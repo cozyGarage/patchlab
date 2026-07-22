@@ -1,0 +1,34 @@
+{
+  "id": "m1-first-lights",
+  "title": "First Lights On",
+  "order": 1,
+  "brief": "Bring SERVER-01 online. Patch panel A-01 to the switch, then the switch to the server NIC. Watch the link lights.",
+  "constraints": [
+    "Use Cat6 copper only",
+    "Prefer blue patch cables"
+  ],
+  "parTimeSec": 90,
+  "hintAfterWrongAttempts": 2,
+  "inventory": { "copper_cat6": 4 },
+  "initial": {
+    "devices": [],
+    "cables": []
+  },
+  "goals": [
+    {
+      "type": "link_up",
+      "a": { "deviceId": "panel-a", "portId": "panel-1" },
+      "b": { "deviceId": "tor-1", "portId": "sw-1" }
+    },
+    {
+      "type": "link_up",
+      "a": { "deviceId": "tor-1", "portId": "sw-5" },
+      "b": { "deviceId": "server-01", "portId": "nic-1" }
+    },
+    {
+      "type": "path_up",
+      "from": { "deviceId": "server-01", "portId": "nic-1" },
+      "to": { "deviceId": "tor-1", "portId": "sw-5" }
+    }
+  ]
+}

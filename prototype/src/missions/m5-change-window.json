@@ -1,0 +1,58 @@
+{
+  "id": "m5-change-window",
+  "title": "Change Window",
+  "order": 5,
+  "brief": "Migrate the documented panel cross-connect from A-01/Gi1/0/1 to A-08/Gi1/0/8. Keep SERVER-01 online on Gi1/0/5. Finish clean: old ports empty, new path lit.",
+  "constraints": [
+    "Final panel port: A-08",
+    "Final switch cross-connect: Gi1/0/8",
+    "Do not strand SERVER-01"
+  ],
+  "parTimeSec": 150,
+  "hintAfterWrongAttempts": 3,
+  "inventory": { "copper_cat6": 3 },
+  "initial": {
+    "devices": [],
+    "cables": [
+      {
+        "id": "c-pre-1",
+        "media": "copper_cat6",
+        "color": "blue",
+        "lengthM": 1,
+        "ends": [
+          { "deviceId": "panel-a", "portId": "panel-1" },
+          { "deviceId": "tor-1", "portId": "sw-1" }
+        ]
+      },
+      {
+        "id": "c-pre-2",
+        "media": "copper_cat6",
+        "color": "blue",
+        "lengthM": 2,
+        "ends": [
+          { "deviceId": "tor-1", "portId": "sw-5" },
+          { "deviceId": "server-01", "portId": "nic-1" }
+        ]
+      }
+    ]
+  },
+  "goals": [
+    {
+      "type": "link_up",
+      "a": { "deviceId": "panel-a", "portId": "panel-8" },
+      "b": { "deviceId": "tor-1", "portId": "sw-8" }
+    },
+    {
+      "type": "link_up",
+      "a": { "deviceId": "tor-1", "portId": "sw-5" },
+      "b": { "deviceId": "server-01", "portId": "nic-1" }
+    },
+    {
+      "type": "no_cables_on",
+      "ports": [
+        { "deviceId": "panel-a", "portId": "panel-1" },
+        { "deviceId": "tor-1", "portId": "sw-1" }
+      ]
+    }
+  ]
+}

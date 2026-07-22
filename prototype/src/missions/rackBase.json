@@ -1,0 +1,59 @@
+{
+  "devices": [
+    {
+      "id": "panel-a",
+      "role": "patch_panel",
+      "name": "Panel-A",
+      "rackUnitStart": 42,
+      "heightU": 1,
+      "ports": [
+        { "id": "panel-1", "deviceId": "panel-a", "index": 1, "label": "A-01", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "panel" },
+        { "id": "panel-2", "deviceId": "panel-a", "index": 2, "label": "A-02", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "panel" },
+        { "id": "panel-3", "deviceId": "panel-a", "index": 3, "label": "A-03", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "panel" },
+        { "id": "panel-4", "deviceId": "panel-a", "index": 4, "label": "A-04", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "panel" },
+        { "id": "panel-5", "deviceId": "panel-a", "index": 5, "label": "A-05", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "panel" },
+        { "id": "panel-6", "deviceId": "panel-a", "index": 6, "label": "A-06", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "panel" },
+        { "id": "panel-7", "deviceId": "panel-a", "index": 7, "label": "A-07", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "panel" },
+        { "id": "panel-8", "deviceId": "panel-a", "index": 8, "label": "A-08", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "panel" }
+      ]
+    },
+    {
+      "id": "tor-1",
+      "role": "switch",
+      "name": "ToR-SW-A",
+      "rackUnitStart": 40,
+      "heightU": 1,
+      "ports": [
+        { "id": "sw-1", "deviceId": "tor-1", "index": 1, "label": "Gi1/0/1", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "network", "vlanId": 10 },
+        { "id": "sw-2", "deviceId": "tor-1", "index": 2, "label": "Gi1/0/2", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "network", "vlanId": 10 },
+        { "id": "sw-3", "deviceId": "tor-1", "index": 3, "label": "Gi1/0/3", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "network", "vlanId": 10 },
+        { "id": "sw-4", "deviceId": "tor-1", "index": 4, "label": "Gi1/0/4", "media": "copper_cat6", "connector": "rj45", "admin": "down", "role": "network", "vlanId": 10 },
+        { "id": "sw-5", "deviceId": "tor-1", "index": 5, "label": "Gi1/0/5", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "network", "vlanId": 10 },
+        { "id": "sw-6", "deviceId": "tor-1", "index": 6, "label": "Gi1/0/6", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "network", "vlanId": 10 },
+        { "id": "sw-7", "deviceId": "tor-1", "index": 7, "label": "Gi1/0/7", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "network", "vlanId": 20 },
+        { "id": "sw-8", "deviceId": "tor-1", "index": 8, "label": "Gi1/0/8", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "network", "vlanId": 10 }
+      ]
+    },
+    {
+      "id": "server-01",
+      "role": "server",
+      "name": "SERVER-01",
+      "rackUnitStart": 20,
+      "heightU": 1,
+      "ports": [
+        { "id": "nic-1", "deviceId": "server-01", "index": 1, "label": "eth0", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "nic", "accessVlan": 10 }
+      ]
+    },
+    {
+      "id": "server-07",
+      "role": "server",
+      "name": "SERVER-07",
+      "rackUnitStart": 14,
+      "heightU": 1,
+      "ports": [
+        { "id": "nic-1", "deviceId": "server-07", "index": 1, "label": "eth0", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "nic", "accessVlan": 20 }
+      ]
+    }
+  ],
+  "cables": []
+}

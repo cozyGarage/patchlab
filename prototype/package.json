@@ -1,0 +1,16 @@
+{
+  "name": "patchlab-prototype",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "PatchLab MVP engine + mission data for datacenter patching trainer",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.9"
+  }
+}
