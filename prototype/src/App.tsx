@@ -28,11 +28,17 @@ const sandboxMission: Mission = {
   id: 'sandbox',
   title: 'Sandbox',
   order: 99,
-  brief: 'Free play on the training rack. Cycle VLANs, toggle admin, mix copper and fiber.',
+  brief:
+    'Free play: power, console, copper/fiber, IP addressing, ping, and firewall rules.',
   constraints: ['Experiment freely', 'Reset anytime'],
   parTimeSec: 9999,
   hintAfterWrongAttempts: 99,
-  inventory: { copper_cat6: 12, fiber_om4: 8 },
+  inventory: {
+    copper_cat6: 12,
+    fiber_om4: 8,
+    power_c13: 6,
+    console_rj45: 4,
+  },
   initial: { devices: [], cables: [] },
   goals: [],
   track: 'mixed',
@@ -64,8 +70,6 @@ export default function App() {
     if (!engine || sandbox || screen !== 'rack') return;
     if (!engine.snapshot.complete) return;
 
-    // StrictMode runs effects twice in dev. We must not clearTimeout on cleanup,
-    // or the only scheduled debrief is cancelled and never rescheduled.
     const runKey = `${mission?.id ?? 'none'}:${engine.startedAtMs}`;
     if (completedRunKey.current === runKey) return;
     completedRunKey.current = runKey;
@@ -92,12 +96,19 @@ export default function App() {
     if (tip && tip.code !== lastTipCode.current) {
       lastTipCode.current = tip.code;
       if (
-        tip.code === 'LINK_UP' ||
-        tip.code === 'MEDIA_MISMATCH' ||
-        tip.code === 'VLAN_MISMATCH' ||
-        tip.code === 'ADMIN_DOWN' ||
-        tip.code === 'PORT_BUSY' ||
-        tip.code === 'GOAL_COMPLETE'
+        [
+          'LINK_UP',
+          'MEDIA_MISMATCH',
+          'VLAN_MISMATCH',
+          'ADMIN_DOWN',
+          'PORT_BUSY',
+          'GOAL_COMPLETE',
+          'NO_POWER',
+          'PING_OK',
+          'PING_FAIL',
+          'IP_UPDATED',
+          'FIREWALL_UPDATED',
+        ].includes(tip.code)
       ) {
         playTipSound(settings.sound, tip.level);
       }
@@ -157,6 +168,45 @@ export default function App() {
     apply(reduce(engine, { type: 'TOGGLE_ADMIN', port }));
   }
 
+  function dispatchSetIp(
+    port: PortRef,
+    address: string,
+    prefix: number,
+    gateway?: string,
+  ) {
+    if (!engine) return;
+    apply(reduce(engine, { type: 'SET_IP', port, address, prefix, gateway }));
+  }
+
+  function dispatchFirewallPermitLan() {
+    if (!engine) return;
+    apply(
+      reduce(engine, {
+        type: 'UPSERT_FIREWALL_RULE',
+        deviceId: 'fw-1',
+        rule: {
+          id: `permit-lan-${Date.now()}`,
+          action: 'permit',
+          srcCidr: '10.10.10.0/24',
+          dstCidr: '10.10.10.0/24',
+          note: 'Trainer permit',
+          enabled: true,
+        },
+      }),
+    );
+  }
+
+  function dispatchPing(fromId: string, toId: string) {
+    if (!engine) return;
+    apply(
+      reduce(engine, {
+        type: 'PING',
+        fromDeviceId: fromId,
+        toDeviceId: toId,
+      }),
+    );
+  }
+
   function dispatchReset() {
     if (!mission) return;
     startMission(mission, sandbox);
@@ -174,7 +224,7 @@ export default function App() {
   }, [mission]);
 
   return (
-    <div className="app-shell">
+    <div className="app-shell wide">
       {screen === 'home' ? (
         <MissionList
           missions={missions}
@@ -206,6 +256,9 @@ export default function App() {
           onReset={dispatchReset}
           onCycleVlan={dispatchCycleVlan}
           onToggleAdmin={dispatchToggleAdmin}
+          onSetIp={dispatchSetIp}
+          onFirewallPermitLan={dispatchFirewallPermitLan}
+          onPing={dispatchPing}
           onBack={() => setScreen(sandbox ? 'home' : 'brief')}
         />
       ) : null}

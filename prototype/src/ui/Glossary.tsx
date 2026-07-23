@@ -1,31 +1,39 @@
 const ENTRIES = [
   {
-    term: 'Patch panel',
-    def: 'Front ports that document and terminate horizontal cabling so you can rearrange with short patch cords.',
+    term: 'Structured cabling',
+    def: 'Standards-based pathways and patching (TIA-568 / TIA-942 thinking): panels, labels, and predictable moves instead of spaghetti point-to-point runs.',
   },
   {
     term: 'ToR switch',
-    def: 'Top-of-rack switch — the first network hop for servers in that rack.',
+    def: 'Top-of-rack switch — first hop for servers. Keep the patch panel nearby to shorten copper runs.',
+  },
+  {
+    term: 'PDU',
+    def: 'Power distribution unit. Active gear stays dark until a PSU cord lands on a PDU outlet.',
+  },
+  {
+    term: 'Console / rollover',
+    def: 'Out-of-band serial access. Use it when the network path is broken and you still need to configure a device.',
   },
   {
     term: 'VLAN',
     def: 'Virtual LAN segment. A cable can be physically up but still fail if VLAN IDs do not match.',
   },
   {
-    term: 'Admin down',
-    def: 'Port is disabled in software. Perfect copper still shows no link.',
+    term: 'Subnet / prefix',
+    def: 'Hosts share a network when address + mask (CIDR prefix) match. /24 is the classic beginner lab size.',
+  },
+  {
+    term: 'Ping path',
+    def: 'In PatchLab: both devices powered, data cabled, same subnet, and firewall policy must allow the flow.',
+  },
+  {
+    term: 'Firewall ACL',
+    def: 'Top-down permit/deny rules. First match wins; an implicit deny can block traffic even when cabling looks perfect.',
   },
   {
     term: 'OM4 fiber / LC',
-    def: 'Multimode fiber patching with LC connectors. Do not use Cat6 on fiber ports.',
-  },
-  {
-    term: 'SFP / Te port',
-    def: 'Fiber transceiver cage on the switch (shown here as ToR-SFP).',
-  },
-  {
-    term: 'Link light',
-    def: 'Green means L1/L2 adjacency is good in this trainer; amber often means admin-down; red means fault/mismatch.',
+    def: 'Multimode fiber patching with LC connectors. Never seat Cat6 into an SFP cage.',
   },
 ] as const;
 

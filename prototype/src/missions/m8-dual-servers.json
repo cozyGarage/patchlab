@@ -5,13 +5,18 @@
   "track": "mixed",
   "brief": "Bring SERVER-01 (VLAN 10) and SERVER-07 (VLAN 20) online at the same time. Keep their panel docs tidy: A-01 and A-02.",
   "constraints": [
-    "SERVER-01 → VLAN 10",
-    "SERVER-07 → VLAN 20",
+    "SERVER-01 \u2192 VLAN 10",
+    "SERVER-07 \u2192 VLAN 20",
     "Document on A-01 and A-02"
   ],
   "parTimeSec": 150,
   "hintAfterWrongAttempts": 2,
-  "inventory": { "copper_cat6": 6, "fiber_om4": 0 },
+  "inventory": {
+    "copper_cat6": 6,
+    "fiber_om4": 0,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
   "initial": {
     "devices": [],
     "cables": []
@@ -19,23 +24,47 @@
   "goals": [
     {
       "type": "link_up",
-      "a": { "deviceId": "panel-a", "portId": "panel-1" },
-      "b": { "deviceId": "tor-1", "portId": "sw-1" }
+      "a": {
+        "deviceId": "panel-a",
+        "portId": "panel-1"
+      },
+      "b": {
+        "deviceId": "tor-1",
+        "portId": "sw-1"
+      }
     },
     {
       "type": "link_up",
-      "a": { "deviceId": "tor-1", "portId": "sw-5" },
-      "b": { "deviceId": "server-01", "portId": "nic-1" }
+      "a": {
+        "deviceId": "tor-1",
+        "portId": "sw-5"
+      },
+      "b": {
+        "deviceId": "server-01",
+        "portId": "nic-1"
+      }
     },
     {
       "type": "link_up",
-      "a": { "deviceId": "panel-a", "portId": "panel-2" },
-      "b": { "deviceId": "tor-1", "portId": "sw-3" }
+      "a": {
+        "deviceId": "panel-a",
+        "portId": "panel-2"
+      },
+      "b": {
+        "deviceId": "tor-1",
+        "portId": "sw-3"
+      }
     },
     {
       "type": "link_up",
-      "a": { "deviceId": "tor-1", "portId": "sw-7" },
-      "b": { "deviceId": "server-07", "portId": "nic-1" }
+      "a": {
+        "deviceId": "tor-1",
+        "portId": "sw-7"
+      },
+      "b": {
+        "deviceId": "server-07",
+        "portId": "nic-1"
+      }
     }
   ]
 }

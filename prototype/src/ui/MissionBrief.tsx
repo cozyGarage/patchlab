@@ -20,7 +20,25 @@ function goalText(mission: Mission): string[] {
       case 'cable_color_between':
         return `Use a ${g.color} cable between ends`;
       case 'cable_media_between':
-        return `Use ${g.media === 'fiber_om4' ? 'OM4 fiber' : 'Cat6'} on ${g.a.portId} ↔ ${g.b.portId}`;
+        return `Use ${
+          g.media === 'fiber_om4'
+            ? 'OM4 fiber'
+            : g.media === 'power_c13'
+              ? 'power'
+              : g.media === 'console_rj45'
+                ? 'console'
+                : 'Cat6'
+        } on ${g.a.portId} ↔ ${g.b.portId}`;
+      case 'device_powered':
+        return `Power ${g.deviceId}`;
+      case 'console_attached':
+        return `Console into ${g.deviceId}`;
+      case 'iface_ip':
+        return `Set ${g.port.portId} = ${g.address}/${g.prefix}`;
+      case 'ping':
+        return `Ping ${g.fromDeviceId} → ${g.toDeviceId}`;
+      case 'firewall_rule':
+        return `FW ${g.action} ${g.srcCidr} → ${g.dstCidr}`;
       default:
         return `Goal ${i + 1}`;
     }
@@ -40,6 +58,12 @@ export function MissionBrief({ mission, onBack, onStart }: MissionBriefProps) {
         </div>
         <h1>{mission.title}</h1>
         <p>{mission.brief}</p>
+        {mission.lesson ? (
+          <div className="lesson-callout">
+            <h3>Lesson</h3>
+            <p>{mission.lesson}</p>
+          </div>
+        ) : null}
         <div>
           <h3 style={{ marginBottom: 8 }}>Win checklist</h3>
           <ul className="checklist">

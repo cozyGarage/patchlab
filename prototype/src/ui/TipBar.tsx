@@ -34,18 +34,21 @@ export function TipBar({
     <div className={`tip-bar ${level}`} role="status" aria-live="polite">
       <div className="row">
         <div className="tip-msg">
-          {tip?.message ?? 'Select a port, then connect to another port.'}
+          {tip?.message ??
+            'Plug data, power, or console — then configure IP / firewall as needed.'}
         </div>
         <div className="rack-stats">
-          <span>Cu × {inventory.copper_cat6}</span>
-          <span>Fib × {inventory.fiber_om4}</span>
+          <span>Cu {inventory.copper_cat6}</span>
+          <span>Fib {inventory.fiber_om4}</span>
+          <span>Pwr {inventory.power_c13}</span>
+          <span>Con {inventory.console_rj45}</span>
         </div>
       </div>
       {goalLabels.length > 0 ? (
         <div className="goal-pills">
           {goalLabels.map((label, i) => (
             <span
-              key={label}
+              key={`${label}-${i}`}
               className={`goal-pill ${goalsMet[i] ? 'met' : ''}`}
             >
               {goalsMet[i] ? '✓ ' : ''}

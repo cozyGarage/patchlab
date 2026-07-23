@@ -3,14 +3,19 @@
   "title": "Wrong Media",
   "order": 7,
   "track": "fiber",
-  "brief": "Someone patched F-02 to Te1/0/2 with Cat6. The ports are fiber — pull the copper and finish with OM4 LC. Also light SERVER-09 on Te1/0/4.",
+  "brief": "Someone patched F-02 to Te1/0/2 with Cat6. The ports are fiber \u2014 pull the copper and finish with OM4 LC. Also light SERVER-09 on Te1/0/4.",
   "constraints": [
     "Fiber ports need fiber patch cords",
     "Leave no copper on the fiber tray"
   ],
   "parTimeSec": 120,
   "hintAfterWrongAttempts": 2,
-  "inventory": { "copper_cat6": 1, "fiber_om4": 4 },
+  "inventory": {
+    "copper_cat6": 1,
+    "fiber_om4": 4,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
   "initial": {
     "devices": [],
     "cables": [
@@ -20,8 +25,14 @@
         "color": "blue",
         "lengthM": 1,
         "ends": [
-          { "deviceId": "fiber-tray", "portId": "f-2" },
-          { "deviceId": "tor-sfp", "portId": "sfp-2" }
+          {
+            "deviceId": "fiber-tray",
+            "portId": "f-2"
+          },
+          {
+            "deviceId": "tor-sfp",
+            "portId": "sfp-2"
+          }
         ]
       }
     ]
@@ -29,19 +40,37 @@
   "goals": [
     {
       "type": "cable_media_between",
-      "a": { "deviceId": "fiber-tray", "portId": "f-2" },
-      "b": { "deviceId": "tor-sfp", "portId": "sfp-2" },
+      "a": {
+        "deviceId": "fiber-tray",
+        "portId": "f-2"
+      },
+      "b": {
+        "deviceId": "tor-sfp",
+        "portId": "sfp-2"
+      },
       "media": "fiber_om4"
     },
     {
       "type": "link_up",
-      "a": { "deviceId": "server-09", "portId": "nic-f" },
-      "b": { "deviceId": "tor-sfp", "portId": "sfp-4" }
+      "a": {
+        "deviceId": "server-09",
+        "portId": "nic-f"
+      },
+      "b": {
+        "deviceId": "tor-sfp",
+        "portId": "sfp-4"
+      }
     },
     {
       "type": "cable_media_between",
-      "a": { "deviceId": "server-09", "portId": "nic-f" },
-      "b": { "deviceId": "tor-sfp", "portId": "sfp-4" },
+      "a": {
+        "deviceId": "server-09",
+        "portId": "nic-f"
+      },
+      "b": {
+        "deviceId": "tor-sfp",
+        "portId": "sfp-4"
+      },
       "media": "fiber_om4"
     }
   ]

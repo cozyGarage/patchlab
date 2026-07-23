@@ -8,6 +8,10 @@ import m5 from './m5-change-window.json';
 import m6 from './m6-fiber-first.json';
 import m7 from './m7-wrong-media.json';
 import m8 from './m8-dual-servers.json';
+import m9 from './m9-power-up.json';
+import m10 from './m10-console-ip.json';
+import m11 from './m11-subnet-ping.json';
+import m12 from './m12-firewall-acl.json';
 
 export const baseRack = rackBase as unknown as RackState;
 
@@ -18,6 +22,8 @@ function asMission(data: unknown): Mission {
     inventory: {
       copper_cat6: m.inventory?.copper_cat6 ?? 0,
       fiber_om4: m.inventory?.fiber_om4 ?? 0,
+      power_c13: m.inventory?.power_c13 ?? 0,
+      console_rj45: m.inventory?.console_rj45 ?? 0,
     },
   };
 }
@@ -31,6 +37,10 @@ export const missions: Mission[] = [
   asMission(m6),
   asMission(m7),
   asMission(m8),
+  asMission(m9),
+  asMission(m10),
+  asMission(m11),
+  asMission(m12),
 ].sort((a, b) => a.order - b.order);
 
 export function getMission(id: string): Mission | undefined {

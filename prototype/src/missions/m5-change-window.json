@@ -11,7 +11,12 @@
   ],
   "parTimeSec": 150,
   "hintAfterWrongAttempts": 3,
-  "inventory": { "copper_cat6": 3, "fiber_om4": 0 },
+  "inventory": {
+    "copper_cat6": 3,
+    "fiber_om4": 0,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
   "initial": {
     "devices": [],
     "cables": [
@@ -21,8 +26,14 @@
         "color": "blue",
         "lengthM": 1,
         "ends": [
-          { "deviceId": "panel-a", "portId": "panel-1" },
-          { "deviceId": "tor-1", "portId": "sw-1" }
+          {
+            "deviceId": "panel-a",
+            "portId": "panel-1"
+          },
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-1"
+          }
         ]
       },
       {
@@ -31,8 +42,14 @@
         "color": "blue",
         "lengthM": 2,
         "ends": [
-          { "deviceId": "tor-1", "portId": "sw-5" },
-          { "deviceId": "server-01", "portId": "nic-1" }
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-5"
+          },
+          {
+            "deviceId": "server-01",
+            "portId": "nic-1"
+          }
         ]
       }
     ]
@@ -40,19 +57,37 @@
   "goals": [
     {
       "type": "link_up",
-      "a": { "deviceId": "panel-a", "portId": "panel-8" },
-      "b": { "deviceId": "tor-1", "portId": "sw-8" }
+      "a": {
+        "deviceId": "panel-a",
+        "portId": "panel-8"
+      },
+      "b": {
+        "deviceId": "tor-1",
+        "portId": "sw-8"
+      }
     },
     {
       "type": "link_up",
-      "a": { "deviceId": "tor-1", "portId": "sw-5" },
-      "b": { "deviceId": "server-01", "portId": "nic-1" }
+      "a": {
+        "deviceId": "tor-1",
+        "portId": "sw-5"
+      },
+      "b": {
+        "deviceId": "server-01",
+        "portId": "nic-1"
+      }
     },
     {
       "type": "no_cables_on",
       "ports": [
-        { "deviceId": "panel-a", "portId": "panel-1" },
-        { "deviceId": "tor-1", "portId": "sw-1" }
+        {
+          "deviceId": "panel-a",
+          "portId": "panel-1"
+        },
+        {
+          "deviceId": "tor-1",
+          "portId": "sw-1"
+        }
       ]
     }
   ]

@@ -13,9 +13,12 @@ import {
   samePort,
   portKey,
 } from '../types/schema';
+import { isValidHostIp } from './ip';
 import {
+  buildConsoleMap,
   buildLinkTable,
   evaluateGoals,
+  evaluatePing,
   findPath,
   getPort,
   glowingPortsFromGoals,
@@ -28,13 +31,19 @@ function cloneRack(rack: RackState): RackState {
 }
 
 function mergeInitial(base: RackState, mission: Mission): RackState {
-  const devices =
-    mission.initial.devices.length > 0
-      ? structuredClone(mission.initial.devices)
-      : structuredClone(base.devices);
+  const devices = structuredClone(base.devices);
+  for (const override of mission.initial.devices) {
+    const idx = devices.findIndex((d) => d.id === override.id);
+    if (idx >= 0) devices[idx] = structuredClone(override);
+    else devices.push(structuredClone(override));
+  }
+
+  const useBase = mission.useBaseCables !== false;
+  const baseCables = useBase ? structuredClone(base.cables) : [];
+  const missionCables = structuredClone(mission.initial.cables);
   return {
     devices,
-    cables: structuredClone(mission.initial.cables),
+    cables: [...baseCables, ...missionCables],
   };
 }
 
@@ -48,9 +57,12 @@ function countByMedia(cables: Cable[]): Inventory {
 
 function remainingInventory(mission: Mission, cables: Cable[]): Inventory {
   const used = countByMedia(cables);
+  const m = mission.inventory;
   return {
-    copper_cat6: Math.max(0, (mission.inventory.copper_cat6 ?? 0) - used.copper_cat6),
-    fiber_om4: Math.max(0, (mission.inventory.fiber_om4 ?? 0) - used.fiber_om4),
+    copper_cat6: Math.max(0, (m.copper_cat6 ?? 0) - used.copper_cat6),
+    fiber_om4: Math.max(0, (m.fiber_om4 ?? 0) - used.fiber_om4),
+    power_c13: Math.max(0, (m.power_c13 ?? 0) - used.power_c13),
+    console_rj45: Math.max(0, (m.console_rj45 ?? 0) - used.console_rj45),
   };
 }
 
@@ -60,8 +72,10 @@ function snapshotOf(
   inventory: Inventory,
   lastTip?: Tip,
   hintGhost: SimSnapshot['hintGhost'] = null,
+  lastPing?: SimSnapshot['lastPing'],
 ): SimSnapshot {
-  const { linkTable, tips } = buildLinkTable(rack);
+  const { linkTable, tips, powered } = buildLinkTable(rack);
+  const consoleAttached = buildConsoleMap(rack);
   const goalsMet = evaluateGoals(rack, mission.goals, linkTable);
   const paths = mission.goals
     .filter((g): g is Extract<typeof g, { type: 'path_up' }> => g.type === 'path_up')
@@ -75,13 +89,15 @@ function snapshotOf(
       ? {
           level: 'success' as const,
           code: 'GOAL_COMPLETE' as const,
-          message: 'Goals complete — nice patching',
+          message: 'Goals complete — nice work',
         }
       : tips[0]);
 
   return {
     rack,
     linkTable,
+    poweredDevices: powered,
+    consoleAttached,
     paths,
     goalsMet,
     complete,
@@ -89,6 +105,7 @@ function snapshotOf(
     inventory,
     hintGhost,
     glowingPortIds: glowingPortsFromGoals(rack, mission.goals, goalsMet),
+    lastPing,
   };
 }
 
@@ -107,7 +124,12 @@ export function createEngineState(
   baseRack: RackState,
 ): EngineState {
   const rack = mergeInitial(baseRack, mission);
-  const inventory = remainingInventory(mission, rack.cables);
+  // Inventory is remaining spares relative to mission allotment minus ALL cables present
+  // For power harness from base, don't charge learner inventory — subtract only mission cables.
+  const missionOnly = structuredClone(mission.initial.cables);
+  const inventory = remainingInventory(mission, missionOnly);
+  // Also subtract any extra cables learner... initially just mission cables.
+  // Base power cables are facility and free.
   return {
     mission,
     baseRack,
@@ -138,19 +160,16 @@ function pickMedia(
 }
 
 function defaultColor(media: MediaType): CableColor {
-  return media === 'fiber_om4' ? 'aqua' : 'blue';
-}
-
-function updatePort(
-  rack: RackState,
-  ref: PortRef,
-  mutate: (port: { admin: 'up' | 'down'; vlanId?: number }) => void,
-): boolean {
-  const device = rack.devices.find((d) => d.id === ref.deviceId);
-  const port = device?.ports.find((p) => p.id === ref.portId);
-  if (!port) return false;
-  mutate(port);
-  return true;
+  switch (media) {
+    case 'fiber_om4':
+      return 'aqua';
+    case 'power_c13':
+      return 'black';
+    case 'console_rj45':
+      return 'lightblue';
+    default:
+      return 'blue';
+  }
 }
 
 export function reduce(state: EngineState, intent: Intent): EngineState {
@@ -166,11 +185,12 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
       if (!cable) return state;
       rack.cables = rack.cables.filter((c) => c.id !== intent.cableId);
       const inventory = { ...state.snapshot.inventory };
+      // Refund only if this media is part of learner inventory tracking
       inventory[cable.media] += 1;
       const tip: Tip = {
         level: 'info',
         code: 'DISCONNECTED',
-        message: `Removed ${cable.media === 'fiber_om4' ? 'fiber' : 'copper'} patch`,
+        message: `Removed ${cable.media.replaceAll('_', ' ')} cord`,
       };
       return {
         ...state,
@@ -246,10 +266,7 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
             lastTip: {
               level: 'warn',
               code: 'OPEN_CIRCUIT',
-              message:
-                media === 'fiber_om4'
-                  ? 'No spare OM4 fiber left in inventory'
-                  : 'No spare Cat6 left in inventory',
+              message: `No spare ${media.replaceAll('_', ' ')} in inventory`,
             },
           },
         };
@@ -269,16 +286,23 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
       const inventory = { ...state.snapshot.inventory };
       inventory[media] -= 1;
 
-      const pair = resolvePair(portA, portB, media);
-      const connectTip: Tip = {
-        level: 'info',
-        code: 'CONNECTED',
+      const powered = state.snapshot.poweredDevices;
+      const pair = resolvePair(
+        portA,
+        portB,
+        media,
+        powered[portA.deviceId] ?? true,
+        powered[portB.deviceId] ?? true,
+      );
+      // After power connect, rebuild will mark powered — tip from resolvePair is fine
+      const tip = pair.tip ?? {
+        level: 'info' as const,
+        code: 'CONNECTED' as const,
         message: `Connected ${portA.label} → ${portB.label}`,
       };
-      const tip = pair.tip ?? connectTip;
 
       let wrongAttempts = state.wrongAttempts;
-      if (pair.status !== 'up') wrongAttempts += 1;
+      if (pair.status !== 'up' && media !== 'power_c13') wrongAttempts += 1;
 
       return {
         ...state,
@@ -308,24 +332,21 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
     case 'CYCLE_VLAN': {
       const rack = cloneRack(state.snapshot.rack);
       const port = getPort(rack, intent.port);
-      if (!port || port.role !== 'network' || port.vlanId == null) {
-        return state;
-      }
+      if (!port || port.role !== 'network' || port.vlanId == null) return state;
       const options = [10, 20, 30];
       const idx = options.indexOf(port.vlanId);
       port.vlanId = options[(idx + 1) % options.length]!;
-      const tip: Tip = {
-        level: 'info',
-        code: 'PORT_UPDATED',
-        message: `${port.label} VLAN → ${port.vlanId}`,
-      };
       return {
         ...state,
         snapshot: snapshotOf(
           rack,
           mission,
           state.snapshot.inventory,
-          tip,
+          {
+            level: 'info',
+            code: 'PORT_UPDATED',
+            message: `${port.label} VLAN → ${port.vlanId}`,
+          },
           null,
         ),
       };
@@ -333,15 +354,49 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
 
     case 'TOGGLE_ADMIN': {
       const rack = cloneRack(state.snapshot.rack);
-      const ok = updatePort(rack, intent.port, (p) => {
-        p.admin = p.admin === 'up' ? 'down' : 'up';
-      });
-      if (!ok) return state;
-      const port = getPort(rack, intent.port)!;
-      const tip: Tip = {
-        level: 'info',
-        code: 'PORT_UPDATED',
-        message: `${port.label} admin → ${port.admin}`,
+      const port = getPort(rack, intent.port);
+      if (!port || (port.kind !== 'data' && port.kind !== 'lan' && port.kind !== 'wan')) {
+        return state;
+      }
+      port.admin = port.admin === 'up' ? 'down' : 'up';
+      return {
+        ...state,
+        snapshot: snapshotOf(
+          rack,
+          mission,
+          state.snapshot.inventory,
+          {
+            level: 'info',
+            code: 'PORT_UPDATED',
+            message: `${port.label} admin → ${port.admin}`,
+          },
+          null,
+        ),
+      };
+    }
+
+    case 'SET_IP': {
+      const rack = cloneRack(state.snapshot.rack);
+      const port = getPort(rack, intent.port);
+      if (!port) return state;
+      if (!isValidHostIp(intent.address, intent.prefix)) {
+        return {
+          ...state,
+          wrongAttempts: state.wrongAttempts + 1,
+          snapshot: {
+            ...state.snapshot,
+            lastTip: {
+              level: 'error',
+              code: 'IP_UPDATED',
+              message: 'Invalid host IP/prefix (avoid network/broadcast)',
+            },
+          },
+        };
+      }
+      port.ip = {
+        address: intent.address,
+        prefix: intent.prefix,
+        gateway: intent.gateway,
       };
       return {
         ...state,
@@ -349,8 +404,60 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
           rack,
           mission,
           state.snapshot.inventory,
-          tip,
+          {
+            level: 'success',
+            code: 'IP_UPDATED',
+            message: `${port.label} → ${intent.address}/${intent.prefix}`,
+          },
           null,
+        ),
+      };
+    }
+
+    case 'UPSERT_FIREWALL_RULE': {
+      const rack = cloneRack(state.snapshot.rack);
+      const fw = rack.devices.find((d) => d.id === intent.deviceId);
+      if (!fw || fw.role !== 'firewall') return state;
+      const existing = fw.firewallRules ?? [];
+      const others = existing.filter((r) => r.id !== intent.rule.id);
+      // New/updated rules evaluate first (trainer-friendly ACL top-insert).
+      fw.firewallRules = [intent.rule, ...others];
+      return {
+        ...state,
+        snapshot: snapshotOf(
+          rack,
+          mission,
+          state.snapshot.inventory,
+          {
+            level: 'success',
+            code: 'FIREWALL_UPDATED',
+            message: `FW ${intent.rule.action} ${intent.rule.srcCidr} → ${intent.rule.dstCidr}`,
+          },
+          null,
+        ),
+      };
+    }
+
+    case 'PING': {
+      const result = evaluatePing(
+        state.snapshot.rack,
+        intent.fromDeviceId,
+        intent.toDeviceId,
+      );
+      return {
+        ...state,
+        wrongAttempts: result.ok ? state.wrongAttempts : state.wrongAttempts + 1,
+        snapshot: snapshotOf(
+          state.snapshot.rack,
+          mission,
+          state.snapshot.inventory,
+          {
+            level: result.ok ? 'success' : 'warn',
+            code: result.ok ? 'PING_OK' : 'PING_FAIL',
+            message: result.detail,
+          },
+          null,
+          result,
         ),
       };
     }

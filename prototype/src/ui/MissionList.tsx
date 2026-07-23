@@ -33,10 +33,10 @@ export function MissionList({
           <span className="dot" aria-hidden />
           <span>PatchLab</span>
         </div>
-        <h1 className="brand">Patch with instant truth.</h1>
+        <h1 className="brand">Rack. Power. IP. Firewall.</h1>
         <p>
-          Copper, fiber, VLANs, and messy tickets — practice datacenter patching
-          with lights that tell you the truth immediately.
+          Plug data, console, and power on a living rack — then configure
+          subnets and firewall rules with instant link and ping feedback.
         </p>
       </header>
 

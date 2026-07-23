@@ -18,11 +18,10 @@ export async function clearApp(page: Page) {
     localStorage.clear();
   });
   await page.reload();
-  await expect(page.getByRole('heading', { name: /Patch with instant truth/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Rack\. Power\. IP\. Firewall/i })).toBeVisible();
 }
 
 export async function unlockThrough(page: Page, order: number) {
-  // Seed progress so mission `order` is unlocked (previous cleared).
   await page.evaluate((maxOrder) => {
     const ids = [
       'm1-first-lights',
@@ -33,6 +32,10 @@ export async function unlockThrough(page: Page, order: number) {
       'm6-fiber-first',
       'm7-wrong-media',
       'm8-dual-servers',
+      'm9-power-up',
+      'm10-console-ip',
+      'm11-subnet-ping',
+      'm12-firewall-acl',
     ];
     const cleared = ids.slice(0, Math.max(0, maxOrder - 1));
     localStorage.setItem(

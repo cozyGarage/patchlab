@@ -52,6 +52,10 @@ button {
   z-index: 1;
 }
 
+.app-shell.wide {
+  width: min(1200px, 100%);
+}
+
 .brand {
   font-family: var(--font-display);
   letter-spacing: -0.03em;
@@ -252,6 +256,142 @@ p {
   gap: 12px;
   min-height: calc(100dvh - 40px);
   grid-template-rows: auto 1fr auto;
+}
+
+.rack-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: 12px;
+  min-height: 0;
+}
+
+.rack-frame {
+  border: 1px solid rgba(156, 163, 175, 0.25);
+  border-radius: 12px;
+  padding: 8px;
+  background:
+    linear-gradient(180deg, rgba(17, 24, 39, 0.65), rgba(10, 14, 20, 0.9));
+}
+
+.port-shell.console {
+  stroke: rgba(125, 211, 252, 0.7);
+}
+
+.port-shell.power {
+  stroke: rgba(239, 68, 68, 0.55);
+  fill: #111827;
+}
+
+.port-led.power {
+  fill: #f87171;
+}
+
+.port-led.console {
+  fill: #7dd3fc;
+}
+
+.config-panel {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  max-height: min(70vh, 720px);
+  overflow: auto;
+}
+
+.config-head h3 {
+  margin-bottom: 4px;
+}
+
+.config-head p,
+.config-note,
+.muted {
+  color: var(--ink-muted);
+  font-size: 0.88rem;
+}
+
+.config-block {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.config-block h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+}
+
+.config-block label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+}
+
+.config-block input,
+.config-block select {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(15, 18, 24, 0.8);
+  color: var(--ink);
+  padding: 8px 10px;
+}
+
+.rule-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  display: grid;
+  gap: 4px;
+}
+
+.ok {
+  color: var(--cyan);
+}
+
+.bad {
+  color: var(--amber);
+}
+
+.lesson-callout {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(61, 220, 181, 0.28);
+  background: rgba(61, 220, 181, 0.08);
+}
+
+.lesson-callout h3 {
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+.track-pill.track-power {
+  color: #fca5a5;
+  border-color: rgba(252, 165, 165, 0.45);
+}
+
+.track-pill.track-logic {
+  color: #93c5fd;
+  border-color: rgba(147, 197, 253, 0.45);
+}
+
+.track-pill.track-security {
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
+@media (max-width: 900px) {
+  .rack-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .config-panel {
+    max-height: none;
+  }
 }
 
 .rack-topbar {

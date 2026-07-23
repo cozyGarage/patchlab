@@ -1,8 +1,10 @@
 # PatchLab
 
-Interactive trainer for **datacenter cable patching** with instant visual feedback (PC + mobile browser/PWA shell).
+Interactive datacenter trainer: **rack patching + power/console + IP/subnet + firewall**, with instant visual feedback (PC + mobile browser).
 
-## Run the app
+Grounded in common structured-cabling practice (TIA-942 / BICSI habits: ToR + panel adjacency, power/data separation, labeling) and a CCNA-style lesson path (addressing → subnet ping → ACL/firewall).
+
+## Run
 
 ```bash
 cd prototype
@@ -10,33 +12,28 @@ npm install
 npm run dev
 ```
 
-Open the local URL Vite prints (default `http://localhost:5173`).
+Open the Vite URL (default `http://localhost:5173`).
 
 ```bash
-npm test      # engine unit tests
-npm run build # production bundle to prototype/dist
+npm test        # engine unit tests
+npm run test:e2e # Playwright browser QA (dev server on :5173)
+npm run build
 ```
 
 ## What you can do
 
-- Home → mission brief → rack patching → star debrief
-- **Tap-tap** or **drag** cables between ports
-- Instant LED + tip feedback (VLAN, admin-down, media mismatch)
-- **8 missions**: copper basics → fiber → dual-server bring-up
-- Ghost **hints**, goal **path glow**, glossary, optional sound
-- Sandbox (after M3): cycle VLANs / toggle admin, mix copper + fiber
-- Progress in `localStorage`
+- Realistic rack chassis: panel, fiber tray, ToR switch, SFP, **firewall**, servers, **console station**, **PDU**
+- Plug **data / fiber / power / console** cords (tap-tap or drag)
+- Side **config panel**: IPv4/subnet, ping, firewall permit rules
+- **12 missions** from first lights → power → console/IP → subnet ping → firewall
+- Glossary, sound toggle, hints, local progress
 
 ## Docs
 
 | Doc | What it covers |
 |---|---|
-| [docs/PRODUCT_BRIEF.md](docs/PRODUCT_BRIEF.md) | Vision, scope, principles, metrics |
-| [docs/SCREEN_MAP.md](docs/SCREEN_MAP.md) | Screens, flows, responsive rules |
-| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Ports, cables, intents, link rules |
-| [docs/MVP_MISSIONS.md](docs/MVP_MISSIONS.md) | Missions 1–5 + sandbox |
-| [docs/TECH_STACK.md](docs/TECH_STACK.md) | Stack, folders, build phases |
-
-## MVP in one line
-
-One rack, copper only, five missions: first lights, wrong port, VLAN trap, admin down, change window.
+| [docs/PRODUCT_BRIEF.md](docs/PRODUCT_BRIEF.md) | Vision / MVP roots |
+| [docs/SCREEN_MAP.md](docs/SCREEN_MAP.md) | Screens & flows |
+| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Ports, cables, intents |
+| [docs/MVP_MISSIONS.md](docs/MVP_MISSIONS.md) | Mission catalog |
+| [docs/TECH_STACK.md](docs/TECH_STACK.md) | Stack & phases |

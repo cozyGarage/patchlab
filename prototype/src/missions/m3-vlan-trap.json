@@ -3,14 +3,19 @@
   "title": "VLAN Trap",
   "order": 3,
   "track": "copper",
-  "brief": "SERVER-07 belongs on VLAN 20. It is patched to Gi1/0/2 (VLAN 10) — the cable looks fine, but the link will not pass. Move the server cable to Gi1/0/7 (VLAN 20).",
+  "brief": "SERVER-07 belongs on VLAN 20. It is patched to Gi1/0/2 (VLAN 10) \u2014 the cable looks fine, but the link will not pass. Move the server cable to Gi1/0/7 (VLAN 20).",
   "constraints": [
     "SERVER-07 access VLAN is 20",
     "Clear the wrong switch port when finished"
   ],
   "parTimeSec": 120,
   "hintAfterWrongAttempts": 2,
-  "inventory": { "copper_cat6": 2, "fiber_om4": 0 },
+  "inventory": {
+    "copper_cat6": 2,
+    "fiber_om4": 0,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
   "initial": {
     "devices": [],
     "cables": [
@@ -20,8 +25,14 @@
         "color": "yellow",
         "lengthM": 1,
         "ends": [
-          { "deviceId": "panel-a", "portId": "panel-2" },
-          { "deviceId": "tor-1", "portId": "sw-3" }
+          {
+            "deviceId": "panel-a",
+            "portId": "panel-2"
+          },
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-3"
+          }
         ]
       },
       {
@@ -30,8 +41,14 @@
         "color": "blue",
         "lengthM": 2,
         "ends": [
-          { "deviceId": "tor-1", "portId": "sw-2" },
-          { "deviceId": "server-07", "portId": "nic-1" }
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-2"
+          },
+          {
+            "deviceId": "server-07",
+            "portId": "nic-1"
+          }
         ]
       }
     ]
@@ -39,17 +56,34 @@
   "goals": [
     {
       "type": "link_up",
-      "a": { "deviceId": "tor-1", "portId": "sw-7" },
-      "b": { "deviceId": "server-07", "portId": "nic-1" }
+      "a": {
+        "deviceId": "tor-1",
+        "portId": "sw-7"
+      },
+      "b": {
+        "deviceId": "server-07",
+        "portId": "nic-1"
+      }
     },
     {
       "type": "path_up",
-      "from": { "deviceId": "server-07", "portId": "nic-1" },
-      "to": { "deviceId": "tor-1", "portId": "sw-7" }
+      "from": {
+        "deviceId": "server-07",
+        "portId": "nic-1"
+      },
+      "to": {
+        "deviceId": "tor-1",
+        "portId": "sw-7"
+      }
     },
     {
       "type": "no_cables_on",
-      "ports": [{ "deviceId": "tor-1", "portId": "sw-2" }]
+      "ports": [
+        {
+          "deviceId": "tor-1",
+          "portId": "sw-2"
+        }
+      ]
     }
   ]
 }
