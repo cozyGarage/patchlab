@@ -80,23 +80,23 @@ This agent run scaffolds **types, engine stubs, rack base, and all 5 mission JSO
 ### Phase 0 — Spec (this folder) ✅
 Product brief, screens, model, missions, stack.
 
-### Phase 1 — Engine vertical slice
+### Phase 1 — Engine vertical slice ✅
 - `CONNECT` / `DISCONNECT`
 - VLAN + admin-down rules
 - Vitest cases for M1–M4 tip codes
 - Headless mission completeness checks
 
-### Phase 2 — UI vertical slice
+### Phase 2 — UI vertical slice ✅
 - Mission list + brief + rack SVG
 - Tap/drag connect
 - Tip bar + debrief stars
 - PWA manifest
 
 ### Phase 3 — Juice & pedagogy
-- Path glow animation
-- Ghost hints
-- Reduced motion
+- Stronger path-glow on goal complete
+- Ghost hint overlay drawn on rack
 - Glossary drawer
+- Sound toggles
 
 ### Phase 4 — Expand content
 - Fiber module

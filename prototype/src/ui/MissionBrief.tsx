@@ -1,0 +1,69 @@
+import type { Mission } from '../types/schema';
+
+interface MissionBriefProps {
+  mission: Mission;
+  onBack: () => void;
+  onStart: () => void;
+}
+
+function goalText(mission: Mission): string[] {
+  return mission.goals.map((g, i) => {
+    switch (g.type) {
+      case 'link_up':
+        return `Link up ${g.a.portId} ↔ ${g.b.portId}`;
+      case 'path_up':
+        return `Path up ${g.from.portId} → ${g.to.portId}`;
+      case 'no_cables_on':
+        return `Clear ${g.ports.map((p) => p.portId).join(', ')}`;
+      case 'port_in_path':
+        return `Include ${g.port.portId} on the active path`;
+      case 'cable_color_between':
+        return `Use a ${g.color} cable between ends`;
+      default:
+        return `Goal ${i + 1}`;
+    }
+  });
+}
+
+export function MissionBrief({ mission, onBack, onStart }: MissionBriefProps) {
+  return (
+    <div className="screen-brief">
+      <button type="button" className="btn btn-ghost" onClick={onBack}>
+        ← Missions
+      </button>
+      <div className="brief-card panel">
+        <div className="brand-mark brand">
+          <span className="dot" aria-hidden />
+          <span>PatchLab</span>
+        </div>
+        <h1>{mission.title}</h1>
+        <p>{mission.brief}</p>
+        <div>
+          <h3 style={{ marginBottom: 8 }}>Win checklist</h3>
+          <ul className="checklist">
+            {goalText(mission).map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+        {mission.constraints.length > 0 ? (
+          <div>
+            <h3 style={{ marginBottom: 8 }}>Constraints</h3>
+            <ul className="checklist">
+              {mission.constraints.map((c) => (
+                <li key={c}>{c}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        <div className="actions">
+          <button type="button" className="btn btn-primary" onClick={onStart}>
+            Start patching
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export { goalText };

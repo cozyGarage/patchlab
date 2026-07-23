@@ -1,8 +1,29 @@
 # PatchLab
 
-Interactive learning concept for **datacenter cable patching** with instant visual feedback (PC + mobile PWA).
+Interactive trainer for **datacenter cable patching** with instant visual feedback (PC + mobile browser/PWA shell).
 
-This workspace contains the **MVP product brief** and a **runnable simulation engine** (TypeScript) with five mission scenarios. Full React rack UI is the next build phase.
+## Run the app
+
+```bash
+cd prototype
+npm install
+npm run dev
+```
+
+Open the local URL Vite prints (default `http://localhost:5173`).
+
+```bash
+npm test      # engine unit tests
+npm run build # production bundle to prototype/dist
+```
+
+## What you can do
+
+- Home → mission brief → rack patching → star debrief
+- **Tap-tap** or **drag** cables between ports
+- Instant LED + tip feedback (VLAN mismatch, admin down, busy port)
+- Missions 1–5 with local progress in `localStorage`
+- Sandbox unlocks after Mission 3
 
 ## Docs
 
@@ -13,17 +34,6 @@ This workspace contains the **MVP product brief** and a **runnable simulation en
 | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Ports, cables, intents, link rules |
 | [docs/MVP_MISSIONS.md](docs/MVP_MISSIONS.md) | Missions 1–5 + sandbox |
 | [docs/TECH_STACK.md](docs/TECH_STACK.md) | Stack, folders, build phases |
-
-## Prototype engine
-
-```bash
-cd prototype
-npm install
-npm test
-npm run typecheck
-```
-
-Core loop: mission JSON → `createEngineState` → `reduce(CONNECT|DISCONNECT|…)` → snapshot with LEDs, tips, goals.
 
 ## MVP in one line
 

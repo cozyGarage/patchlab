@@ -1,0 +1,30 @@
+:root {
+  --bg-0: #12161c;
+  --bg-1: #1b2128;
+  --bg-2: #243040;
+  --bg-3: #2a3340;
+  --ink: #e8eef4;
+  --ink-muted: #9aa8b5;
+  --line: rgba(232, 238, 244, 0.12);
+  --cyan: #3ddcb5;
+  --cyan-dim: rgba(61, 220, 181, 0.18);
+  --amber: #e0a106;
+  --amber-dim: rgba(224, 161, 6, 0.18);
+  --blue-cable: #3b82f6;
+  --red-fault: #ef5b5b;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'IBM Plex Sans', sans-serif;
+  --radius: 14px;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
