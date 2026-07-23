@@ -122,12 +122,32 @@ Five guided missions + sandbox. JSON sources live in `prototype/src/missions/`.
 **Teaches:** Parallel circuits / mixed VLANs.  
 **Par time:** 150s
 
+## Mission 9 — Power the Rack
+
+**Objective:** Power ToR + SERVER-01 from PDU, then restore data path.  
+**Teaches:** Active gear is dark without PDU power.
+
+## Mission 10 — Console & Mgmt IP
+
+**Objective:** Console into ToR; set `10.10.10.2/24` on Gi1/0/1.  
+**Teaches:** Out-of-band console + valid host addressing.
+
+## Mission 11 — Same Subnet Ping
+
+**Objective:** Address SERVER-01 and ping FW-EDGE on `10.10.10.0/24`.  
+**Teaches:** Same-subnet reachability.
+
+## Mission 12 — Firewall Permit
+
+**Objective:** Insert permit ACL so LAN ping succeeds.  
+**Teaches:** Top-down firewall policy / implicit deny.
+
 ## Sandbox
 
-- Same rack devices as missions (copper panel, fiber tray, ToR copper + SFP, 3 servers)
-- Select a copper switch port → **Cycle VLAN** / **Toggle admin**
-- No goals; reset button
-- Copper + fiber inventory for free play
+- Full rack: panel, fiber, ToR, SFP, firewall, servers, console, PDU
+- Config panel: IP, ping, firewall permit helper
+- Select copper switch port → **Cycle VLAN** / **Toggle admin**
+- Inventory includes copper, fiber, power, console
 
 ---
 
