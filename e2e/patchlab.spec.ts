@@ -1,35 +1,79 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import {
+  applyIp,
   clearApp,
   connectPorts,
   expectDebrief,
   expectTip,
+  focusDevice,
+  pingFromFocused,
+  setAccessVlan,
+  setTrunkMode,
   shot,
   shotDir,
   startMission,
   tapPort,
   unlockThrough,
+  unplugPort,
 } from './helpers';
 
 test.beforeAll(() => {
   fs.mkdirSync(shotDir, { recursive: true });
 });
 
-test.describe('PatchLab browser QA', () => {
+test.describe('home & shell', () => {
   test('home, glossary, and sound toggle', async ({ page }) => {
     await clearApp(page);
     await shot(page, '01-home');
     await expect(page.getByText('PatchLab').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /First Lights On/i })).toBeEnabled();
+    await expect(page.locator('.progress-strip')).toContainText('/18');
+    await expect(page.getByRole('button', { name: /Deny One Host/i })).toBeVisible();
     await page.getByRole('button', { name: 'Glossary' }).click();
-    await expect(page.getByRole('dialog', { name: 'Glossary' })).toBeVisible();
-    await expect(page.getByText('Firewall ACL')).toBeVisible();
-    await page.getByRole('button', { name: 'Close' }).click();
+    const glossary = page.getByRole('dialog', { name: 'Glossary' });
+    await expect(glossary).toBeVisible();
+    await expect(glossary.getByText('Firewall ACL')).toBeVisible();
+    await expect(glossary.getByText('Static NAT', { exact: true })).toBeVisible();
+    await expect(glossary.getByText('Default gateway')).toBeVisible();
+    await glossary.getByRole('button', { name: 'Close' }).click();
     await page.getByRole('button', { name: /Sound:/i }).click();
     await expect(page.getByRole('button', { name: /Sound: Off/i })).toBeVisible();
   });
 
+  test('later missions stay locked until prior clears', async ({ page }) => {
+    await clearApp(page);
+    await expect(page.getByRole('button', { name: /Wrong Port/i })).toBeDisabled();
+    await expect(page.getByRole('button', { name: /Static NAT/i })).toBeDisabled();
+  });
+
+  test('sandbox shows PDU, firewall, config panel', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 4);
+    await page.getByRole('button', { name: /Open Sandbox/i }).click();
+    await expect(page.locator('.config-panel')).toBeVisible();
+    await expect(page.locator('svg.rack-svg')).toContainText('PDU-A');
+    await expect(page.locator('svg.rack-svg')).toContainText('FW-EDGE');
+    await expect(page.locator('svg.rack-svg')).toContainText('ISP-PEER');
+    await focusDevice(page, 'ToR-SW-A');
+    await expect(page.getByRole('button', { name: 'Set access VLAN' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Mode trunk' })).toBeVisible();
+    await focusDevice(page, 'FW-EDGE');
+    await expect(page.getByRole('button', { name: 'Apply static NAT' })).toBeVisible();
+    await shot(page, '13-sandbox');
+  });
+
+  test('mobile viewport still usable', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await clearApp(page);
+    await startMission(page, /First Lights On/i);
+    await connectPorts(page, /Panel-A A-01/, /ToR-SW-A Gi1\/0\/1 VLAN 10/);
+    await expectTip(page, /Link up|Connected/i);
+    await shot(page, '17-mobile-rack');
+  });
+});
+
+test.describe('copper missions', () => {
   test('Mission 1 completes with tap-tap patching', async ({ page }) => {
     await clearApp(page);
     await startMission(page, /First Lights On/i);
@@ -41,22 +85,73 @@ test.describe('PatchLab browser QA', () => {
     await shot(page, '05-m1-debrief');
   });
 
+  test('Mission 2 moves panel to A-01', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 2);
+    await startMission(page, /Wrong Port/i);
+    await unplugPort(page, /Panel-A A-03/);
+    await connectPorts(page, /Panel-A A-01/, /ToR-SW-A Gi1\/0\/1 VLAN 10/);
+    await expectDebrief(page);
+  });
+
   test('Mission 3 VLAN trap shows mismatch then completes', async ({ page }) => {
     await clearApp(page);
     await unlockThrough(page, 3);
     await startMission(page, /VLAN Trap/i);
     await expectTip(page, /VLAN mismatch/i);
-    await tapPort(page, /SERVER-07 eth0 VLAN 20/);
-    await page.getByRole('button', { name: 'Unplug' }).click();
+    await unplugPort(page, /SERVER-07 eth0 VLAN 20/);
     await connectPorts(page, /ToR-SW-A Gi1\/0\/7 VLAN 20/, /SERVER-07 eth0 VLAN 20/);
     await expectDebrief(page);
   });
 
+  test('Mission 4 escapes admin-down port', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 4);
+    await startMission(page, /Admin Down/i);
+    await expectTip(page, /admin down/i);
+    await unplugPort(page, /ToR-SW-A Gi1\/0\/4/);
+    await connectPorts(page, /Panel-A A-04/, /ToR-SW-A Gi1\/0\/6 VLAN 10/);
+    await expectDebrief(page);
+  });
+
+  test('Mission 5 change window migration', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 5);
+    await startMission(page, /Change Window/i);
+    await unplugPort(page, /Panel-A A-01/);
+    await connectPorts(page, /Panel-A A-08/, /ToR-SW-A Gi1\/0\/8 VLAN 10/);
+    await expectDebrief(page);
+  });
+
+  test('Mission 8 dual server bring-up', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 8);
+    await startMission(page, /Dual Server Bring-up/i);
+    await connectPorts(page, /Panel-A A-01/, /ToR-SW-A Gi1\/0\/1 VLAN 10/);
+    await connectPorts(page, /ToR-SW-A Gi1\/0\/5 VLAN 10/, /SERVER-01 eth0 VLAN 10/);
+    await connectPorts(page, /Panel-A A-02/, /ToR-SW-A Gi1\/0\/3 VLAN 10/);
+    await connectPorts(page, /ToR-SW-A Gi1\/0\/7 VLAN 20/, /SERVER-07 eth0 VLAN 20/);
+    await expectDebrief(page);
+  });
+});
+
+test.describe('fiber / power / console missions', () => {
   test('Mission 6 fiber path', async ({ page }) => {
     await clearApp(page);
     await unlockThrough(page, 6);
     await startMission(page, /Fiber First Light/i);
     await connectPorts(page, /Fiber-Tray F-01 fiber/, /ToR-SFP Te1\/0\/1 fiber/);
+    await expectDebrief(page);
+  });
+
+  test('Mission 7 replaces wrong media with fiber', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 7);
+    await startMission(page, /Wrong Media/i);
+    await expectTip(page, /Wrong cord|Media mismatch/i);
+    await unplugPort(page, /Fiber-Tray F-02 fiber/);
+    await connectPorts(page, /Fiber-Tray F-02 fiber/, /ToR-SFP Te1\/0\/2 fiber/);
+    await connectPorts(page, /SERVER-09 eth1-F fiber/, /ToR-SFP Te1\/0\/4 fiber/);
     await expectDebrief(page);
   });
 
@@ -79,23 +174,40 @@ test.describe('PatchLab browser QA', () => {
     await unlockThrough(page, 10);
     await startMission(page, /Console & Mgmt IP/i);
     await connectPorts(page, /Console TTY1 console/, /ToR-SW-A CON console/);
-    await page.getByRole('button', { name: /ToR-SW-A Gi1\/0\/1 VLAN 10/ }).click();
+    await tapPort(page, /ToR-SW-A Gi1\/0\/1 VLAN 10/);
     await expect(page.locator('.config-panel')).toContainText(/ToR-SW-A/);
-    await page.locator('.config-panel select').first().selectOption('sw-1');
-    await page.locator('.config-panel input').nth(0).fill('10.10.10.2');
-    await page.locator('.config-panel input').nth(1).fill('24');
-    await page.locator('.config-panel input').nth(2).fill('10.10.10.1');
-    await page.getByRole('button', { name: 'Apply IP' }).click();
+    await applyIp(page, {
+      portId: 'sw-1',
+      address: '10.10.10.2',
+      prefix: '24',
+      gateway: '10.10.10.1',
+    });
     await expectDebrief(page);
     await shot(page, '21-m10-debrief');
+  });
+});
+
+test.describe('logic / security missions', () => {
+  test('Mission 11 same-subnet ping', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 11);
+    await startMission(page, /Same Subnet Ping/i);
+    await connectPorts(page, /ToR-SW-A Gi1\/0\/5 VLAN 10/, /SERVER-01 eth0 VLAN 10/);
+    await focusDevice(page, 'SERVER-01');
+    await applyIp(page, {
+      portId: 'nic-1',
+      address: '10.10.10.10',
+      prefix: '24',
+      gateway: '10.10.10.1',
+    });
+    await expectDebrief(page);
   });
 
   test('Mission 12 firewall permit then ping', async ({ page }) => {
     await clearApp(page);
     await unlockThrough(page, 12);
     await startMission(page, /Firewall Permit/i);
-    // Focus firewall chassis via its LCD/name region
-    await page.locator('text=FW-EDGE').first().click();
+    await focusDevice(page, 'FW-EDGE');
     await page.getByRole('button', { name: /Insert permit 10\.10\.10\.0\/24/i }).click();
     await expectDebrief(page);
     await shot(page, '22-m12-debrief');
@@ -105,23 +217,66 @@ test.describe('PatchLab browser QA', () => {
     await clearApp(page);
     await unlockThrough(page, 13);
     await startMission(page, /Access VLAN Assign/i);
-    await page.locator('text=ToR-SW-A').first().click();
-    const selects = page.locator('.config-panel select');
-    // Interface (IP) · Switchport port · Access VLAN
-    await selects.nth(1).selectOption('sw-6');
-    await selects.nth(2).selectOption('20');
-    await page.getByRole('button', { name: 'Set access VLAN' }).click();
+    await focusDevice(page, 'ToR-SW-A');
+    await setAccessVlan(page, 'sw-6', '20');
+    await expectTip(page, /VLAN → 20|access VLAN → 20/i);
     await connectPorts(page, /ToR-SW-A Gi1\/0\/6 VLAN 20/, /SERVER-07 eth0 VLAN 20/);
     await expectDebrief(page);
     await shot(page, '23-m13-debrief');
+  });
+
+  test('Mission 14 VLAN isolation proves ping fail', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 14);
+    await startMission(page, /VLAN Isolation/i);
+    await connectPorts(page, /ToR-SW-A Gi1\/0\/5 VLAN 10/, /SERVER-01 eth0 VLAN 10/);
+    await connectPorts(page, /ToR-SW-A Gi1\/0\/7 VLAN 20/, /SERVER-07 eth0 VLAN 20/);
+    await focusDevice(page, 'SERVER-01');
+    await applyIp(page, { address: '10.10.10.10', prefix: '24' });
+    await focusDevice(page, 'SERVER-01');
+    await pingFromFocused(page, /SERVER-07/);
+    await expectTip(page, /Ping fail|different subnets|no default gateway|configure IPv4/i);
+    await focusDevice(page, 'SERVER-07');
+    await applyIp(page, { address: '10.10.20.10', prefix: '24' });
+    await expectDebrief(page);
+  });
+
+  test('Mission 15 default gateway to ISP peer', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 15);
+    await startMission(page, /Default Gateway/i);
+    await connectPorts(page, /ToR-SW-A Gi1\/0\/5 VLAN 10/, /SERVER-01 eth0 VLAN 10/);
+    await connectPorts(page, /FW-EDGE LAN0/, /ToR-SW-A Gi1\/0\/2 VLAN 10/);
+    await focusDevice(page, 'SERVER-01');
+    await applyIp(page, {
+      address: '10.10.10.10',
+      prefix: '24',
+      gateway: '10.10.10.1',
+    });
+    await focusDevice(page, 'FW-EDGE');
+    await page.getByRole('button', { name: /Insert permit LAN → WAN/i }).click();
+    await expectDebrief(page);
+    await shot(page, '26-m15-debrief');
+  });
+
+  test('Mission 16 trunk uplink', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 16);
+    await startMission(page, /Trunk Uplink/i);
+    await focusDevice(page, 'ToR-SW-A');
+    await setTrunkMode(page, 'sw-8');
+    await expectTip(page, /mode → trunk/i);
+    await connectPorts(page, /ToR-SW-A Gi1\/0\/8 VLAN 10/, /FW-EDGE LAN0/);
+    await expectDebrief(page);
   });
 
   test('Mission 17 static NAT inbound', async ({ page }) => {
     await clearApp(page);
     await unlockThrough(page, 17);
     await startMission(page, /Static NAT/i);
-    await page.locator('text=FW-EDGE').first().click();
+    await focusDevice(page, 'FW-EDGE');
     await page.getByRole('button', { name: 'Apply static NAT' }).click();
+    await expectTip(page, /NAT 10\.10\.10\.10/i);
     await page.getByRole('button', { name: /Insert permit WAN → LAN/i }).click();
     await expectDebrief(page);
     await shot(page, '24-m17-debrief');
@@ -131,28 +286,12 @@ test.describe('PatchLab browser QA', () => {
     await clearApp(page);
     await unlockThrough(page, 18);
     await startMission(page, /Deny One Host/i);
-    await page.locator('text=FW-EDGE').first().click();
+    await focusDevice(page, 'SERVER-07');
+    await pingFromFocused(page, /ISP-PEER/);
+    await expectTip(page, /Ping ok/i);
+    await focusDevice(page, 'FW-EDGE');
     await page.getByRole('button', { name: /Insert deny host 10\.10\.10\.20/i }).click();
     await expectDebrief(page);
     await shot(page, '25-m18-debrief');
-  });
-
-  test('sandbox shows PDU, firewall, config panel', async ({ page }) => {
-    await clearApp(page);
-    await unlockThrough(page, 4);
-    await page.getByRole('button', { name: /Open Sandbox/i }).click();
-    await expect(page.locator('.config-panel')).toBeVisible();
-    await expect(page.locator('svg.rack-svg')).toContainText('PDU-A');
-    await expect(page.locator('svg.rack-svg')).toContainText('FW-EDGE');
-    await shot(page, '13-sandbox');
-  });
-
-  test('mobile viewport still usable', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await clearApp(page);
-    await startMission(page, /First Lights On/i);
-    await connectPorts(page, /Panel-A A-01/, /ToR-SW-A Gi1\/0\/1 VLAN 10/);
-    await expectTip(page, /Link up|Connected/i);
-    await shot(page, '17-mobile-rack');
   });
 });

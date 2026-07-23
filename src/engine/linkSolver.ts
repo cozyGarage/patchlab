@@ -389,11 +389,15 @@ export function evaluatePing(
       };
     }
   } else {
+    // WAN peers may use a directly attached firewall without configuring a gateway.
+    // LAN hosts must set an explicit default gateway (CCNA lesson).
     router = rack.devices.find(
       (d) =>
-        (d.role === 'firewall' || d.role === 'switch') &&
+        d.role === 'firewall' &&
         isDevicePowered(rack, d.id) &&
-        d.ports.some((p) => p.ip && sameSubnet(fromIp, p.ip)),
+        d.ports.some(
+          (p) => p.kind === 'wan' && p.ip && sameSubnet(fromIp, p.ip),
+        ),
     );
     if (!router) {
       return {
