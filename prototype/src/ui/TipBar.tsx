@@ -1,14 +1,18 @@
-import type { Tip } from '../types/schema';
+import type { Inventory, Tip } from '../types/schema';
 
 interface TipBarProps {
   tip?: Tip;
-  inventory: number;
+  inventory: Inventory;
   goalsMet: boolean[];
   goalLabels: string[];
   onHint?: () => void;
   onUnplugSelected?: () => void;
   canUnplug?: boolean;
   showHint?: boolean;
+  sandbox?: boolean;
+  onCycleVlan?: () => void;
+  onToggleAdmin?: () => void;
+  canEditPort?: boolean;
 }
 
 export function TipBar({
@@ -20,6 +24,10 @@ export function TipBar({
   onUnplugSelected,
   canUnplug,
   showHint,
+  sandbox,
+  onCycleVlan,
+  onToggleAdmin,
+  canEditPort,
 }: TipBarProps) {
   const level = tip?.level ?? 'info';
   return (
@@ -29,17 +37,23 @@ export function TipBar({
           {tip?.message ?? 'Select a port, then connect to another port.'}
         </div>
         <div className="rack-stats">
-          <span>Cat6 × {inventory}</span>
+          <span>Cu × {inventory.copper_cat6}</span>
+          <span>Fib × {inventory.fiber_om4}</span>
         </div>
       </div>
-      <div className="goal-pills">
-        {goalLabels.map((label, i) => (
-          <span key={label} className={`goal-pill ${goalsMet[i] ? 'met' : ''}`}>
-            {goalsMet[i] ? '✓ ' : ''}
-            {label}
-          </span>
-        ))}
-      </div>
+      {goalLabels.length > 0 ? (
+        <div className="goal-pills">
+          {goalLabels.map((label, i) => (
+            <span
+              key={label}
+              className={`goal-pill ${goalsMet[i] ? 'met' : ''}`}
+            >
+              {goalsMet[i] ? '✓ ' : ''}
+              {label}
+            </span>
+          ))}
+        </div>
+      ) : null}
       <div className="actions">
         {showHint && onHint ? (
           <button type="button" className="btn btn-ghost" onClick={onHint}>
@@ -53,6 +67,20 @@ export function TipBar({
             onClick={onUnplugSelected}
           >
             Unplug
+          </button>
+        ) : null}
+        {sandbox && canEditPort && onCycleVlan ? (
+          <button type="button" className="btn btn-ghost" onClick={onCycleVlan}>
+            Cycle VLAN
+          </button>
+        ) : null}
+        {sandbox && canEditPort && onToggleAdmin ? (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={onToggleAdmin}
+          >
+            Toggle admin
           </button>
         ) : null}
       </div>

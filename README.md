@@ -21,9 +21,11 @@ npm run build # production bundle to prototype/dist
 
 - Home → mission brief → rack patching → star debrief
 - **Tap-tap** or **drag** cables between ports
-- Instant LED + tip feedback (VLAN mismatch, admin down, busy port)
-- Missions 1–5 with local progress in `localStorage`
-- Sandbox unlocks after Mission 3
+- Instant LED + tip feedback (VLAN, admin-down, media mismatch)
+- **8 missions**: copper basics → fiber → dual-server bring-up
+- Ghost **hints**, goal **path glow**, glossary, optional sound
+- Sandbox (after M3): cycle VLANs / toggle admin, mix copper + fiber
+- Progress in `localStorage`
 
 ## Docs
 

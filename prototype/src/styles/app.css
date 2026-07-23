@@ -357,6 +357,110 @@ p {
   pointer-events: none;
 }
 
+.cable-hint {
+  fill: none;
+  stroke: rgba(61, 220, 181, 0.75);
+  stroke-width: 3.5;
+  stroke-dasharray: 8 7;
+  stroke-linecap: round;
+  pointer-events: none;
+  animation: dash 1.1s linear infinite;
+}
+
+.cable-path.cable-glow {
+  stroke-width: 4.5;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -30;
+  }
+}
+
+.port-shell.fiber {
+  fill: #151b22;
+  stroke: rgba(45, 212, 191, 0.55);
+  stroke-width: 1.5;
+}
+
+.port-shell.glowing {
+  stroke: var(--cyan);
+  stroke-width: 2.5;
+}
+
+.home-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.track-pill {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  vertical-align: middle;
+  border: 1px solid var(--line);
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.track-pill.track-fiber {
+  color: #2dd4bf;
+  border-color: rgba(45, 212, 191, 0.45);
+}
+
+.track-pill.track-mixed {
+  color: #93c5fd;
+  border-color: rgba(147, 197, 253, 0.45);
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 14, 0.55);
+  z-index: 40;
+  display: grid;
+  justify-items: end;
+}
+
+.drawer {
+  width: min(380px, 100%);
+  height: 100%;
+  padding: 18px 16px;
+  overflow: auto;
+  border-radius: 0;
+  border-left: 1px solid var(--line);
+}
+
+.drawer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.glossary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.glossary-list li strong {
+  font-family: var(--font-display);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.glossary-list li p {
+  font-size: 0.92rem;
+}
+
 .tip-bar {
   display: grid;
   gap: 8px;

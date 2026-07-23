@@ -1,11 +1,11 @@
-/** Canonical PatchLab simulation types (MVP). */
+/** Canonical PatchLab simulation types. */
 
-export type DeviceRole = 'patch_panel' | 'switch' | 'server';
-export type MediaType = 'copper_cat6';
-export type Connector = 'rj45';
+export type DeviceRole = 'patch_panel' | 'switch' | 'server' | 'fiber_tray';
+export type MediaType = 'copper_cat6' | 'fiber_om4';
+export type Connector = 'rj45' | 'lc';
 export type LinkStatus = 'up' | 'down' | 'fault';
 export type PortAdmin = 'up' | 'down';
-export type CableColor = 'blue' | 'yellow' | 'orange' | 'gray';
+export type CableColor = 'blue' | 'yellow' | 'orange' | 'gray' | 'aqua';
 export type TipLevel = 'info' | 'success' | 'warn' | 'error';
 
 export type TipCode =
@@ -19,7 +19,9 @@ export type TipCode =
   | 'LABEL_MISMATCH'
   | 'OPEN_CIRCUIT'
   | 'GOAL_COMPLETE'
-  | 'INVALID_PORTS';
+  | 'INVALID_PORTS'
+  | 'HINT'
+  | 'PORT_UPDATED';
 
 export interface PortRef {
   deviceId: string;
@@ -34,7 +36,7 @@ export interface Port {
   media: MediaType;
   connector: Connector;
   admin: PortAdmin;
-  role: 'network' | 'nic' | 'panel';
+  role: 'network' | 'nic' | 'panel' | 'fiber';
   vlanId?: number;
   accessVlan?: number;
 }
@@ -66,7 +68,13 @@ export type Goal =
   | { type: 'path_up'; from: PortRef; to: PortRef }
   | { type: 'port_in_path'; port: PortRef; from: PortRef; to: PortRef }
   | { type: 'no_cables_on'; ports: PortRef[] }
-  | { type: 'cable_color_between'; a: PortRef; b: PortRef; color: CableColor };
+  | { type: 'cable_color_between'; a: PortRef; b: PortRef; color: CableColor }
+  | { type: 'cable_media_between'; a: PortRef; b: PortRef; media: MediaType };
+
+export interface Inventory {
+  copper_cat6: number;
+  fiber_om4: number;
+}
 
 export interface Mission {
   id: string;
@@ -76,9 +84,10 @@ export interface Mission {
   constraints: string[];
   parTimeSec: number;
   hintAfterWrongAttempts: number;
-  inventory: { copper_cat6: number };
+  inventory: Inventory;
   initial: RackState;
   goals: Goal[];
+  track?: 'copper' | 'fiber' | 'mixed';
 }
 
 export interface Tip {
@@ -92,6 +101,11 @@ export interface PathInfo {
   status: LinkStatus;
 }
 
+export interface HintGhost {
+  a: PortRef;
+  b: PortRef;
+}
+
 export interface SimSnapshot {
   rack: RackState;
   linkTable: Record<string, LinkStatus>;
@@ -99,15 +113,19 @@ export interface SimSnapshot {
   goalsMet: boolean[];
   complete: boolean;
   lastTip?: Tip;
-  inventory: { copper_cat6: number };
+  inventory: Inventory;
+  hintGhost?: HintGhost | null;
+  glowingPortIds: string[];
 }
 
 export type Intent =
-  | { type: 'CONNECT'; a: PortRef; b: PortRef; color?: CableColor }
+  | { type: 'CONNECT'; a: PortRef; b: PortRef; color?: CableColor; media?: MediaType }
   | { type: 'DISCONNECT'; cableId: string }
   | { type: 'DISCONNECT_PORT'; port: PortRef }
   | { type: 'RESET' }
-  | { type: 'REQUEST_HINT' };
+  | { type: 'REQUEST_HINT' }
+  | { type: 'CYCLE_VLAN'; port: PortRef }
+  | { type: 'TOGGLE_ADMIN'; port: PortRef };
 
 export interface Score {
   correctness: 0 | 1 | 2 | 3;
@@ -122,10 +140,20 @@ export interface ProgressSave {
   sandboxUnlocked: boolean;
 }
 
+export interface SettingsSave {
+  version: 1;
+  sound: boolean;
+  reducedHints: boolean;
+}
+
 export function portKey(ref: PortRef): string {
   return `${ref.deviceId}::${ref.portId}`;
 }
 
 export function samePort(a: PortRef, b: PortRef): boolean {
   return a.deviceId === b.deviceId && a.portId === b.portId;
+}
+
+export function emptyInventory(): Inventory {
+  return { copper_cat6: 0, fiber_om4: 0 };
 }

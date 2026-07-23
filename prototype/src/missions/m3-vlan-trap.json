@@ -2,6 +2,7 @@
   "id": "m3-vlan-trap",
   "title": "VLAN Trap",
   "order": 3,
+  "track": "copper",
   "brief": "SERVER-07 belongs on VLAN 20. It is patched to Gi1/0/2 (VLAN 10) — the cable looks fine, but the link will not pass. Move the server cable to Gi1/0/7 (VLAN 20).",
   "constraints": [
     "SERVER-07 access VLAN is 20",
@@ -9,7 +10,7 @@
   ],
   "parTimeSec": 120,
   "hintAfterWrongAttempts": 2,
-  "inventory": { "copper_cat6": 2 },
+  "inventory": { "copper_cat6": 2, "fiber_om4": 0 },
   "initial": {
     "devices": [],
     "cables": [

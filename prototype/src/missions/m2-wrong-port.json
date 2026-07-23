@@ -2,6 +2,7 @@
   "id": "m2-wrong-port",
   "title": "Wrong Port, Right Intent",
   "order": 2,
+  "track": "copper",
   "brief": "The ticket says SERVER-01 should ride panel label A-01. Someone patched A-03 instead. Move the panel cross-connect to A-01 and clear the wrong port.",
   "constraints": [
     "Final panel port must be A-01",
@@ -9,7 +10,7 @@
   ],
   "parTimeSec": 75,
   "hintAfterWrongAttempts": 2,
-  "inventory": { "copper_cat6": 2 },
+  "inventory": { "copper_cat6": 2, "fiber_om4": 0 },
   "initial": {
     "devices": [],
     "cables": [

@@ -18,6 +18,19 @@
       ]
     },
     {
+      "id": "fiber-tray",
+      "role": "fiber_tray",
+      "name": "Fiber-Tray",
+      "rackUnitStart": 41,
+      "heightU": 1,
+      "ports": [
+        { "id": "f-1", "deviceId": "fiber-tray", "index": 1, "label": "F-01", "media": "fiber_om4", "connector": "lc", "admin": "up", "role": "fiber" },
+        { "id": "f-2", "deviceId": "fiber-tray", "index": 2, "label": "F-02", "media": "fiber_om4", "connector": "lc", "admin": "up", "role": "fiber" },
+        { "id": "f-3", "deviceId": "fiber-tray", "index": 3, "label": "F-03", "media": "fiber_om4", "connector": "lc", "admin": "up", "role": "fiber" },
+        { "id": "f-4", "deviceId": "fiber-tray", "index": 4, "label": "F-04", "media": "fiber_om4", "connector": "lc", "admin": "up", "role": "fiber" }
+      ]
+    },
+    {
       "id": "tor-1",
       "role": "switch",
       "name": "ToR-SW-A",
@@ -32,6 +45,19 @@
         { "id": "sw-6", "deviceId": "tor-1", "index": 6, "label": "Gi1/0/6", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "network", "vlanId": 10 },
         { "id": "sw-7", "deviceId": "tor-1", "index": 7, "label": "Gi1/0/7", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "network", "vlanId": 20 },
         { "id": "sw-8", "deviceId": "tor-1", "index": 8, "label": "Gi1/0/8", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "network", "vlanId": 10 }
+      ]
+    },
+    {
+      "id": "tor-sfp",
+      "role": "switch",
+      "name": "ToR-SFP",
+      "rackUnitStart": 39,
+      "heightU": 1,
+      "ports": [
+        { "id": "sfp-1", "deviceId": "tor-sfp", "index": 1, "label": "Te1/0/1", "media": "fiber_om4", "connector": "lc", "admin": "up", "role": "network" },
+        { "id": "sfp-2", "deviceId": "tor-sfp", "index": 2, "label": "Te1/0/2", "media": "fiber_om4", "connector": "lc", "admin": "up", "role": "network" },
+        { "id": "sfp-3", "deviceId": "tor-sfp", "index": 3, "label": "Te1/0/3", "media": "fiber_om4", "connector": "lc", "admin": "down", "role": "network" },
+        { "id": "sfp-4", "deviceId": "tor-sfp", "index": 4, "label": "Te1/0/4", "media": "fiber_om4", "connector": "lc", "admin": "up", "role": "network" }
       ]
     },
     {
@@ -52,6 +78,16 @@
       "heightU": 1,
       "ports": [
         { "id": "nic-1", "deviceId": "server-07", "index": 1, "label": "eth0", "media": "copper_cat6", "connector": "rj45", "admin": "up", "role": "nic", "accessVlan": 20 }
+      ]
+    },
+    {
+      "id": "server-09",
+      "role": "server",
+      "name": "SERVER-09",
+      "rackUnitStart": 10,
+      "heightU": 1,
+      "ports": [
+        { "id": "nic-f", "deviceId": "server-09", "index": 1, "label": "eth1-F", "media": "fiber_om4", "connector": "lc", "admin": "up", "role": "nic" }
       ]
     }
   ],

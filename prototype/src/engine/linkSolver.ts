@@ -22,7 +22,10 @@ function indexPorts(devices: Device[]): Map<string, Port> {
   return map;
 }
 
-function findCableOnPort(cables: Cable[], ref: PortRef): Cable | undefined {
+export function findCableOnPort(
+  cables: Cable[],
+  ref: PortRef,
+): Cable | undefined {
   return cables.find(
     (c) => samePort(c.ends[0], ref) || samePort(c.ends[1], ref),
   );
@@ -36,6 +39,7 @@ function otherEnd(cable: Cable, ref: PortRef): PortRef {
 export function resolvePair(
   a: Port,
   b: Port,
+  cableMedia?: Cable['media'],
 ): { status: LinkStatus; tip?: Tip } {
   if (a.media !== b.media || a.connector !== b.connector) {
     return {
@@ -43,7 +47,18 @@ export function resolvePair(
       tip: {
         level: 'error',
         code: 'MEDIA_MISMATCH',
-        message: 'Media/connector mismatch — check copper vs fiber and ends',
+        message: `Media mismatch — ${a.label} is ${a.media.replace('_', ' ')}, ${b.label} is ${b.media.replace('_', ' ')}`,
+      },
+    };
+  }
+
+  if (cableMedia && cableMedia !== a.media) {
+    return {
+      status: 'fault',
+      tip: {
+        level: 'error',
+        code: 'MEDIA_MISMATCH',
+        message: `Wrong patch cord — need ${a.media === 'fiber_om4' ? 'OM4 fiber LC' : 'Cat6 copper'}`,
       },
     };
   }
@@ -73,12 +88,13 @@ export function resolvePair(
     };
   }
 
+  const kind = a.media === 'fiber_om4' ? 'Fiber' : 'Copper';
   return {
     status: 'up',
     tip: {
       level: 'success',
       code: 'LINK_UP',
-      message: `Link up — ${a.label} ↔ ${b.label}`,
+      message: `${kind} link up — ${a.label} ↔ ${b.label}`,
     },
   };
 }
@@ -99,7 +115,7 @@ export function buildLinkTable(rack: RackState): {
     const a = ports.get(portKey(cable.ends[0]));
     const b = ports.get(portKey(cable.ends[1]));
     if (!a || !b) continue;
-    const { status, tip } = resolvePair(a, b);
+    const { status, tip } = resolvePair(a, b, cable.media);
     linkTable[portKey(cable.ends[0])] = status;
     linkTable[portKey(cable.ends[1])] = status;
     if (tip && (status === 'down' || status === 'fault')) {
@@ -140,7 +156,7 @@ export function findPath(
     const a = ports.get(tail);
     const b = ports.get(nextKey);
     if (!a || !b) continue;
-    if (resolvePair(a, b).status !== 'up') continue;
+    if (resolvePair(a, b, cable.media).status !== 'up') continue;
 
     seen.add(nextKey);
     queue.push([...path, nextKey]);
@@ -183,14 +199,79 @@ export function evaluateGoals(
         );
         return !!cable && cable.color === g.color;
       }
+      case 'cable_media_between': {
+        const cable = rack.cables.find(
+          (c) =>
+            (samePort(c.ends[0], g.a) && samePort(c.ends[1], g.b)) ||
+            (samePort(c.ends[0], g.b) && samePort(c.ends[1], g.a)),
+        );
+        return !!cable && cable.media === g.media &&
+          linkTable[portKey(g.a)] === 'up';
+      }
       default:
         return false;
     }
   });
 }
 
+export function glowingPortsFromGoals(
+  rack: RackState,
+  goals: Goal[],
+  goalsMet: boolean[],
+): string[] {
+  const ids = new Set<string>();
+  goals.forEach((g, i) => {
+    if (!goalsMet[i]) return;
+    if (g.type === 'link_up') {
+      ids.add(portKey(g.a));
+      ids.add(portKey(g.b));
+    } else if (g.type === 'path_up') {
+      const path = findPath(rack, g.from, g.to);
+      path?.portIds.forEach((id) => ids.add(id));
+    } else if (g.type === 'cable_media_between') {
+      ids.add(portKey(g.a));
+      ids.add(portKey(g.b));
+    }
+  });
+  return [...ids];
+}
+
 export function getPort(rack: RackState, ref: PortRef): Port | undefined {
   return rack.devices
     .find((d) => d.id === ref.deviceId)
     ?.ports.find((p) => p.id === ref.portId);
+}
+
+export function hintForGoal(goal: Goal | undefined): {
+  message: string;
+  ghost?: { a: PortRef; b: PortRef };
+} {
+  if (!goal) {
+    return { message: 'Check port labels, media, and VLAN on the switch' };
+  }
+  switch (goal.type) {
+    case 'link_up':
+    case 'cable_media_between':
+    case 'cable_color_between':
+      return {
+        message: `Hint: patch ${goal.a.portId} ↔ ${goal.b.portId}`,
+        ghost: { a: goal.a, b: goal.b },
+      };
+    case 'path_up':
+      return {
+        message: `Hint: build a clean path ${goal.from.portId} → ${goal.to.portId}`,
+        ghost: { a: goal.from, b: goal.to },
+      };
+    case 'no_cables_on':
+      return {
+        message: `Hint: clear ${goal.ports.map((p) => p.portId).join(', ')}`,
+      };
+    case 'port_in_path':
+      return {
+        message: `Hint: include ${goal.port.portId} on the active path`,
+        ghost: { a: goal.from, b: goal.to },
+      };
+    default:
+      return { message: 'Check port labels, media, and VLAN on the switch' };
+  }
 }

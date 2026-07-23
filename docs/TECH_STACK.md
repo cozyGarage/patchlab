@@ -92,16 +92,17 @@ Product brief, screens, model, missions, stack.
 - Tip bar + debrief stars
 - PWA manifest
 
-### Phase 3 — Juice & pedagogy
-- Stronger path-glow on goal complete
-- Ghost hint overlay drawn on rack
+### Phase 3 — Juice & pedagogy ✅
+- Path glow on completed goal ports/cables
+- Ghost hint overlay on rack
 - Glossary drawer
 - Sound toggles
 
-### Phase 4 — Expand content
-- Fiber module
-- Second rack
-- Classroom progress export
+### Phase 4 — Expand content (in progress)
+- Fiber tray + SFP cage + SERVER-09 ✅
+- Missions 6–8 ✅
+- Sandbox VLAN/admin editing ✅
+- Second full rack / classroom export — later
 
 ---
 

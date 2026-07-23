@@ -1,4 +1,4 @@
-import type { Mission, ProgressSave } from '../types/schema';
+import type { Mission, ProgressSave, SettingsSave } from '../types/schema';
 import {
   isMissionUnlocked,
   starGlyph,
@@ -8,15 +8,21 @@ import {
 interface MissionListProps {
   missions: Mission[];
   progress: ProgressSave;
+  settings: SettingsSave;
   onSelect: (mission: Mission) => void;
   onSandbox: () => void;
+  onToggleSound: () => void;
+  onOpenGlossary: () => void;
 }
 
 export function MissionList({
   missions,
   progress,
+  settings,
   onSelect,
   onSandbox,
+  onToggleSound,
+  onOpenGlossary,
 }: MissionListProps) {
   const cleared = progress.clearedMissionIds.length;
 
@@ -29,14 +35,15 @@ export function MissionList({
         </div>
         <h1 className="brand">Patch with instant truth.</h1>
         <p>
-          Practice datacenter copper patching. Lights, VLANs, and labels respond
-          the moment you plug in.
+          Copper, fiber, VLANs, and messy tickets — practice datacenter patching
+          with lights that tell you the truth immediately.
         </p>
       </header>
 
       <div className="progress-strip panel">
         <span>
-          Missions cleared <strong style={{ color: 'var(--ink)' }}>{cleared}</strong>/
+          Missions cleared{' '}
+          <strong style={{ color: 'var(--ink)' }}>{cleared}</strong>/
           {missions.length}
         </span>
         <span>
@@ -44,10 +51,20 @@ export function MissionList({
         </span>
       </div>
 
+      <div className="home-toolbar">
+        <button type="button" className="btn btn-ghost" onClick={onOpenGlossary}>
+          Glossary
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={onToggleSound}>
+          Sound: {settings.sound ? 'On' : 'Off'}
+        </button>
+      </div>
+
       <div className="mission-list">
         {missions.map((mission) => {
           const unlocked = isMissionUnlocked(mission.order, progress);
           const clearedMission = progress.clearedMissionIds.includes(mission.id);
+          const track = mission.track ?? 'copper';
           return (
             <button
               key={mission.id}
@@ -58,8 +75,15 @@ export function MissionList({
             >
               <div className="mission-num">{mission.order}</div>
               <div className="mission-meta">
-                <h3>{mission.title}</h3>
-                <p>{unlocked ? mission.brief : 'Clear the previous mission to unlock'}</p>
+                <h3>
+                  {mission.title}{' '}
+                  <span className={`track-pill track-${track}`}>{track}</span>
+                </h3>
+                <p>
+                  {unlocked
+                    ? mission.brief
+                    : 'Clear the previous mission to unlock'}
+                </p>
               </div>
               <div className="stars" aria-label="stars">
                 {clearedMission ? starGlyph(progress.stars[mission.id]) : '···'}
@@ -75,7 +99,9 @@ export function MissionList({
         disabled={!progress.sandboxUnlocked}
         onClick={onSandbox}
       >
-        {progress.sandboxUnlocked ? 'Open Sandbox' : 'Sandbox unlocks after Mission 3'}
+        {progress.sandboxUnlocked
+          ? 'Open Sandbox'
+          : 'Sandbox unlocks after Mission 3'}
       </button>
     </div>
   );

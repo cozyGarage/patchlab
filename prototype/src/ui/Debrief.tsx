@@ -48,8 +48,8 @@ export function Debrief({
           <h3 style={{ marginBottom: 8 }}>What you practiced</h3>
           <ul className="checklist">
             <li>Reading port link lights after each patch</li>
-            <li>Matching physical ports to the ticket</li>
-            <li>Spotting VLAN / admin-down faults quickly</li>
+            <li>Matching physical ports and media to the ticket</li>
+            <li>Spotting VLAN, admin-down, and media faults quickly</li>
           </ul>
         </div>
 

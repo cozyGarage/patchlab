@@ -2,6 +2,7 @@
   "id": "m5-change-window",
   "title": "Change Window",
   "order": 5,
+  "track": "copper",
   "brief": "Migrate the documented panel cross-connect from A-01/Gi1/0/1 to A-08/Gi1/0/8. Keep SERVER-01 online on Gi1/0/5. Finish clean: old ports empty, new path lit.",
   "constraints": [
     "Final panel port: A-08",
@@ -10,7 +11,7 @@
   ],
   "parTimeSec": 150,
   "hintAfterWrongAttempts": 3,
-  "inventory": { "copper_cat6": 3 },
+  "inventory": { "copper_cat6": 3, "fiber_om4": 0 },
   "initial": {
     "devices": [],
     "cables": [

@@ -2,6 +2,7 @@
   "id": "m4-admin-down",
   "title": "Admin Down",
   "order": 4,
+  "track": "copper",
   "brief": "The patch to Gi1/0/4 looks perfect, but the light stays dark. That port is administratively down. Move the panel cross-connect to a known-good port (Gi1/0/6) and bring SERVER-01 up.",
   "constraints": [
     "Do not leave a cable on Gi1/0/4",
@@ -9,7 +10,7 @@
   ],
   "parTimeSec": 90,
   "hintAfterWrongAttempts": 2,
-  "inventory": { "copper_cat6": 3 },
+  "inventory": { "copper_cat6": 3, "fiber_om4": 0 },
   "initial": {
     "devices": [],
     "cables": [

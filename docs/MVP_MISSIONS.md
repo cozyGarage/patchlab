@@ -104,12 +104,30 @@ Five guided missions + sandbox. JSON sources live in `prototype/src/missions/`.
 
 ---
 
+## Mission 6 — Fiber First Light
+
+**Objective:** Patch OM4 fiber tray `F-01` to `Te1/0/1`.  
+**Teaches:** Fiber LC vs copper; SFP cages.  
+**Par time:** 90s
+
+## Mission 7 — Wrong Media
+
+**Objective:** Replace Cat6 mistakenly used on fiber ports; bring SERVER-09 up on fiber.  
+**Teaches:** Media mismatch faults.  
+**Par time:** 120s
+
+## Mission 8 — Dual Server Bring-up
+
+**Objective:** Bring SERVER-01 (VLAN 10) and SERVER-07 (VLAN 20) online with panel docs A-01/A-02.  
+**Teaches:** Parallel circuits / mixed VLANs.  
+**Par time:** 150s
+
 ## Sandbox
 
-- Same rack devices as missions
-- All ports editable: tap switch port → cycle VLAN 10/20, toggle admin
+- Same rack devices as missions (copper panel, fiber tray, ToR copper + SFP, 3 servers)
+- Select a copper switch port → **Cycle VLAN** / **Toggle admin**
 - No goals; reset button
-- Challenge seeds (optional later): “Make both servers live on VLAN 20”
+- Copper + fiber inventory for free play
 
 ---
 

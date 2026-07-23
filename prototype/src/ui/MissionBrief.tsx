@@ -19,6 +19,8 @@ function goalText(mission: Mission): string[] {
         return `Include ${g.port.portId} on the active path`;
       case 'cable_color_between':
         return `Use a ${g.color} cable between ends`;
+      case 'cable_media_between':
+        return `Use ${g.media === 'fiber_om4' ? 'OM4 fiber' : 'Cat6'} on ${g.a.portId} ↔ ${g.b.portId}`;
       default:
         return `Goal ${i + 1}`;
     }

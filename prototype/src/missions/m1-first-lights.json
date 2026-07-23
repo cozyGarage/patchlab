@@ -2,6 +2,7 @@
   "id": "m1-first-lights",
   "title": "First Lights On",
   "order": 1,
+  "track": "copper",
   "brief": "Bring SERVER-01 online. Patch panel A-01 to the switch, then the switch to the server NIC. Watch the link lights.",
   "constraints": [
     "Use Cat6 copper only",
@@ -9,7 +10,7 @@
   ],
   "parTimeSec": 90,
   "hintAfterWrongAttempts": 2,
-  "inventory": { "copper_cat6": 4 },
+  "inventory": { "copper_cat6": 4, "fiber_om4": 0 },
   "initial": {
     "devices": [],
     "cables": []

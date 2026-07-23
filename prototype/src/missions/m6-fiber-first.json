@@ -1,0 +1,35 @@
+{
+  "id": "m6-fiber-first",
+  "title": "Fiber First Light",
+  "order": 6,
+  "track": "fiber",
+  "brief": "Bring up the OM4 uplink. Patch fiber tray F-01 to Te1/0/1 with an LC fiber cord — copper will not light this path.",
+  "constraints": [
+    "Use OM4 fiber LC only for this circuit",
+    "Te1/0/3 is admin down — avoid it"
+  ],
+  "parTimeSec": 90,
+  "hintAfterWrongAttempts": 2,
+  "inventory": { "copper_cat6": 2, "fiber_om4": 3 },
+  "initial": {
+    "devices": [],
+    "cables": []
+  },
+  "goals": [
+    {
+      "type": "cable_media_between",
+      "a": { "deviceId": "fiber-tray", "portId": "f-1" },
+      "b": { "deviceId": "tor-sfp", "portId": "sfp-1" },
+      "media": "fiber_om4"
+    },
+    {
+      "type": "link_up",
+      "a": { "deviceId": "fiber-tray", "portId": "f-1" },
+      "b": { "deviceId": "tor-sfp", "portId": "sfp-1" }
+    },
+    {
+      "type": "no_cables_on",
+      "ports": [{ "deviceId": "tor-sfp", "portId": "sfp-3" }]
+    }
+  ]
+}
