@@ -32,6 +32,22 @@ const ENTRIES = [
     def: 'Top-down permit/deny rules. First match wins; an implicit deny can block traffic even when cabling looks perfect.',
   },
   {
+    term: 'Access VLAN',
+    def: 'An access port belongs to one VLAN. Change the switchport access VLAN to move a host between segments without inventing a new cable type.',
+  },
+  {
+    term: 'Trunk',
+    def: 'A trunk carries multiple VLANs (802.1Q tagging). Uplinks between switches or to a firewall often run as trunks.',
+  },
+  {
+    term: 'Default gateway',
+    def: 'The router/firewall IP on the local subnet that hosts use to leave their network. Wrong or missing gateway breaks off-subnet pings.',
+  },
+  {
+    term: 'Static NAT',
+    def: 'One-to-one mapping: one public outside IP ↔ one private inside host. Used to publish a server to WAN peers.',
+  },
+  {
     term: 'OM4 fiber / LC',
     def: 'Multimode fiber patching with LC connectors. Never seat Cat6 into an SFP cage.',
   },

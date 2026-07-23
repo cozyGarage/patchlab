@@ -10,6 +10,7 @@ import type {
   Device,
   LinkStatus,
   Port,
+  PortMode,
   PortRef,
 } from '../types/schema';
 import { portKey, samePort } from '../types/schema';
@@ -35,6 +36,12 @@ interface RackViewProps {
     gateway?: string,
   ) => void;
   onFirewallPermitLan: () => void;
+  onFirewallPermitLanWan: () => void;
+  onFirewallPermitWanLan: () => void;
+  onFirewallDenyHost: () => void;
+  onSetNat: (insideIp: string, outsideIp: string) => void;
+  onSetVlan: (port: PortRef, vlanId: number) => void;
+  onSetPortMode: (port: PortRef, mode: PortMode) => void;
   onPing: (fromId: string, toId: string) => void;
   elapsedSec: number;
 }
@@ -139,6 +146,12 @@ export function RackView({
   onToggleAdmin,
   onSetIp,
   onFirewallPermitLan,
+  onFirewallPermitLanWan,
+  onFirewallPermitWanLan,
+  onFirewallDenyHost,
+  onSetNat,
+  onSetVlan,
+  onSetPortMode,
   onPing,
   elapsedSec,
 }: RackViewProps) {
@@ -572,6 +585,12 @@ export function RackView({
           powered={!!state.snapshot.poweredDevices[focusDevice.id]}
           onSetIp={onSetIp}
           onFirewallPermitLan={onFirewallPermitLan}
+          onFirewallPermitLanWan={onFirewallPermitLanWan}
+          onFirewallPermitWanLan={onFirewallPermitWanLan}
+          onFirewallDenyHost={onFirewallDenyHost}
+          onSetNat={onSetNat}
+          onSetVlan={onSetVlan}
+          onSetPortMode={onSetPortMode}
           onPing={onPing}
           pingTargets={pingTargets}
         />

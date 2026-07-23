@@ -1,6 +1,6 @@
 # CCNA Interactive Simulation
 
-Interactive datacenter / CCNA-style trainer: **rack patching + power/console + IP/subnet + firewall**, with instant visual feedback (PC + mobile browser).
+Interactive datacenter / CCNA-style trainer: **rack patching + VLANs/trunks + IP/gateway + NAT + firewall**, with instant visual feedback (PC + mobile browser).
 
 Formerly developed as PatchLab under `/agent/prototype`.
 
@@ -22,10 +22,10 @@ npm run build
 
 ## What you can do
 
-- Realistic rack chassis: panel, fiber tray, ToR switch, SFP, firewall, servers, console station, PDU
+- Realistic rack chassis: panel, fiber tray, ToR switch, SFP, firewall, servers, console station, PDU, ISP peer
 - Plug data / fiber / power / console cords (tap-tap or drag)
-- Side config panel: IPv4/subnet, ping, firewall permit rules
-- 12 missions from first lights → power → console/IP → subnet ping → firewall
+- Side config panel: IPv4/gateway, switchport VLAN/mode, ping, firewall ACLs, static NAT
+- 18 missions: copper/fiber → power/console → subnet ping → firewall → VLAN/trunk → gateway → NAT → host deny
 - Glossary, sound toggle, hints, local progress
 
 ## Docs

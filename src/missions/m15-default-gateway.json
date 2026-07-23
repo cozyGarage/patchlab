@@ -1,0 +1,79 @@
+{
+  "id": "m15-default-gateway",
+  "title": "Default Gateway",
+  "order": 15,
+  "track": "logic",
+  "lesson": "Hosts use a default gateway to leave their subnet. Without a gateway (or with a wrong one), off-subnet destinations fail even when the LAN cable is perfect. Classic CCNA IP connectivity skill.",
+  "brief": "Patch SERVER-01 and the firewall LAN onto the switch. Give SERVER-01 10.10.10.10/24 with gateway 10.10.10.1. Permit LAN→WAN traffic, then ping ISP-PEER (203.0.113.2).",
+  "constraints": [
+    "Gateway must be 10.10.10.1 (FW LAN)",
+    "Permit 10.10.10.0/24 → 203.0.113.0/30",
+    "WAN peer is already cabled"
+  ],
+  "parTimeSec": 180,
+  "hintAfterWrongAttempts": 2,
+  "inventory": {
+    "copper_cat6": 4,
+    "fiber_om4": 0,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
+  "initial": {
+    "devices": [
+      {
+        "id": "fw-1",
+        "role": "firewall",
+        "name": "FW-EDGE",
+        "model": "NGFW training",
+        "rackUnitStart": 36,
+        "heightU": 1,
+        "firewallRules": [
+          {
+            "id": "deny-all-lab",
+            "action": "deny",
+            "srcCidr": "0.0.0.0/0",
+            "dstCidr": "0.0.0.0/0",
+            "note": "Closed until you permit",
+            "enabled": true
+          }
+        ],
+        "ports": [
+          { "id": "fw-lan", "deviceId": "fw-1", "index": 1, "label": "LAN0", "media": "copper_cat6", "connector": "rj45", "kind": "lan", "admin": "up", "role": "lan", "vlanId": 10, "ip": { "address": "10.10.10.1", "prefix": 24 } },
+          { "id": "fw-wan", "deviceId": "fw-1", "index": 2, "label": "WAN0", "media": "copper_cat6", "connector": "rj45", "kind": "wan", "admin": "up", "role": "wan", "ip": { "address": "203.0.113.1", "prefix": 30 } },
+          { "id": "fw-con", "deviceId": "fw-1", "index": 3, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
+          { "id": "fw-psu", "deviceId": "fw-1", "index": 4, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+        ]
+      }
+    ],
+    "cables": []
+  },
+  "goals": [
+    {
+      "type": "link_up",
+      "a": { "deviceId": "tor-1", "portId": "sw-5" },
+      "b": { "deviceId": "server-01", "portId": "nic-1" }
+    },
+    {
+      "type": "link_up",
+      "a": { "deviceId": "fw-1", "portId": "fw-lan" },
+      "b": { "deviceId": "tor-1", "portId": "sw-2" }
+    },
+    {
+      "type": "iface_ip",
+      "port": { "deviceId": "server-01", "portId": "nic-1" },
+      "address": "10.10.10.10",
+      "prefix": 24
+    },
+    {
+      "type": "firewall_rule",
+      "action": "permit",
+      "srcCidr": "10.10.10.0/24",
+      "dstCidr": "203.0.113.0/30"
+    },
+    {
+      "type": "ping",
+      "fromDeviceId": "server-01",
+      "toDeviceId": "wan-peer"
+    }
+  ]
+}

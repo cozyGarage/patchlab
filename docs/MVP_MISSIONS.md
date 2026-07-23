@@ -142,10 +142,40 @@ Five guided missions + sandbox. JSON sources live in `prototype/src/missions/`.
 **Objective:** Insert permit ACL so LAN ping succeeds.  
 **Teaches:** Top-down firewall policy / implicit deny.
 
+## Mission 13 — Access VLAN Assign
+
+**Objective:** Set Gi1/0/6 to VLAN 20, then patch SERVER-07.  
+**Teaches:** Access VLAN assignment on a switchport.
+
+## Mission 14 — VLAN Isolation
+
+**Objective:** Address SERVER-01 (VLAN 10) and SERVER-07 (VLAN 20); prove ping fails.  
+**Teaches:** VLANs isolate broadcast domains / L2 adjacency.
+
+## Mission 15 — Default Gateway
+
+**Objective:** Patch LAN + FW, set host IP with gateway, permit LAN→WAN, ping ISP-PEER.  
+**Teaches:** Off-subnet reachability via default gateway.
+
+## Mission 16 — Trunk Uplink
+
+**Objective:** Set Gi1/0/8 to trunk and uplink to FW LAN0.  
+**Teaches:** Trunk mode for multi-VLAN / uplink handoff.
+
+## Mission 17 — Static NAT
+
+**Objective:** Publish 10.10.10.10 as 203.0.113.10; permit WAN→LAN; ISP-PEER pings SERVER-01.  
+**Teaches:** One-to-one static NAT for inbound reachability.
+
+## Mission 18 — Deny One Host
+
+**Objective:** Insert deny 10.10.10.20/32 → WAN above a broad permit; .20 fails, .10 succeeds.  
+**Teaches:** ACL order — specific deny before general permit.
+
 ## Sandbox
 
-- Full rack: panel, fiber, ToR, SFP, firewall, servers, console, PDU
-- Config panel: IP, ping, firewall permit helper
+- Full rack: panel, fiber, ToR, SFP, firewall, servers, console, PDU, ISP peer
+- Config panel: IP/gateway, switchport VLAN/mode, ping, firewall helpers, static NAT
 - Select copper switch port → **Cycle VLAN** / **Toggle admin**
 - Inventory includes copper, fiber, power, console
 
@@ -170,4 +200,4 @@ Each file exports / contains:
 }
 ```
 
-Exact device graphs are in `prototype/src/missions/*.json`.
+Exact device graphs are in `src/missions/*.json`.

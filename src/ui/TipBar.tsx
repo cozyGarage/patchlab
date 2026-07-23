@@ -72,12 +72,12 @@ export function TipBar({
             Unplug
           </button>
         ) : null}
-        {sandbox && canEditPort && onCycleVlan ? (
+        {canEditPort && onCycleVlan ? (
           <button type="button" className="btn btn-ghost" onClick={onCycleVlan}>
             Cycle VLAN
           </button>
         ) : null}
-        {sandbox && canEditPort && onToggleAdmin ? (
+        {canEditPort && onToggleAdmin ? (
           <button
             type="button"
             className="btn btn-ghost"

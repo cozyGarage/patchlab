@@ -17,6 +17,7 @@ export type MediaType =
 
 export type Connector = 'rj45' | 'lc' | 'c13' | 'console';
 export type PortKind = 'data' | 'console' | 'power' | 'wan' | 'lan';
+export type PortMode = 'access' | 'trunk';
 export type LinkStatus = 'up' | 'down' | 'fault';
 export type PortAdmin = 'up' | 'down';
 export type CableColor =
@@ -47,7 +48,9 @@ export type TipCode =
   | 'IP_UPDATED'
   | 'FIREWALL_UPDATED'
   | 'PING_OK'
-  | 'PING_FAIL';
+  | 'PING_FAIL'
+  | 'NAT_UPDATED'
+  | 'MODE_UPDATED';
 
 export interface PortRef {
   deviceId: string;
@@ -72,6 +75,7 @@ export interface Port {
   role: 'network' | 'nic' | 'panel' | 'fiber' | 'power' | 'console' | 'wan' | 'lan';
   vlanId?: number;
   accessVlan?: number;
+  mode?: PortMode;
   ip?: IpConfig;
 }
 
@@ -84,6 +88,13 @@ export interface FirewallRule {
   enabled: boolean;
 }
 
+export interface NatRule {
+  id: string;
+  insideIp: string;
+  outsideIp: string;
+  enabled: boolean;
+}
+
 export interface Device {
   id: string;
   role: DeviceRole;
@@ -93,6 +104,7 @@ export interface Device {
   model?: string;
   ports: Port[];
   firewallRules?: FirewallRule[];
+  natRules?: NatRule[];
   poweredByDefault?: boolean;
 }
 
@@ -125,11 +137,20 @@ export type Goal =
       prefix: number;
     }
   | { type: 'ping'; fromDeviceId: string; toDeviceId: string }
+  | { type: 'ping_fail'; fromDeviceId: string; toDeviceId: string }
   | {
       type: 'firewall_rule';
       action: 'permit' | 'deny';
       srcCidr: string;
       dstCidr: string;
+    }
+  | { type: 'port_vlan'; port: PortRef; vlanId: number }
+  | { type: 'port_mode'; port: PortRef; mode: PortMode }
+  | {
+      type: 'nat_static';
+      deviceId: string;
+      insideIp: string;
+      outsideIp: string;
     };
 
 export interface Inventory {
@@ -150,7 +171,15 @@ export interface Mission {
   inventory: Inventory;
   initial: RackState;
   goals: Goal[];
-  track?: 'copper' | 'fiber' | 'mixed' | 'power' | 'logic' | 'security';
+  track?:
+    | 'copper'
+    | 'fiber'
+    | 'mixed'
+    | 'power'
+    | 'logic'
+    | 'security'
+    | 'switching'
+    | 'services';
   /** When false, do not merge rackBase facility cables (power harness). Default true. */
   useBaseCables?: boolean;
   lesson?: string;
@@ -213,7 +242,15 @@ export type Intent =
       deviceId: string;
       rule: FirewallRule;
     }
-  | { type: 'PING'; fromDeviceId: string; toDeviceId: string };
+  | { type: 'PING'; fromDeviceId: string; toDeviceId: string }
+  | { type: 'SET_VLAN'; port: PortRef; vlanId: number }
+  | { type: 'SET_PORT_MODE'; port: PortRef; mode: PortMode }
+  | {
+      type: 'SET_NAT';
+      deviceId: string;
+      insideIp: string;
+      outsideIp: string;
+    };
 
 export interface Score {
   correctness: 0 | 1 | 2 | 3;

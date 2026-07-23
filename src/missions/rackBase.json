@@ -133,6 +133,18 @@
       ]
     },
     {
+      "id": "wan-peer",
+      "role": "server",
+      "name": "ISP-PEER",
+      "model": "WAN peer / cloud edge",
+      "rackUnitStart": 37,
+      "heightU": 1,
+      "poweredByDefault": true,
+      "ports": [
+        { "id": "peer-eth", "deviceId": "wan-peer", "index": 1, "label": "PEERING", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "nic", "ip": { "address": "203.0.113.2", "prefix": 30 } }
+      ]
+    },
+    {
       "id": "pdu-a",
       "role": "pdu",
       "name": "PDU-A",
@@ -150,6 +162,16 @@
     }
   ],
   "cables": [
+    {
+      "id": "wan-uplink",
+      "media": "copper_cat6",
+      "color": "orange",
+      "lengthM": 1,
+      "ends": [
+        { "deviceId": "fw-1", "portId": "fw-wan" },
+        { "deviceId": "wan-peer", "portId": "peer-eth" }
+      ]
+    },
     {
       "id": "pwr-tor",
       "media": "power_c13",

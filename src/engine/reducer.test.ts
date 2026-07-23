@@ -162,4 +162,147 @@ describe('PatchLab engine', () => {
     expect(state.snapshot.lastTip?.code).toBe('HINT');
     expect(state.snapshot.hintGhost?.a.portId).toBe('panel-1');
   });
+
+  it('M13: set access VLAN then patch SERVER-07', () => {
+    const mission = getMission('m13-access-vlan')!;
+    let state = createEngineState(mission, baseRack);
+    state = reduce(state, {
+      type: 'SET_VLAN',
+      port: { deviceId: 'tor-1', portId: 'sw-6' },
+      vlanId: 20,
+    });
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'tor-1', portId: 'sw-6' },
+      b: { deviceId: 'server-07', portId: 'nic-1' },
+    });
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M14: different VLANs stay isolated at L3', () => {
+    const mission = getMission('m14-vlan-isolation')!;
+    let state = createEngineState(mission, baseRack);
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'tor-1', portId: 'sw-5' },
+      b: { deviceId: 'server-01', portId: 'nic-1' },
+    });
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'tor-1', portId: 'sw-7' },
+      b: { deviceId: 'server-07', portId: 'nic-1' },
+    });
+    state = reduce(state, {
+      type: 'SET_IP',
+      port: { deviceId: 'server-01', portId: 'nic-1' },
+      address: '10.10.10.10',
+      prefix: 24,
+    });
+    state = reduce(state, {
+      type: 'SET_IP',
+      port: { deviceId: 'server-07', portId: 'nic-1' },
+      address: '10.10.20.10',
+      prefix: 24,
+    });
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M15: gateway + LAN→WAN permit reaches ISP peer', () => {
+    const mission = getMission('m15-default-gateway')!;
+    let state = createEngineState(mission, baseRack);
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'tor-1', portId: 'sw-5' },
+      b: { deviceId: 'server-01', portId: 'nic-1' },
+    });
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'fw-1', portId: 'fw-lan' },
+      b: { deviceId: 'tor-1', portId: 'sw-2' },
+    });
+    state = reduce(state, {
+      type: 'SET_IP',
+      port: { deviceId: 'server-01', portId: 'nic-1' },
+      address: '10.10.10.10',
+      prefix: 24,
+      gateway: '10.10.10.1',
+    });
+    state = reduce(state, {
+      type: 'UPSERT_FIREWALL_RULE',
+      deviceId: 'fw-1',
+      rule: {
+        id: 'permit-lan-wan',
+        action: 'permit',
+        srcCidr: '10.10.10.0/24',
+        dstCidr: '203.0.113.0/30',
+        enabled: true,
+      },
+    });
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M16: trunk mode + uplink to firewall LAN', () => {
+    const mission = getMission('m16-trunk-uplink')!;
+    let state = createEngineState(mission, baseRack);
+    state = reduce(state, {
+      type: 'SET_PORT_MODE',
+      port: { deviceId: 'tor-1', portId: 'sw-8' },
+      mode: 'trunk',
+    });
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'tor-1', portId: 'sw-8' },
+      b: { deviceId: 'fw-1', portId: 'fw-lan' },
+    });
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M17: static NAT + WAN permit unlocks inbound ping', () => {
+    const mission = getMission('m17-static-nat')!;
+    let state = createEngineState(mission, baseRack);
+    state = reduce(state, {
+      type: 'PING',
+      fromDeviceId: 'wan-peer',
+      toDeviceId: 'server-01',
+    });
+    expect(state.snapshot.lastTip?.code).toBe('PING_FAIL');
+
+    state = reduce(state, {
+      type: 'SET_NAT',
+      deviceId: 'fw-1',
+      insideIp: '10.10.10.10',
+      outsideIp: '203.0.113.10',
+    });
+    state = reduce(state, {
+      type: 'UPSERT_FIREWALL_RULE',
+      deviceId: 'fw-1',
+      rule: {
+        id: 'permit-wan-lan',
+        action: 'permit',
+        srcCidr: '203.0.113.0/30',
+        dstCidr: '10.10.10.0/24',
+        enabled: true,
+      },
+    });
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M18: specific deny blocks one host, other still reaches WAN', () => {
+    const mission = getMission('m18-deny-host')!;
+    let state = createEngineState(mission, baseRack);
+    expect(state.snapshot.complete).toBe(false);
+
+    state = reduce(state, {
+      type: 'UPSERT_FIREWALL_RULE',
+      deviceId: 'fw-1',
+      rule: {
+        id: 'deny-20',
+        action: 'deny',
+        srcCidr: '10.10.10.20/32',
+        dstCidr: '203.0.113.0/30',
+        enabled: true,
+      },
+    });
+    expect(state.snapshot.complete).toBe(true);
+  });
 });

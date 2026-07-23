@@ -29,7 +29,7 @@ const sandboxMission: Mission = {
   title: 'Sandbox',
   order: 99,
   brief:
-    'Free play: power, console, copper/fiber, IP addressing, ping, and firewall rules.',
+    'Free play: power, console, copper/fiber, VLANs, trunks, IP, NAT, ping, and firewall rules.',
   constraints: ['Experiment freely', 'Reset anytime'],
   parTimeSec: 9999,
   hintAfterWrongAttempts: 99,
@@ -196,6 +196,85 @@ export default function App() {
     );
   }
 
+  function dispatchFirewallPermitLanWan() {
+    if (!engine) return;
+    apply(
+      reduce(engine, {
+        type: 'UPSERT_FIREWALL_RULE',
+        deviceId: 'fw-1',
+        rule: {
+          id: `permit-lan-wan-${Date.now()}`,
+          action: 'permit',
+          srcCidr: '10.10.10.0/24',
+          dstCidr: '203.0.113.0/30',
+          note: 'LAN → WAN',
+          enabled: true,
+        },
+      }),
+    );
+  }
+
+  function dispatchFirewallPermitWanLan() {
+    if (!engine) return;
+    apply(
+      reduce(engine, {
+        type: 'UPSERT_FIREWALL_RULE',
+        deviceId: 'fw-1',
+        rule: {
+          id: `permit-wan-lan-${Date.now()}`,
+          action: 'permit',
+          srcCidr: '203.0.113.0/30',
+          dstCidr: '10.10.10.0/24',
+          note: 'WAN → LAN',
+          enabled: true,
+        },
+      }),
+    );
+  }
+
+  function dispatchFirewallDenyHost() {
+    if (!engine) return;
+    apply(
+      reduce(engine, {
+        type: 'UPSERT_FIREWALL_RULE',
+        deviceId: 'fw-1',
+        rule: {
+          id: `deny-host-20-${Date.now()}`,
+          action: 'deny',
+          srcCidr: '10.10.10.20/32',
+          dstCidr: '203.0.113.0/30',
+          note: 'Deny SERVER-07 to WAN',
+          enabled: true,
+        },
+      }),
+    );
+  }
+
+  function dispatchSetNat(insideIp: string, outsideIp: string) {
+    if (!engine) return;
+    apply(
+      reduce(engine, {
+        type: 'SET_NAT',
+        deviceId: 'fw-1',
+        insideIp,
+        outsideIp,
+      }),
+    );
+  }
+
+  function dispatchSetVlan(port: PortRef, vlanId: number) {
+    if (!engine) return;
+    apply(reduce(engine, { type: 'SET_VLAN', port, vlanId }));
+  }
+
+  function dispatchSetPortMode(
+    port: PortRef,
+    mode: 'access' | 'trunk',
+  ) {
+    if (!engine) return;
+    apply(reduce(engine, { type: 'SET_PORT_MODE', port, mode }));
+  }
+
   function dispatchPing(fromId: string, toId: string) {
     if (!engine) return;
     apply(
@@ -258,6 +337,12 @@ export default function App() {
           onToggleAdmin={dispatchToggleAdmin}
           onSetIp={dispatchSetIp}
           onFirewallPermitLan={dispatchFirewallPermitLan}
+          onFirewallPermitLanWan={dispatchFirewallPermitLanWan}
+          onFirewallPermitWanLan={dispatchFirewallPermitWanLan}
+          onFirewallDenyHost={dispatchFirewallDenyHost}
+          onSetNat={dispatchSetNat}
+          onSetVlan={dispatchSetVlan}
+          onSetPortMode={dispatchSetPortMode}
           onPing={dispatchPing}
           onBack={() => setScreen(sandbox ? 'home' : 'brief')}
         />

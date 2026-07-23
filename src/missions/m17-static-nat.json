@@ -1,0 +1,104 @@
+{
+  "id": "m17-static-nat",
+  "title": "Static NAT",
+  "order": 17,
+  "track": "services",
+  "lesson": "Static NAT publishes one inside host at one outside IP. Outside hosts reach the public address; the firewall translates to the private server. Without that mapping, WAN peers should not treat RFC1918 addresses as reachable.",
+  "brief": "SERVER-01 is pre-patched at 10.10.10.10. Add static NAT 10.10.10.10 ↔ 203.0.113.10, permit WAN→LAN, then prove ISP-PEER can ping SERVER-01 through the translation.",
+  "constraints": [
+    "Static NAT: inside 10.10.10.10 → outside 203.0.113.10",
+    "Permit 203.0.113.0/30 → 10.10.10.0/24",
+    "Do not remove the working LAN cables"
+  ],
+  "parTimeSec": 150,
+  "hintAfterWrongAttempts": 2,
+  "inventory": {
+    "copper_cat6": 2,
+    "fiber_om4": 0,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
+  "initial": {
+    "devices": [
+      {
+        "id": "fw-1",
+        "role": "firewall",
+        "name": "FW-EDGE",
+        "model": "NGFW training",
+        "rackUnitStart": 36,
+        "heightU": 1,
+        "firewallRules": [
+          {
+            "id": "deny-inbound",
+            "action": "deny",
+            "srcCidr": "203.0.113.0/30",
+            "dstCidr": "10.10.10.0/24",
+            "note": "Closed until you permit + NAT",
+            "enabled": true
+          }
+        ],
+        "natRules": [],
+        "ports": [
+          { "id": "fw-lan", "deviceId": "fw-1", "index": 1, "label": "LAN0", "media": "copper_cat6", "connector": "rj45", "kind": "lan", "admin": "up", "role": "lan", "vlanId": 10, "ip": { "address": "10.10.10.1", "prefix": 24 } },
+          { "id": "fw-wan", "deviceId": "fw-1", "index": 2, "label": "WAN0", "media": "copper_cat6", "connector": "rj45", "kind": "wan", "admin": "up", "role": "wan", "ip": { "address": "203.0.113.1", "prefix": 30 } },
+          { "id": "fw-con", "deviceId": "fw-1", "index": 3, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
+          { "id": "fw-psu", "deviceId": "fw-1", "index": 4, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+        ]
+      },
+      {
+        "id": "server-01",
+        "role": "server",
+        "name": "SERVER-01",
+        "model": "1U compute",
+        "rackUnitStart": 20,
+        "heightU": 1,
+        "ports": [
+          { "id": "nic-1", "deviceId": "server-01", "index": 1, "label": "eth0", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "nic", "accessVlan": 10, "ip": { "address": "10.10.10.10", "prefix": 24, "gateway": "10.10.10.1" } },
+          { "id": "srv1-con", "deviceId": "server-01", "index": 2, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
+          { "id": "srv1-psu", "deviceId": "server-01", "index": 3, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+        ]
+      }
+    ],
+    "cables": [
+      {
+        "id": "c-fw-lan",
+        "media": "copper_cat6",
+        "color": "yellow",
+        "lengthM": 1,
+        "ends": [
+          { "deviceId": "fw-1", "portId": "fw-lan" },
+          { "deviceId": "tor-1", "portId": "sw-2" }
+        ]
+      },
+      {
+        "id": "c-srv",
+        "media": "copper_cat6",
+        "color": "blue",
+        "lengthM": 2,
+        "ends": [
+          { "deviceId": "tor-1", "portId": "sw-5" },
+          { "deviceId": "server-01", "portId": "nic-1" }
+        ]
+      }
+    ]
+  },
+  "goals": [
+    {
+      "type": "nat_static",
+      "deviceId": "fw-1",
+      "insideIp": "10.10.10.10",
+      "outsideIp": "203.0.113.10"
+    },
+    {
+      "type": "firewall_rule",
+      "action": "permit",
+      "srcCidr": "203.0.113.0/30",
+      "dstCidr": "10.10.10.0/24"
+    },
+    {
+      "type": "ping",
+      "fromDeviceId": "wan-peer",
+      "toDeviceId": "server-01"
+    }
+  ]
+}

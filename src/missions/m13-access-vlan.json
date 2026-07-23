@@ -1,0 +1,33 @@
+{
+  "id": "m13-access-vlan",
+  "title": "Access VLAN Assign",
+  "order": 13,
+  "track": "switching",
+  "lesson": "Access ports belong to one VLAN. Moving a host means changing the switchport access VLAN — not inventing a new cable type. Verify with show-style thinking: port VLAN must match the server's expected segment.",
+  "brief": "SERVER-07 expects VLAN 20. Gi1/0/6 is still VLAN 10. Set Gi1/0/6 to VLAN 20, patch SERVER-07 there, and confirm the copper link is up.",
+  "constraints": [
+    "Change the switch access VLAN (do not change the server)",
+    "Use Gi1/0/6 for SERVER-07"
+  ],
+  "parTimeSec": 120,
+  "hintAfterWrongAttempts": 2,
+  "inventory": {
+    "copper_cat6": 3,
+    "fiber_om4": 0,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
+  "initial": { "devices": [], "cables": [] },
+  "goals": [
+    {
+      "type": "port_vlan",
+      "port": { "deviceId": "tor-1", "portId": "sw-6" },
+      "vlanId": 20
+    },
+    {
+      "type": "link_up",
+      "a": { "deviceId": "tor-1", "portId": "sw-6" },
+      "b": { "deviceId": "server-07", "portId": "nic-1" }
+    }
+  ]
+}

@@ -177,9 +177,10 @@ export function resolvePair(
     };
   }
 
+  const trunk = a.mode === 'trunk' || b.mode === 'trunk';
   const vlanA = a.role === 'nic' ? a.accessVlan : a.vlanId;
   const vlanB = b.role === 'nic' ? b.accessVlan : b.vlanId;
-  if (vlanA != null && vlanB != null && vlanA !== vlanB) {
+  if (!trunk && vlanA != null && vlanB != null && vlanA !== vlanB) {
     return {
       status: 'down',
       tip: {
@@ -326,6 +327,14 @@ function firewallAllows(
   return { ok: true, detail: 'No firewall filter matched (open)' };
 }
 
+function hasDataCable(device: Device, rack: RackState): boolean {
+  return device.ports.some(
+    (p) =>
+      (p.kind === 'data' || p.kind === 'lan' || p.kind === 'wan' || p.role === 'nic') &&
+      findCableOnPort(rack.cables, { deviceId: device.id, portId: p.id }),
+  );
+}
+
 export function evaluatePing(
   rack: RackState,
   fromDeviceId: string,
@@ -338,42 +347,113 @@ export function evaluatePing(
     return { ok: false, detail: 'Ping fail — a device is unpowered' };
   }
 
+  const fromIpFull = from.ports.find((p) => p.ip?.address)?.ip;
   const fromIp = primaryIp(from);
   const toIp = primaryIp(to);
-  if (!fromIp || !toIp) {
+  if (!fromIp || !toIp || !fromIpFull) {
     return { ok: false, detail: 'Ping fail — configure IPv4 on both hosts' };
   }
-  if (!sameSubnet(fromIp, toIp)) {
-    return {
-      ok: false,
-      detail: `Ping fail — different subnets (${fromIp.address}/${fromIp.prefix} vs ${toIp.address}/${toIp.prefix})`,
-    };
-  }
 
-  // Require each host to have at least one data link up
-  const fromUp = from.ports.some(
-    (p) =>
-      (p.kind === 'data' || p.kind === 'lan' || p.role === 'nic') &&
-      findCableOnPort(rack.cables, { deviceId: from.id, portId: p.id }),
-  );
-  const toUp = to.ports.some(
-    (p) =>
-      (p.kind === 'data' || p.kind === 'lan' || p.role === 'nic') &&
-      findCableOnPort(rack.cables, { deviceId: to.id, portId: p.id }),
-  );
-  if (!fromUp || !toUp) {
+  if (!hasDataCable(from, rack) || !hasDataCable(to, rack)) {
     return { ok: false, detail: 'Ping fail — host missing data cable' };
   }
 
   const fw = rack.devices.find((d) => d.role === 'firewall');
-  if (fw && isDevicePowered(rack, fw.id)) {
-    const check = firewallAllows(fw.firewallRules, fromIp.address, toIp.address);
+
+  if (sameSubnet(fromIp, toIp)) {
+    if (fw && isDevicePowered(rack, fw.id)) {
+      const check = firewallAllows(fw.firewallRules, fromIp.address, toIp.address);
+      if (!check.ok) return { ok: false, detail: `Ping fail — ${check.detail}` };
+    }
+    return {
+      ok: true,
+      detail: `Ping ok — ${fromIp.address} → ${toIp.address} (same subnet)`,
+    };
+  }
+
+  // Routed path via default gateway, or a directly connected router/FW
+  const gateway = fromIpFull.gateway;
+  let router =
+    gateway != null
+      ? rack.devices.find((d) => d.ports.some((p) => p.ip?.address === gateway))
+      : undefined;
+
+  if (gateway) {
+    if (!sameSubnet(fromIp, { address: gateway, prefix: fromIp.prefix })) {
+      return { ok: false, detail: 'Ping fail — gateway is not on the local subnet' };
+    }
+    if (!router || !isDevicePowered(rack, router.id)) {
+      return {
+        ok: false,
+        detail: `Ping fail — gateway ${gateway} not found on a live router/FW`,
+      };
+    }
+  } else {
+    router = rack.devices.find(
+      (d) =>
+        (d.role === 'firewall' || d.role === 'switch') &&
+        isDevicePowered(rack, d.id) &&
+        d.ports.some((p) => p.ip && sameSubnet(fromIp, p.ip)),
+    );
+    if (!router) {
+      return {
+        ok: false,
+        detail: `Ping fail — different subnets and no default gateway on ${from.name}`,
+      };
+    }
+  }
+
+  const routerReachesDst = router.ports.some(
+    (p) => p.ip && sameSubnet(p.ip, toIp),
+  );
+
+  const fromOnWan = router.ports.some(
+    (p) => p.kind === 'wan' && p.ip && sameSubnet(fromIp, p.ip),
+  );
+  const toOnLan = router.ports.some(
+    (p) => p.kind === 'lan' && p.ip && sameSubnet(toIp, p.ip),
+  );
+
+  // Inbound WAN→LAN requires static NAT publishing the inside host
+  if (router.role === 'firewall' && fromOnWan && toOnLan) {
+    const nat = (router.natRules ?? []).find(
+      (r) => r.enabled && r.insideIp === toIp.address,
+    );
+    if (!nat) {
+      return {
+        ok: false,
+        detail: 'Ping fail — no static NAT publishing the inside host',
+      };
+    }
+    const check = firewallAllows(
+      router.firewallRules,
+      fromIp.address,
+      toIp.address,
+    );
+    if (!check.ok) return { ok: false, detail: `Ping fail — ${check.detail}` };
+    return {
+      ok: true,
+      detail: `Ping ok — ${fromIp.address} → ${toIp.address} via NAT ${nat.outsideIp}`,
+    };
+  }
+
+  if (!routerReachesDst) {
+    return {
+      ok: false,
+      detail: 'Ping fail — no route on gateway to destination subnet',
+    };
+  }
+
+  if (router.role === 'firewall') {
+    const check = firewallAllows(router.firewallRules, fromIp.address, toIp.address);
     if (!check.ok) return { ok: false, detail: `Ping fail — ${check.detail}` };
   }
 
+  const via = gateway ?? router.ports.find((p) => p.ip && sameSubnet(fromIp, p.ip))?.ip
+    ?.address;
   return {
     ok: true,
-    detail: `Ping ok — ${fromIp.address} → ${toIp.address}`,
+    detail: `Ping ok — ${fromIp.address} → ${toIp.address} via ${via ?? router.name}`,
   };
 }
 
@@ -431,6 +511,8 @@ export function evaluateGoals(
       }
       case 'ping':
         return evaluatePing(rack, g.fromDeviceId, g.toDeviceId).ok;
+      case 'ping_fail':
+        return !evaluatePing(rack, g.fromDeviceId, g.toDeviceId).ok;
       case 'firewall_rule': {
         const fw = rack.devices.find((d) => d.role === 'firewall');
         return !!fw?.firewallRules?.some(
@@ -439,6 +521,24 @@ export function evaluateGoals(
             r.action === g.action &&
             r.srcCidr === g.srcCidr &&
             r.dstCidr === g.dstCidr,
+        );
+      }
+      case 'port_vlan': {
+        const port = getPort(rack, g.port);
+        const vlan = port?.role === 'nic' ? port.accessVlan : port?.vlanId;
+        return vlan === g.vlanId;
+      }
+      case 'port_mode': {
+        const port = getPort(rack, g.port);
+        return (port?.mode ?? 'access') === g.mode;
+      }
+      case 'nat_static': {
+        const dev = getDevice(rack, g.deviceId);
+        return !!dev?.natRules?.some(
+          (r) =>
+            r.enabled &&
+            r.insideIp === g.insideIp &&
+            r.outsideIp === g.outsideIp,
         );
       }
       default:
@@ -460,7 +560,7 @@ export function glowingPortsFromGoals(
       ids.add(portKey(g.b));
     } else if (g.type === 'path_up') {
       findPath(rack, g.from, g.to)?.portIds.forEach((id) => ids.add(id));
-    } else if (g.type === 'iface_ip') {
+    } else if (g.type === 'iface_ip' || g.type === 'port_vlan' || g.type === 'port_mode') {
       ids.add(portKey(g.port));
     }
   });
@@ -501,13 +601,29 @@ export function hintForGoal(goal: Goal | undefined): {
       };
     case 'ping':
       return {
-        message: `Hint: power, cable, same subnet, then ping ${goal.fromDeviceId} → ${goal.toDeviceId}`,
+        message: `Hint: cable + IP (+ gateway if needed), then reach ${goal.fromDeviceId} → ${goal.toDeviceId}`,
+      };
+    case 'ping_fail':
+      return {
+        message: `Hint: keep ${goal.fromDeviceId} isolated from ${goal.toDeviceId} (VLAN/ACL)`,
       };
     case 'firewall_rule':
       return {
         message: `Hint: add firewall ${goal.action} ${goal.srcCidr} → ${goal.dstCidr}`,
       };
+    case 'port_vlan':
+      return {
+        message: `Hint: set ${goal.port.portId} access VLAN to ${goal.vlanId}`,
+      };
+    case 'port_mode':
+      return {
+        message: `Hint: set ${goal.port.portId} mode to ${goal.mode}`,
+      };
+    case 'nat_static':
+      return {
+        message: `Hint: static NAT ${goal.insideIp} → ${goal.outsideIp} on ${goal.deviceId}`,
+      };
     default:
-      return { message: 'Check power, media, VLAN, IP, and firewall rules' };
+      return { message: 'Check power, media, VLAN, IP, gateway, and firewall rules' };
   }
 }

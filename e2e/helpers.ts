@@ -18,7 +18,9 @@ export async function clearApp(page: Page) {
     localStorage.clear();
   });
   await page.reload();
-  await expect(page.getByRole('heading', { name: /Rack\. Power\. IP\. Firewall/i })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /Rack\. Power\. VLAN\. IP\. Firewall/i }),
+  ).toBeVisible();
 }
 
 export async function unlockThrough(page: Page, order: number) {
@@ -36,6 +38,12 @@ export async function unlockThrough(page: Page, order: number) {
       'm10-console-ip',
       'm11-subnet-ping',
       'm12-firewall-acl',
+      'm13-access-vlan',
+      'm14-vlan-isolation',
+      'm15-default-gateway',
+      'm16-trunk-uplink',
+      'm17-static-nat',
+      'm18-deny-host',
     ];
     const cleared = ids.slice(0, Math.max(0, maxOrder - 1));
     localStorage.setItem(

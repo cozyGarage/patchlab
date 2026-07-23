@@ -462,6 +462,77 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
       };
     }
 
+    case 'SET_VLAN': {
+      const rack = cloneRack(state.snapshot.rack);
+      const port = getPort(rack, intent.port);
+      if (!port) return state;
+      if (port.role === 'nic') port.accessVlan = intent.vlanId;
+      else port.vlanId = intent.vlanId;
+      return {
+        ...state,
+        snapshot: snapshotOf(
+          rack,
+          mission,
+          state.snapshot.inventory,
+          {
+            level: 'success',
+            code: 'PORT_UPDATED',
+            message: `${port.label} access VLAN → ${intent.vlanId}`,
+          },
+          null,
+        ),
+      };
+    }
+
+    case 'SET_PORT_MODE': {
+      const rack = cloneRack(state.snapshot.rack);
+      const port = getPort(rack, intent.port);
+      if (!port || port.role !== 'network') return state;
+      port.mode = intent.mode;
+      return {
+        ...state,
+        snapshot: snapshotOf(
+          rack,
+          mission,
+          state.snapshot.inventory,
+          {
+            level: 'success',
+            code: 'MODE_UPDATED',
+            message: `${port.label} mode → ${intent.mode}`,
+          },
+          null,
+        ),
+      };
+    }
+
+    case 'SET_NAT': {
+      const rack = cloneRack(state.snapshot.rack);
+      const fw = rack.devices.find((d) => d.id === intent.deviceId);
+      if (!fw || fw.role !== 'firewall') return state;
+      const rule = {
+        id: `nat-${intent.insideIp}-${intent.outsideIp}`,
+        insideIp: intent.insideIp,
+        outsideIp: intent.outsideIp,
+        enabled: true,
+      };
+      const others = (fw.natRules ?? []).filter((r) => r.id !== rule.id);
+      fw.natRules = [rule, ...others];
+      return {
+        ...state,
+        snapshot: snapshotOf(
+          rack,
+          mission,
+          state.snapshot.inventory,
+          {
+            level: 'success',
+            code: 'NAT_UPDATED',
+            message: `NAT ${intent.insideIp} → ${intent.outsideIp}`,
+          },
+          null,
+        ),
+      };
+    }
+
     default:
       return state;
   }

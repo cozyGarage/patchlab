@@ -384,6 +384,23 @@ p {
   border-color: rgba(251, 191, 36, 0.45);
 }
 
+.track-pill.track-switching {
+  color: #67e8f9;
+  border-color: rgba(103, 232, 249, 0.45);
+}
+
+.track-pill.track-services {
+  color: #c4b5fd;
+  border-color: rgba(196, 181, 253, 0.45);
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 @media (max-width: 900px) {
   .rack-workspace {
     grid-template-columns: 1fr;

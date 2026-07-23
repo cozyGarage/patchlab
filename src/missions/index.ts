@@ -12,6 +12,12 @@ import m9 from './m9-power-up.json';
 import m10 from './m10-console-ip.json';
 import m11 from './m11-subnet-ping.json';
 import m12 from './m12-firewall-acl.json';
+import m13 from './m13-access-vlan.json';
+import m14 from './m14-vlan-isolation.json';
+import m15 from './m15-default-gateway.json';
+import m16 from './m16-trunk-uplink.json';
+import m17 from './m17-static-nat.json';
+import m18 from './m18-deny-host.json';
 
 export const baseRack = rackBase as unknown as RackState;
 
@@ -41,6 +47,12 @@ export const missions: Mission[] = [
   asMission(m10),
   asMission(m11),
   asMission(m12),
+  asMission(m13),
+  asMission(m14),
+  asMission(m15),
+  asMission(m16),
+  asMission(m17),
+  asMission(m18),
 ].sort((a, b) => a.order - b.order);
 
 export function getMission(id: string): Mission | undefined {

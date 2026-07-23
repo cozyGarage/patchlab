@@ -96,9 +96,45 @@ test.describe('PatchLab browser QA', () => {
     await startMission(page, /Firewall Permit/i);
     // Focus firewall chassis via its LCD/name region
     await page.locator('text=FW-EDGE').first().click();
-    await page.getByRole('button', { name: /Insert permit/i }).click();
+    await page.getByRole('button', { name: /Insert permit 10\.10\.10\.0\/24/i }).click();
     await expectDebrief(page);
     await shot(page, '22-m12-debrief');
+  });
+
+  test('Mission 13 access VLAN assign', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 13);
+    await startMission(page, /Access VLAN Assign/i);
+    await page.locator('text=ToR-SW-A').first().click();
+    const selects = page.locator('.config-panel select');
+    // Interface (IP) · Switchport port · Access VLAN
+    await selects.nth(1).selectOption('sw-6');
+    await selects.nth(2).selectOption('20');
+    await page.getByRole('button', { name: 'Set access VLAN' }).click();
+    await connectPorts(page, /ToR-SW-A Gi1\/0\/6 VLAN 20/, /SERVER-07 eth0 VLAN 20/);
+    await expectDebrief(page);
+    await shot(page, '23-m13-debrief');
+  });
+
+  test('Mission 17 static NAT inbound', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 17);
+    await startMission(page, /Static NAT/i);
+    await page.locator('text=FW-EDGE').first().click();
+    await page.getByRole('button', { name: 'Apply static NAT' }).click();
+    await page.getByRole('button', { name: /Insert permit WAN → LAN/i }).click();
+    await expectDebrief(page);
+    await shot(page, '24-m17-debrief');
+  });
+
+  test('Mission 18 deny one host', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 18);
+    await startMission(page, /Deny One Host/i);
+    await page.locator('text=FW-EDGE').first().click();
+    await page.getByRole('button', { name: /Insert deny host 10\.10\.10\.20/i }).click();
+    await expectDebrief(page);
+    await shot(page, '25-m18-debrief');
   });
 
   test('sandbox shows PDU, firewall, config panel', async ({ page }) => {

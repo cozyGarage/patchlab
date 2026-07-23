@@ -1,0 +1,33 @@
+{
+  "id": "m16-trunk-uplink",
+  "title": "Trunk Uplink",
+  "order": 16,
+  "track": "switching",
+  "lesson": "Trunk ports carry multiple VLANs (802.1Q). In this trainer, marking a switchport as trunk relaxes single-VLAN matching so it can uplink to the firewall LAN handoff — the same idea as a tagged uplink in Packet Tracer labs.",
+  "brief": "Set Gi1/0/8 to trunk mode and patch it to FW-EDGE LAN0. Prove the uplink is up.",
+  "constraints": [
+    "Gi1/0/8 must be mode trunk",
+    "Patch Gi1/0/8 ↔ LAN0"
+  ],
+  "parTimeSec": 90,
+  "hintAfterWrongAttempts": 2,
+  "inventory": {
+    "copper_cat6": 3,
+    "fiber_om4": 0,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
+  "initial": { "devices": [], "cables": [] },
+  "goals": [
+    {
+      "type": "port_mode",
+      "port": { "deviceId": "tor-1", "portId": "sw-8" },
+      "mode": "trunk"
+    },
+    {
+      "type": "link_up",
+      "a": { "deviceId": "tor-1", "portId": "sw-8" },
+      "b": { "deviceId": "fw-1", "portId": "fw-lan" }
+    }
+  ]
+}

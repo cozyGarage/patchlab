@@ -1,0 +1,51 @@
+{
+  "id": "m14-vlan-isolation",
+  "title": "VLAN Isolation",
+  "order": 14,
+  "track": "switching",
+  "lesson": "VLANs create broadcast-domain isolation. Two healthy hosts on different access VLANs should NOT ping each other at L2 — even on the same switch. That is a feature, not a bug.",
+  "brief": "Bring SERVER-01 (VLAN 10) and SERVER-07 (VLAN 20) online with addresses. Prove they cannot ping each other while both stay linked.",
+  "constraints": [
+    "SERVER-01: 10.10.10.10/24 on VLAN 10",
+    "SERVER-07: 10.10.20.10/24 on VLAN 20",
+    "Ping between them must fail"
+  ],
+  "parTimeSec": 150,
+  "hintAfterWrongAttempts": 2,
+  "inventory": {
+    "copper_cat6": 4,
+    "fiber_om4": 0,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
+  "initial": { "devices": [], "cables": [] },
+  "goals": [
+    {
+      "type": "link_up",
+      "a": { "deviceId": "tor-1", "portId": "sw-5" },
+      "b": { "deviceId": "server-01", "portId": "nic-1" }
+    },
+    {
+      "type": "link_up",
+      "a": { "deviceId": "tor-1", "portId": "sw-7" },
+      "b": { "deviceId": "server-07", "portId": "nic-1" }
+    },
+    {
+      "type": "iface_ip",
+      "port": { "deviceId": "server-01", "portId": "nic-1" },
+      "address": "10.10.10.10",
+      "prefix": 24
+    },
+    {
+      "type": "iface_ip",
+      "port": { "deviceId": "server-07", "portId": "nic-1" },
+      "address": "10.10.20.10",
+      "prefix": 24
+    },
+    {
+      "type": "ping_fail",
+      "fromDeviceId": "server-01",
+      "toDeviceId": "server-07"
+    }
+  ]
+}

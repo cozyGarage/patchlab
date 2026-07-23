@@ -37,8 +37,16 @@ function goalText(mission: Mission): string[] {
         return `Set ${g.port.portId} = ${g.address}/${g.prefix}`;
       case 'ping':
         return `Ping ${g.fromDeviceId} → ${g.toDeviceId}`;
+      case 'ping_fail':
+        return `Ping must fail ${g.fromDeviceId} → ${g.toDeviceId}`;
       case 'firewall_rule':
         return `FW ${g.action} ${g.srcCidr} → ${g.dstCidr}`;
+      case 'port_vlan':
+        return `Set ${g.port.portId} access VLAN ${g.vlanId}`;
+      case 'port_mode':
+        return `Set ${g.port.portId} mode ${g.mode}`;
+      case 'nat_static':
+        return `Static NAT ${g.insideIp} ↔ ${g.outsideIp}`;
       default:
         return `Goal ${i + 1}`;
     }
