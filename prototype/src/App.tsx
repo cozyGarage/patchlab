@@ -50,6 +50,7 @@ export default function App() {
   const [sandbox, setSandbox] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const lastTipCode = useRef<string | undefined>(undefined);
+  const completedRunKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (screen !== 'rack' || !engine || sandbox) return;
@@ -61,16 +62,24 @@ export default function App() {
 
   useEffect(() => {
     if (!engine || sandbox || screen !== 'rack') return;
-    if (!engine.snapshot.complete || score) return;
+    if (!engine.snapshot.complete) return;
+
+    // StrictMode runs effects twice in dev. We must not clearTimeout on cleanup,
+    // or the only scheduled debrief is cancelled and never rescheduled.
+    const runKey = `${mission?.id ?? 'none'}:${engine.startedAtMs}`;
+    if (completedRunKey.current === runKey) return;
+    completedRunKey.current = runKey;
+
     const result = scoreRun(engine);
     setScore(result);
     if (mission && mission.id !== 'sandbox') {
       setProgress(recordMissionClear(mission.id, result));
     }
     playTipSound(settings.sound, 'success');
-    const t = window.setTimeout(() => setScreen('debrief'), 700);
-    return () => window.clearTimeout(t);
-  }, [engine, sandbox, screen, mission, score, settings.sound]);
+    window.setTimeout(() => {
+      setScreen((current) => (current === 'rack' ? 'debrief' : current));
+    }, 450);
+  }, [engine, sandbox, screen, mission, settings.sound]);
 
   function trackTip(next: EngineState) {
     const tip = next.snapshot.lastTip;
@@ -114,6 +123,7 @@ export default function App() {
     setElapsedSec(0);
     setScreen('rack');
     lastTipCode.current = undefined;
+    completedRunKey.current = null;
     trackTip(state);
   }
 

@@ -338,7 +338,7 @@ p {
 .cable-path {
   fill: none;
   stroke-linecap: round;
-  stroke-width: 3.5;
+  stroke-width: 4;
   pointer-events: stroke;
   cursor: pointer;
   transition: opacity 120ms ease;
@@ -359,8 +359,8 @@ p {
 
 .cable-hint {
   fill: none;
-  stroke: rgba(61, 220, 181, 0.75);
-  stroke-width: 3.5;
+  stroke: rgba(61, 220, 181, 0.9);
+  stroke-width: 4;
   stroke-dasharray: 8 7;
   stroke-linecap: round;
   pointer-events: none;

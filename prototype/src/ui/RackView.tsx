@@ -335,11 +335,6 @@ export function RackView({
             />
           ))}
 
-          {hintPath ? (
-            <path className="cable-hint" d={hintPath} filter="url(#glow)" />
-          ) : null}
-          {ghostDrag ? <path className="cable-ghost" d={ghostDrag} /> : null}
-
           {ports.map((p) => {
             const status = state.snapshot.linkTable[portKey(p.ref)];
             const isSelected = !!selected && samePort(selected, p.ref);
@@ -410,6 +405,16 @@ export function RackView({
               </g>
             );
           })}
+
+          {hintPath ? (
+            <path
+              className="cable-hint"
+              d={hintPath}
+              filter="url(#glow)"
+              data-testid="hint-ghost"
+            />
+          ) : null}
+          {ghostDrag ? <path className="cable-ghost" d={ghostDrag} /> : null}
         </svg>
       </div>
 
