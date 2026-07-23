@@ -1,0 +1,8 @@
+node_modules/
+dist/
+e2e-artifacts/
+e2e-report/
+.DS_Store
+*.log
+.vite/
+coverage/

@@ -1,0 +1,33 @@
+{
+  "id": "m10-console-ip",
+  "title": "Console & Mgmt IP",
+  "order": 10,
+  "track": "logic",
+  "lesson": "Out-of-band console is how you recover switches when the network is down. Set a management IP in the correct subnet before you rely on SSH.",
+  "brief": "Attach Console TTY1 to ToR CON, then set Gi1/0/1 management addressing to 10.10.10.2/24 (gateway 10.10.10.1).",
+  "constraints": [
+    "Use a console / rollover cable",
+    "Host IP must be valid in /24 (not .0 or .255)"
+  ],
+  "parTimeSec": 120,
+  "hintAfterWrongAttempts": 2,
+  "inventory": {
+    "copper_cat6": 2,
+    "fiber_om4": 0,
+    "power_c13": 0,
+    "console_rj45": 2
+  },
+  "initial": {
+    "devices": [],
+    "cables": []
+  },
+  "goals": [
+    { "type": "console_attached", "deviceId": "tor-1" },
+    {
+      "type": "iface_ip",
+      "port": { "deviceId": "tor-1", "portId": "sw-1" },
+      "address": "10.10.10.2",
+      "prefix": 24
+    }
+  ]
+}

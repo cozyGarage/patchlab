@@ -1,0 +1,89 @@
+{
+  "id": "m2-wrong-port",
+  "title": "Wrong Port, Right Intent",
+  "order": 2,
+  "track": "copper",
+  "brief": "The ticket says SERVER-01 should ride panel label A-01. Someone patched A-03 instead. Move the panel cross-connect to A-01 and clear the wrong port.",
+  "constraints": [
+    "Final panel port must be A-01",
+    "Leave A-03 empty"
+  ],
+  "parTimeSec": 75,
+  "hintAfterWrongAttempts": 2,
+  "inventory": {
+    "copper_cat6": 2,
+    "fiber_om4": 0,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
+  "initial": {
+    "devices": [],
+    "cables": [
+      {
+        "id": "c-pre-1",
+        "media": "copper_cat6",
+        "color": "blue",
+        "lengthM": 1,
+        "ends": [
+          {
+            "deviceId": "panel-a",
+            "portId": "panel-3"
+          },
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-1"
+          }
+        ]
+      },
+      {
+        "id": "c-pre-2",
+        "media": "copper_cat6",
+        "color": "blue",
+        "lengthM": 2,
+        "ends": [
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-5"
+          },
+          {
+            "deviceId": "server-01",
+            "portId": "nic-1"
+          }
+        ]
+      }
+    ]
+  },
+  "goals": [
+    {
+      "type": "link_up",
+      "a": {
+        "deviceId": "panel-a",
+        "portId": "panel-1"
+      },
+      "b": {
+        "deviceId": "tor-1",
+        "portId": "sw-1"
+      }
+    },
+    {
+      "type": "link_up",
+      "a": {
+        "deviceId": "tor-1",
+        "portId": "sw-5"
+      },
+      "b": {
+        "deviceId": "server-01",
+        "portId": "nic-1"
+      }
+    },
+    {
+      "type": "no_cables_on",
+      "ports": [
+        {
+          "deviceId": "panel-a",
+          "portId": "panel-3"
+        }
+      ]
+    }
+  ]
+}
