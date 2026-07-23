@@ -1,6 +1,8 @@
 node_modules/
 dist/
 prototype/dist/
+prototype/e2e-artifacts/
+prototype/e2e-report/
 .DS_Store
 *.log
 .vite/
