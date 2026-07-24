@@ -1,13 +1,12 @@
-# CCNA Interactive Simulation
+# PatchLab
 
 Interactive datacenter / CCNA-style trainer: **rack patching + VLANs/trunks + IP/gateway + NAT + firewall**, with instant visual feedback (PC + mobile browser).
 
-Formerly developed as PatchLab under `/agent/prototype`.
+**Live demo:** https://cozygarage.github.io/patchlab/
 
 ## Run
 
 ```bash
-cd ~/Projects/CCNA\ interactive\ simulation
 npm install
 npm run dev
 ```
