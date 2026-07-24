@@ -7,6 +7,7 @@ import type {
   SettingsSave,
 } from './types/schema';
 import { missions, baseRack, getMission } from './missions';
+import { isMissionUnlocked } from './lib/progress';
 import {
   createEngineState,
   reduce,
@@ -384,11 +385,12 @@ export default function App() {
         <Debrief
           mission={mission}
           score={score}
+          progress={progress}
           tipHistory={tipHistory}
           onHome={() => setScreen('home')}
           onRetry={() => startMission(mission, false)}
           onNext={
-            nextMission
+            nextMission && isMissionUnlocked(nextMission.order, progress)
               ? () => {
                   const m = getMission(nextMission.id);
                   if (m) openBrief(m);

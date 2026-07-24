@@ -29,8 +29,9 @@ test.describe('home & shell', () => {
     await expect(page.getByText('PatchLab').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /First Lights On/i })).toBeEnabled();
     await expect(page.locator('.stage-panel')).toContainText(/Stage 1 of 22/i);
-    await expect(page.locator('.chapter-rail')).toContainText('Copper Path');
-    await expect(page.locator('.chapter-rail')).toContainText('Routing Lab');
+    await expect(page.locator('.stage-panel')).toContainText(/hard gates/i);
+    await expect(page.locator('.chapter-rail')).toContainText('First Lights');
+    await expect(page.locator('.chapter-rail')).toContainText('Route Craft');
     await expect(page.getByRole('button', { name: /Static Route/i })).toBeVisible();
     await page.getByRole('button', { name: 'Glossary' }).click();
     const glossary = page.getByRole('dialog', { name: 'Glossary' });
@@ -51,7 +52,7 @@ test.describe('home & shell', () => {
 
   test('sandbox shows PDU, firewall, config panel', async ({ page }) => {
     await clearApp(page);
-    await unlockThrough(page, 4);
+    await unlockThrough(page, 6);
     await page.getByRole('button', { name: /Open Sandbox/i }).click();
     await expect(page.locator('.config-panel')).toBeVisible();
     await expect(page.locator('svg.rack-svg')).toContainText('PDU-A');

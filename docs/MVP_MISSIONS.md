@@ -192,10 +192,17 @@ Five guided missions + sandbox. JSON sources live in `prototype/src/missions/`.
 **Objective:** Route 198.51.100.0/24 via ISP-PEER, permit LAN→BRANCH, ping BRANCH-01.  
 **Teaches:** Static routes for non-connected destinations (+ ACL).
 
+## Campaign gating
+
+- **11 chapters** / 22 stages (pass-to-advance)
+- Unlock next stage only with **≥5★** on the previous stage (of 9)
+- Chapter borders also require **≥4★ on every stage** in the finished chapter
+- Sandbox unlocks after **Stage 5** with the stage star gate met
+
 ## Sandbox
 
-- Full rack: panel, fiber, ToR, SFP, firewall, servers, console, PDU, ISP peer
-- Config panel: IP/gateway, switchport VLAN/mode, ping, firewall helpers, static NAT
+- Full rack: panel, fiber, ToR, SFP, firewall, servers, console, PDU, ISP peer, BRANCH
+- Config panel: IP/gateway, switchport VLAN/mode, ping, firewall helpers, routes, static NAT
 - Select copper switch port → **Cycle VLAN** / **Toggle admin**
 - Inventory includes copper, fiber, power, console
 

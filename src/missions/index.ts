@@ -67,4 +67,5 @@ export function getMission(id: string): Mission | undefined {
   return missions.find((m) => m.id === id);
 }
 
-export const SANDBOX_UNLOCK_AFTER_ORDER = 3;
+/** @deprecated Prefer GATE.sandboxAfterOrder from lib/chapters — kept for docs. */
+export const SANDBOX_UNLOCK_AFTER_ORDER = 5;

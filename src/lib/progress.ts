@@ -1,5 +1,6 @@
 import type { ProgressSave, Score } from '../types/schema';
-import { SANDBOX_UNLOCK_AFTER_ORDER, missions } from '../missions';
+import { missions } from '../missions';
+import { GATE, missionGate, sandboxGate, starTotal } from './chapters';
 
 const KEY = 'patchlab.progress.v1';
 
@@ -33,30 +34,24 @@ export function recordMissionClear(
 ): ProgressSave {
   const cleared = new Set(prev.clearedMissionIds);
   cleared.add(missionId);
-  const mission = missions.find((m) => m.id === missionId);
-  const sandboxUnlocked =
-    prev.sandboxUnlocked ||
-    (!!mission && mission.order >= SANDBOX_UNLOCK_AFTER_ORDER) ||
-    [...cleared].some((id) => {
-      const m = missions.find((x) => x.id === id);
-      return !!m && m.order >= SANDBOX_UNLOCK_AFTER_ORDER;
-    });
 
   const existing = prev.stars[missionId];
   const stars = { ...prev.stars };
-  if (
-    !existing ||
-    existing.correctness + existing.speed + existing.cleanliness <
-      score.correctness + score.speed + score.cleanliness
-  ) {
+  if (!existing || starTotal(existing) < starTotal(score)) {
     stars[missionId] = score;
   }
 
-  const next: ProgressSave = {
+  const draft: ProgressSave = {
     version: 1,
     clearedMissionIds: [...cleared],
     stars,
-    sandboxUnlocked,
+    sandboxUnlocked: prev.sandboxUnlocked,
+  };
+
+  const sandbox = sandboxGate(missions, draft);
+  const next: ProgressSave = {
+    ...draft,
+    sandboxUnlocked: prev.sandboxUnlocked || sandbox.unlocked,
   };
   saveProgress(next);
   return next;
@@ -64,7 +59,7 @@ export function recordMissionClear(
 
 export function totalStars(progress: ProgressSave): number {
   return Object.values(progress.stars).reduce(
-    (sum, s) => sum + s.correctness + s.speed + s.cleanliness,
+    (sum, s) => sum + starTotal(s),
     0,
   );
 }
@@ -73,16 +68,21 @@ export function isMissionUnlocked(
   order: number,
   progress: ProgressSave,
 ): boolean {
-  if (order <= 1) return true;
-  const prev = missions.find((m) => m.order === order - 1);
-  if (!prev) return true;
-  return progress.clearedMissionIds.includes(prev.id);
+  return missionGate(order, missions, progress).unlocked;
+}
+
+export function missionUnlockReason(
+  order: number,
+  progress: ProgressSave,
+): string | undefined {
+  const gate = missionGate(order, missions, progress);
+  return gate.unlocked ? undefined : gate.reason;
 }
 
 export function starGlyph(score?: Score): string {
   if (!score) return '···';
-  const n = Math.round(
-    (score.correctness + score.speed + score.cleanliness) / 3,
-  );
+  const n = Math.round(starTotal(score) / 3);
   return '★'.repeat(Math.max(1, n)).padEnd(3, '☆');
 }
+
+export { GATE };

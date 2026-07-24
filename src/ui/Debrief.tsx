@@ -1,10 +1,17 @@
-import type { Mission, Score } from '../types/schema';
-import { chapterForMission } from '../lib/chapters';
+import type { Mission, ProgressSave, Score } from '../types/schema';
+import {
+  GATE,
+  chapterForMission,
+  meetsStageGate,
+  missionGate,
+  starTotal,
+} from '../lib/chapters';
 import { missions } from '../missions';
 
 interface DebriefProps {
   mission: Mission;
   score: Score;
+  progress: ProgressSave;
   tipHistory: string[];
   onNext?: () => void;
   onRetry: () => void;
@@ -15,6 +22,7 @@ interface DebriefProps {
 export function Debrief({
   mission,
   score,
+  progress,
   tipHistory,
   onNext,
   onRetry,
@@ -24,6 +32,12 @@ export function Debrief({
   const chapter = chapterForMission(mission);
   const next = missions.find((m) => m.order === mission.order + 1);
   const nextChapter = next ? chapterForMission(next) : undefined;
+  const earned = starTotal(score);
+  const stageOk = meetsStageGate(score);
+  const nextGate = next
+    ? missionGate(next.order, missions, progress)
+    : { unlocked: true as const };
+  const canAdvance = !!next && nextGate.unlocked;
   const chapterClear =
     chapter &&
     !missions.some(
@@ -41,18 +55,35 @@ export function Debrief({
           <span>PatchLab</span>
         </div>
         <div className="stage-badge">
-          Stage {mission.order} of {missions.length} cleared
+          Stage {mission.order} of {missions.length} · {earned}★ / 9
           {chapter ? ` · Chapter ${chapter.index}` : ''}
         </div>
         <h1>Circuit complete</h1>
         <p>
           You finished <strong>{mission.title}</strong>
-          {chapterClear && chapter
-            ? ` — Chapter ${chapter.index} (${chapter.title}) complete!`
-            : next
-              ? `. Stage ${next.order} is now unlocked.`
-              : '. Campaign complete — try the Sandbox.'}
+          {!stageOk
+            ? `. Gate not met — earn at least ${GATE.minStarsToAdvance}★ to unlock the next stage (you scored ${earned}★).`
+            : chapterClear && chapter
+              ? next && !canAdvance
+                ? ` — chapter stages done, but boost every stage in Chapter ${chapter.index} to ≥${GATE.minStarsPerMissionForChapter}★ to open the next chapter.`
+                : ` — Chapter ${chapter.index} (${chapter.title}) gate ready!`
+              : next
+                ? canAdvance
+                  ? `. Stage ${next.order} is unlocked.`
+                  : `. Next stage is still gated.`
+                : '. Campaign complete — try the Sandbox.'}
         </p>
+
+        {!stageOk ? (
+          <div className="gate-callout">
+            <strong>Hard gate</strong>
+            <p>
+              Score {GATE.minStarsToAdvance}★+ (correctness + speed +
+              cleanliness). Fewer wrong attempts, fewer hints, and finishing near
+              par time raise your stars.
+            </p>
+          </div>
+        ) : null}
 
         <div className="debrief-stars">
           <div className="star-box">
@@ -90,7 +121,7 @@ export function Debrief({
         ) : null}
 
         <div className="actions">
-          {onNext ? (
+          {canAdvance && onNext ? (
             <button type="button" className="btn btn-primary" onClick={onNext}>
               {nextLabel ??
                 (next
@@ -102,13 +133,20 @@ export function Debrief({
                   : 'Next mission')}
             </button>
           ) : null}
-          <button type="button" className="btn btn-ghost" onClick={onRetry}>
-            Retry stage
+          <button
+            type="button"
+            className={canAdvance ? 'btn btn-ghost' : 'btn btn-primary'}
+            onClick={onRetry}
+          >
+            {stageOk ? 'Retry for more ★' : 'Retry — beat the gate'}
           </button>
           <button type="button" className="btn btn-ghost" onClick={onHome}>
             Campaign map
           </button>
         </div>
+        {!canAdvance && next && !nextGate.unlocked ? (
+          <p className="gate-hint">{nextGate.reason}</p>
+        ) : null}
       </div>
     </div>
   );

@@ -59,13 +59,13 @@ export async function unlockThrough(page: Page, order: number) {
         JSON.stringify({
           version: 1,
           clearedMissionIds: cleared,
-          stars: Object.fromEntries(
-            cleared.map((id) => [
-              id,
-              { correctness: 3, speed: 3, elegance: 3 },
-            ]),
-          ),
-          sandboxUnlocked: maxOrder > 3 || cleared.includes('m3-vlan-trap'),
+        stars: Object.fromEntries(
+          cleared.map((id) => [
+            id,
+            { correctness: 3, speed: 3, cleanliness: 3 },
+          ]),
+        ),
+        sandboxUnlocked: maxOrder > 5 || cleared.includes('m5-change-window'),
         }),
       );
     },
