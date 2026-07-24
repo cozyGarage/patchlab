@@ -185,12 +185,17 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
       if (!cable) return state;
       rack.cables = rack.cables.filter((c) => c.id !== intent.cableId);
       const inventory = { ...state.snapshot.inventory };
-      // Refund only if this media is part of learner inventory tracking
-      inventory[cable.media] += 1;
+      // Facility / base-rack harnesses are not learner inventory — do not refund them.
+      const isBaseCable = state.baseRack.cables.some((c) => c.id === cable.id);
+      if (!isBaseCable) {
+        inventory[cable.media] += 1;
+      }
       const tip: Tip = {
         level: 'info',
         code: 'DISCONNECTED',
-        message: `Removed ${cable.media.replaceAll('_', ' ')} cord`,
+        message: isBaseCable
+          ? `Removed facility ${cable.media.replaceAll('_', ' ')} cord`
+          : `Removed ${cable.media.replaceAll('_', ' ')} cord`,
       };
       return {
         ...state,
@@ -418,6 +423,24 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
       const rack = cloneRack(state.snapshot.rack);
       const fw = rack.devices.find((d) => d.id === intent.deviceId);
       if (!fw || fw.role !== 'firewall') return state;
+      if (
+        !parseCidr(intent.rule.srcCidr) ||
+        !parseCidr(intent.rule.dstCidr)
+      ) {
+        return {
+          ...state,
+          wrongAttempts: state.wrongAttempts + 1,
+          snapshot: {
+            ...state.snapshot,
+            lastTip: {
+              level: 'error',
+              code: 'FIREWALL_UPDATED',
+              message:
+                'Invalid ACL — use CIDR like 10.10.10.20/32 → 198.51.100.0/24',
+            },
+          },
+        };
+      }
       const existing = fw.firewallRules ?? [];
       const others = existing.filter((r) => r.id !== intent.rule.id);
       // New/updated rules evaluate first (trainer-friendly ACL top-insert).

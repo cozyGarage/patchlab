@@ -1,0 +1,50 @@
+{
+  "id": "m28-fiber-no-shutdown",
+  "title": "Fiber No-Shut",
+  "order": 28,
+  "track": "fiber",
+  "lesson": "Fiber admin-down looks exactly like a dark strand. Docs already land on Te1/0/3 — enable the SFP instead of jumping to a spare tray port.",
+  "brief": "F-03 is already patched to Te1/0/3, but the cage is admin down. Select Te1/0/3 and Toggle admin (no shutdown). Do not move the circuit to F-04 / Te1/0/4.",
+  "constraints": [
+    "Keep F-03 ↔ Te1/0/3",
+    "Do not leave cables on F-04 or Te1/0/4",
+    "Use Toggle admin on the SFP"
+  ],
+  "parTimeSec": 75,
+  "hintAfterWrongAttempts": 1,
+  "inventory": {
+    "copper_cat6": 0,
+    "fiber_om4": 2,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
+  "initial": {
+    "devices": [],
+    "cables": [
+      {
+        "id": "c-fiber-dark",
+        "media": "fiber_om4",
+        "color": "aqua",
+        "lengthM": 2,
+        "ends": [
+          { "deviceId": "fiber-tray", "portId": "f-3" },
+          { "deviceId": "tor-sfp", "portId": "sfp-3" }
+        ]
+      }
+    ]
+  },
+  "goals": [
+    {
+      "type": "link_up",
+      "a": { "deviceId": "fiber-tray", "portId": "f-3" },
+      "b": { "deviceId": "tor-sfp", "portId": "sfp-3" }
+    },
+    {
+      "type": "no_cables_on",
+      "ports": [
+        { "deviceId": "fiber-tray", "portId": "f-4" },
+        { "deviceId": "tor-sfp", "portId": "sfp-4" }
+      ]
+    }
+  ]
+}

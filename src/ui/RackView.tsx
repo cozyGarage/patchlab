@@ -291,10 +291,16 @@ export function RackView({
         ?.ports.find((p) => p.id === selected.portId)
     : undefined;
 
-  const canEditPort =
+  const canCycleVlan =
     !!selectedPort &&
     selectedPort.role === 'network' &&
     selectedPort.media === 'copper_cat6';
+  const canToggleAdmin =
+    !!selectedPort &&
+    selectedPort.role === 'network' &&
+    (selectedPort.kind === 'data' ||
+      selectedPort.kind === 'lan' ||
+      selectedPort.kind === 'wan');
 
   const showHint =
     !sandbox &&
@@ -621,12 +627,13 @@ export function RackView({
         onHint={onHint}
         canUnplug={canUnplug}
         sandbox={sandbox}
-        canEditPort={canEditPort}
+        canCycleVlan={canCycleVlan}
+        canToggleAdmin={canToggleAdmin}
         onCycleVlan={
-          selected && canEditPort ? () => onCycleVlan(selected) : undefined
+          selected && canCycleVlan ? () => onCycleVlan(selected) : undefined
         }
         onToggleAdmin={
-          selected && canEditPort ? () => onToggleAdmin(selected) : undefined
+          selected && canToggleAdmin ? () => onToggleAdmin(selected) : undefined
         }
         onUnplugSelected={
           selected

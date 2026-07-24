@@ -126,6 +126,14 @@ export const CHAPTERS: Chapter[] = [
     from: 25,
     to: 26,
   },
+  {
+    id: 'hardening-recovery',
+    index: 14,
+    title: 'Hardening & Recovery',
+    blurb: 'Host ACL exception, fiber no-shut, and spare PDU outlets.',
+    from: 27,
+    to: 29,
+  },
 ];
 
 export function starTotal(score?: Score): number {

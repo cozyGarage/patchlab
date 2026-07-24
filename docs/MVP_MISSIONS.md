@@ -212,9 +212,24 @@ Five guided missions + sandbox. JSON sources live in `prototype/src/missions/`.
 **Objective:** Deny 10.10.10.20/32 → BRANCH while SERVER-01 still reaches BRANCH-01.  
 **Teaches:** Specific deny above a broader permit on a routed prefix.
 
+## Mission 27 — Branch Exception
+
+**Objective:** Console FW via TTY2; permit only 10.10.10.10/32 → 198.51.100.10/32.  
+**Teaches:** Host exceptions above a broad deny; OOB console for ACL work.
+
+## Mission 28 — Fiber No-Shut
+
+**Objective:** Toggle admin on Te1/0/3 so prepatched F-03 lights.  
+**Teaches:** Fiber admin-down recovery without moving strands.
+
+## Mission 29 — Spare PDU
+
+**Objective:** Power FW→OUT5 and SERVER-07→OUT6; ping recovers.  
+**Teaches:** Spare outlet moves during maintenance.
+
 ## Campaign gating
 
-- **13 chapters** / 26 stages (pass-to-advance)
+- **14 chapters** / 29 stages (pass-to-advance)
 - Unlock next stage only with **≥5★** on the previous stage (of 9)
 - Chapter borders also require **≥4★ on every stage** in the finished chapter
 - Sandbox unlocks after **Stage 5** with the stage star gate met

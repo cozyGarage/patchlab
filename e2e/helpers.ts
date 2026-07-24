@@ -32,6 +32,9 @@ export const MISSION_IDS = [
   'm24-wrong-gateway',
   'm25-host-route',
   'm26-deny-branch',
+  'm27-branch-exception',
+  'm28-fiber-no-shutdown',
+  'm29-spare-pdu',
 ] as const;
 
 export async function shot(page: Page, name: string) {

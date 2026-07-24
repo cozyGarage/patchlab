@@ -28,11 +28,11 @@ test.describe('home & shell', () => {
     await shot(page, '01-home');
     await expect(page.getByText('PatchLab').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /First Lights On/i })).toBeEnabled();
-    await expect(page.locator('.stage-panel')).toContainText(/Stage 1 of 26/i);
+    await expect(page.locator('.stage-panel')).toContainText(/Stage 1 of 29/i);
     await expect(page.locator('.stage-panel')).toContainText(/hard gates/i);
     await expect(page.locator('.chapter-rail')).toContainText('First Lights');
-    await expect(page.locator('.chapter-rail')).toContainText('Precision Path');
-    await expect(page.getByRole('button', { name: /Deny to Branch/i })).toBeVisible();
+    await expect(page.locator('.chapter-rail')).toContainText('Hardening');
+    await expect(page.getByRole('button', { name: /Spare PDU/i })).toBeVisible();
     await page.getByRole('button', { name: 'Glossary' }).click();
     const glossary = page.getByRole('dialog', { name: 'Glossary' });
     await expect(glossary).toBeVisible();
@@ -332,6 +332,30 @@ test.describe('logic / security missions', () => {
     await expectDebrief(page);
   });
 
+  test('Mission 21 inter-VLAN router', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 21);
+    await startMission(page, /Inter-VLAN Router/i);
+    await connectPorts(page, /ToR-SW-A Gi1\/0\/5 VLAN 10/, /SERVER-01 eth0 VLAN 10/);
+    await connectPorts(page, /ToR-SW-A Gi1\/0\/7 VLAN 20/, /SERVER-07 eth0 VLAN 20/);
+    await connectPorts(page, /FW-EDGE LAN0/, /ToR-SW-A Gi1\/0\/2 VLAN 10/);
+    await connectPorts(page, /FW-EDGE LAN20/, /ToR-SW-A Gi1\/0\/8 VLAN 20/);
+    await focusDevice(page, 'SERVER-01');
+    await applyIp(page, {
+      address: '10.10.10.10',
+      prefix: '24',
+      gateway: '10.10.10.1',
+    });
+    await focusDevice(page, 'SERVER-07');
+    await applyIp(page, {
+      address: '10.10.20.10',
+      prefix: '24',
+      gateway: '10.10.20.1',
+    });
+    await expectDebrief(page);
+    await shot(page, '26-m21-debrief');
+  });
+
   test('Mission 22 static route to BRANCH', async ({ page }) => {
     await clearApp(page);
     await unlockThrough(page, 22);
@@ -400,5 +424,53 @@ test.describe('logic / security missions', () => {
       .click();
     await expectDebrief(page);
     await shot(page, '31-m26-debrief');
+  });
+
+  test('Mission 27 branch exception via console + custom ACL', async ({
+    page,
+  }) => {
+    await clearApp(page);
+    await unlockThrough(page, 27);
+    await startMission(page, /Branch Exception/i);
+    await connectPorts(page, /Console TTY2 console/, /FW-EDGE CON console/);
+    await focusDevice(page, 'FW-EDGE');
+    await page
+      .locator('.config-panel')
+      .locator('label', { hasText: 'Action' })
+      .locator('select')
+      .selectOption('permit');
+    await page
+      .locator('.config-panel')
+      .locator('label', { hasText: 'Source CIDR' })
+      .locator('input')
+      .fill('10.10.10.10/32');
+    await page
+      .locator('.config-panel')
+      .locator('label', { hasText: 'Dest CIDR' })
+      .locator('input')
+      .fill('198.51.100.10/32');
+    await page.getByRole('button', { name: 'Insert custom ACL' }).click();
+    await expectDebrief(page);
+    await shot(page, '32-m27-debrief');
+  });
+
+  test('Mission 28 fiber no-shutdown', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 28);
+    await startMission(page, /Fiber No-Shut/i);
+    await tapPort(page, /ToR-SFP Te1\/0\/3 fiber/);
+    await page.getByRole('button', { name: 'Toggle admin' }).click();
+    await expectDebrief(page);
+    await shot(page, '33-m28-debrief');
+  });
+
+  test('Mission 29 spare PDU outlets', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 29);
+    await startMission(page, /Spare PDU/i);
+    await connectPorts(page, /FW-EDGE PSU power/, /PDU-A OUT5 power/);
+    await connectPorts(page, /SERVER-07 PSU power/, /PDU-A OUT6 power/);
+    await expectDebrief(page);
+    await shot(page, '34-m29-debrief');
   });
 });

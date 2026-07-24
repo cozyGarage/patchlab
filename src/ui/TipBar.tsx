@@ -12,7 +12,8 @@ interface TipBarProps {
   sandbox?: boolean;
   onCycleVlan?: () => void;
   onToggleAdmin?: () => void;
-  canEditPort?: boolean;
+  canCycleVlan?: boolean;
+  canToggleAdmin?: boolean;
 }
 
 export function TipBar({
@@ -27,7 +28,8 @@ export function TipBar({
   sandbox,
   onCycleVlan,
   onToggleAdmin,
-  canEditPort,
+  canCycleVlan,
+  canToggleAdmin,
 }: TipBarProps) {
   const level = tip?.level ?? 'info';
   return (
@@ -72,12 +74,12 @@ export function TipBar({
             Unplug
           </button>
         ) : null}
-        {canEditPort && onCycleVlan ? (
+        {canCycleVlan && onCycleVlan ? (
           <button type="button" className="btn btn-ghost" onClick={onCycleVlan}>
             Cycle VLAN
           </button>
         ) : null}
-        {canEditPort && onToggleAdmin ? (
+        {canToggleAdmin && onToggleAdmin ? (
           <button
             type="button"
             className="btn btn-ghost"

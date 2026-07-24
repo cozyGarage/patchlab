@@ -61,7 +61,11 @@ const ENTRIES = [
   },
   {
     term: 'Admin up / no shutdown',
-    def: 'A port can be cabled correctly and still stay dark if it is administratively down. Enabling the port (no shutdown) restores the link without moving the cable.',
+    def: 'A port can be cabled correctly and still stay dark if it is administratively down. Enabling the port (no shutdown) restores the link without moving the cable — copper or fiber SFP.',
+  },
+  {
+    term: 'ACL host exception',
+    def: 'A more-specific permit (often /32) placed above a broader deny so one host can reach a destination while the rest of the subnet stays blocked.',
   },
   {
     term: 'Subnet mask / prefix',

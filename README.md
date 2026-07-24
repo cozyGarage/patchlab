@@ -24,7 +24,7 @@ npm run build
 - Realistic rack chassis: panel, fiber tray, ToR switch, SFP, firewall, servers, console station, PDU, ISP peer
 - Plug data / fiber / power / console cords (tap-tap or drag)
 - Side config panel: IPv4/gateway, switchport VLAN/mode, ping, firewall ACLs, static NAT
-- 26 missions: copper/fiber → power/console → VLAN/trunk → gateway/NAT/ACL → addressing → inter-VLAN → routes → no-shutdown / wrong gateway → host-route / deny-to-branch
+- 29 missions: copper/fiber → power/console → VLAN/trunk → gateway/NAT/ACL → addressing → inter-VLAN → routes → ops recovery → host-route/ACL → BRANCH exception / fiber no-shut / spare PDU
 - Custom ACL form + route overrides; glossary, sound toggle, hints, local progress
 
 ## Docs

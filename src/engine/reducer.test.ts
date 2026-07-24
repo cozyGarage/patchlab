@@ -6,10 +6,10 @@ import { scoreRun } from './scoring';
 import { portKey } from '../types/schema';
 
 describe('mission catalog', () => {
-  it('loads 26 ordered missions with goals', () => {
-    expect(missions).toHaveLength(26);
+  it('loads 29 ordered missions with goals', () => {
+    expect(missions).toHaveLength(29);
     expect(missions.map((m) => m.order)).toEqual(
-      Array.from({ length: 26 }, (_, i) => i + 1),
+      Array.from({ length: 29 }, (_, i) => i + 1),
     );
     for (const m of missions) {
       expect(m.goals.length).toBeGreaterThan(0);
@@ -849,6 +849,110 @@ describe('NetPractice-inspired routing lessons', () => {
     expect(evaluatePing(state.snapshot.rack, 'server-01', 'branch-01').ok).toBe(
       true,
     );
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('does not refund facility base cables into learner inventory', () => {
+    const mission = getMission('m1-first-lights')!;
+    let state = createEngineState(mission, baseRack);
+    const before = state.snapshot.inventory.power_c13;
+    state = reduce(state, {
+      type: 'DISCONNECT_PORT',
+      port: { deviceId: 'fw-1', portId: 'fw-psu' },
+    });
+    expect(state.snapshot.inventory.power_c13).toBe(before);
+    expect(state.snapshot.lastTip?.message).toMatch(/facility/i);
+  });
+
+  it('rejects invalid ACL CIDRs', () => {
+    const mission = getMission('m12-firewall-acl')!;
+    let state = createEngineState(mission, baseRack);
+    const before = state.wrongAttempts;
+    state = reduce(state, {
+      type: 'UPSERT_FIREWALL_RULE',
+      deviceId: 'fw-1',
+      rule: {
+        id: 'bad',
+        action: 'permit',
+        srcCidr: 'not-a-cidr',
+        dstCidr: '10.10.10.0/24',
+        enabled: true,
+      },
+    });
+    expect(state.wrongAttempts).toBe(before + 1);
+    expect(state.snapshot.lastTip?.message).toMatch(/Invalid ACL/i);
+    const fw = state.snapshot.rack.devices.find((d) => d.id === 'fw-1')!;
+    expect(fw.firewallRules?.some((r) => r.id === 'bad')).toBe(false);
+  });
+
+  it('M27: console + host BRANCH exception', () => {
+    const mission = getMission('m27-branch-exception')!;
+    let state = createEngineState(mission, baseRack);
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'branch-01').ok).toBe(
+      false,
+    );
+
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'con-srv', portId: 'tty2' },
+      b: { deviceId: 'fw-1', portId: 'fw-con' },
+    });
+    state = reduce(state, {
+      type: 'UPSERT_FIREWALL_RULE',
+      deviceId: 'fw-1',
+      rule: {
+        id: 'host-exception',
+        action: 'permit',
+        srcCidr: '10.10.10.10/32',
+        dstCidr: '198.51.100.10/32',
+        enabled: true,
+      },
+    });
+    expect(state.snapshot.consoleAttached['fw-1']).toBe(true);
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'branch-01').ok).toBe(
+      true,
+    );
+    expect(evaluatePing(state.snapshot.rack, 'server-07', 'branch-01').ok).toBe(
+      false,
+    );
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M28: fiber no-shutdown on Te1/0/3', () => {
+    const mission = getMission('m28-fiber-no-shutdown')!;
+    let state = createEngineState(mission, baseRack);
+    expect(
+      state.snapshot.linkTable[
+        portKey({ deviceId: 'tor-sfp', portId: 'sfp-3' })
+      ],
+    ).toBe('down');
+
+    state = reduce(state, {
+      type: 'TOGGLE_ADMIN',
+      port: { deviceId: 'tor-sfp', portId: 'sfp-3' },
+    });
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M29: spare PDU outlets restore FW and SERVER-07', () => {
+    const mission = getMission('m29-spare-pdu')!;
+    let state = createEngineState(mission, baseRack);
+    expect(state.snapshot.poweredDevices['fw-1']).toBe(false);
+    expect(state.snapshot.poweredDevices['server-07']).toBe(false);
+
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'fw-1', portId: 'fw-psu' },
+      b: { deviceId: 'pdu-a', portId: 'out-5' },
+    });
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'server-07', portId: 'srv7-psu' },
+      b: { deviceId: 'pdu-a', portId: 'out-6' },
+    });
+    expect(state.snapshot.poweredDevices['fw-1']).toBe(true);
+    expect(state.snapshot.poweredDevices['server-07']).toBe(true);
+    expect(evaluatePing(state.snapshot.rack, 'server-07', 'fw-1').ok).toBe(true);
     expect(state.snapshot.complete).toBe(true);
   });
 });
