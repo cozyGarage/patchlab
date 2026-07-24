@@ -110,6 +110,22 @@ export const CHAPTERS: Chapter[] = [
     from: 21,
     to: 22,
   },
+  {
+    id: 'ops-recovery',
+    index: 12,
+    title: 'Ops Recovery',
+    blurb: 'No-shutdown a dark port, then fix a wrong gateway.',
+    from: 23,
+    to: 24,
+  },
+  {
+    id: 'precision-path',
+    index: 13,
+    title: 'Precision Path',
+    blurb: 'Host-route longest match, then deny one host to BRANCH.',
+    from: 25,
+    to: 26,
+  },
 ];
 
 export function starTotal(score?: Score): number {

@@ -1,0 +1,152 @@
+{
+  "id": "m26-deny-branch",
+  "title": "Deny to Branch",
+  "order": 26,
+  "track": "security",
+  "lesson": "Same first-match ACL idea as Deny One Host, aimed at a routed BRANCH prefix. Specific deny above a broader permit keeps one host out while others still reach the cloud site.",
+  "brief": "Route to BRANCH is up and a broad LAN→BRANCH permit exists. Insert deny 10.10.10.20/32 → 198.51.100.0/24 so SERVER-07 cannot reach BRANCH-01, while SERVER-01 still can.",
+  "constraints": [
+    "Deny only host 10.10.10.20 (SERVER-07)",
+    "SERVER-01 must still reach BRANCH-01",
+    "Rule order matters — specific deny first"
+  ],
+  "parTimeSec": 120,
+  "hintAfterWrongAttempts": 2,
+  "inventory": {
+    "copper_cat6": 2,
+    "fiber_om4": 0,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
+  "initial": {
+    "devices": [
+      {
+        "id": "tor-1",
+        "role": "switch",
+        "name": "ToR-SW-A",
+        "model": "48x1G + 4x10G",
+        "rackUnitStart": 40,
+        "heightU": 1,
+        "ports": [
+          { "id": "sw-1", "deviceId": "tor-1", "index": 1, "label": "Gi1/0/1", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "network", "vlanId": 10 },
+          { "id": "sw-2", "deviceId": "tor-1", "index": 2, "label": "Gi1/0/2", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "network", "vlanId": 10 },
+          { "id": "sw-3", "deviceId": "tor-1", "index": 3, "label": "Gi1/0/3", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "network", "vlanId": 10 },
+          { "id": "sw-4", "deviceId": "tor-1", "index": 4, "label": "Gi1/0/4", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "down", "role": "network", "vlanId": 10 },
+          { "id": "sw-5", "deviceId": "tor-1", "index": 5, "label": "Gi1/0/5", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "network", "vlanId": 10 },
+          { "id": "sw-6", "deviceId": "tor-1", "index": 6, "label": "Gi1/0/6", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "network", "vlanId": 10 },
+          { "id": "sw-7", "deviceId": "tor-1", "index": 7, "label": "Gi1/0/7", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "network", "vlanId": 10 },
+          { "id": "sw-8", "deviceId": "tor-1", "index": 8, "label": "Gi1/0/8", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "network", "vlanId": 10 },
+          { "id": "sw-con", "deviceId": "tor-1", "index": 9, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
+          { "id": "sw-psu", "deviceId": "tor-1", "index": 10, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+        ]
+      },
+      {
+        "id": "fw-1",
+        "role": "firewall",
+        "name": "FW-EDGE",
+        "model": "NGFW training",
+        "rackUnitStart": 36,
+        "heightU": 1,
+        "firewallRules": [
+          {
+            "id": "permit-branch",
+            "action": "permit",
+            "srcCidr": "10.10.10.0/24",
+            "dstCidr": "198.51.100.0/24",
+            "note": "Broad permit — put a specific deny above it",
+            "enabled": true
+          }
+        ],
+        "routes": [
+          {
+            "id": "rt-branch",
+            "destCidr": "198.51.100.0/24",
+            "nextHop": "203.0.113.2",
+            "enabled": true
+          }
+        ],
+        "ports": [
+          { "id": "fw-lan", "deviceId": "fw-1", "index": 1, "label": "LAN0", "media": "copper_cat6", "connector": "rj45", "kind": "lan", "admin": "up", "role": "lan", "vlanId": 10, "ip": { "address": "10.10.10.1", "prefix": 24 } },
+          { "id": "fw-wan", "deviceId": "fw-1", "index": 2, "label": "WAN0", "media": "copper_cat6", "connector": "rj45", "kind": "wan", "admin": "up", "role": "wan", "ip": { "address": "203.0.113.1", "prefix": 30 } },
+          { "id": "fw-con", "deviceId": "fw-1", "index": 3, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
+          { "id": "fw-psu", "deviceId": "fw-1", "index": 4, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+        ]
+      },
+      {
+        "id": "server-01",
+        "role": "server",
+        "name": "SERVER-01",
+        "model": "1U compute",
+        "rackUnitStart": 20,
+        "heightU": 1,
+        "ports": [
+          { "id": "nic-1", "deviceId": "server-01", "index": 1, "label": "eth0", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "nic", "accessVlan": 10, "ip": { "address": "10.10.10.10", "prefix": 24, "gateway": "10.10.10.1" } },
+          { "id": "srv1-con", "deviceId": "server-01", "index": 2, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
+          { "id": "srv1-psu", "deviceId": "server-01", "index": 3, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+        ]
+      },
+      {
+        "id": "server-07",
+        "role": "server",
+        "name": "SERVER-07",
+        "model": "1U compute",
+        "rackUnitStart": 14,
+        "heightU": 1,
+        "ports": [
+          { "id": "nic-1", "deviceId": "server-07", "index": 1, "label": "eth0", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "nic", "accessVlan": 10, "ip": { "address": "10.10.10.20", "prefix": 24, "gateway": "10.10.10.1" } },
+          { "id": "srv7-psu", "deviceId": "server-07", "index": 2, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+        ]
+      }
+    ],
+    "cables": [
+      {
+        "id": "c-fw-lan",
+        "media": "copper_cat6",
+        "color": "yellow",
+        "lengthM": 1,
+        "ends": [
+          { "deviceId": "fw-1", "portId": "fw-lan" },
+          { "deviceId": "tor-1", "portId": "sw-2" }
+        ]
+      },
+      {
+        "id": "c-srv-a",
+        "media": "copper_cat6",
+        "color": "blue",
+        "lengthM": 2,
+        "ends": [
+          { "deviceId": "tor-1", "portId": "sw-5" },
+          { "deviceId": "server-01", "portId": "nic-1" }
+        ]
+      },
+      {
+        "id": "c-srv-b",
+        "media": "copper_cat6",
+        "color": "blue",
+        "lengthM": 2,
+        "ends": [
+          { "deviceId": "tor-1", "portId": "sw-7" },
+          { "deviceId": "server-07", "portId": "nic-1" }
+        ]
+      }
+    ]
+  },
+  "goals": [
+    {
+      "type": "firewall_rule",
+      "action": "deny",
+      "srcCidr": "10.10.10.20/32",
+      "dstCidr": "198.51.100.0/24"
+    },
+    {
+      "type": "ping_fail",
+      "fromDeviceId": "server-07",
+      "toDeviceId": "branch-01"
+    },
+    {
+      "type": "ping",
+      "fromDeviceId": "server-01",
+      "toDeviceId": "branch-01"
+    }
+  ]
+}

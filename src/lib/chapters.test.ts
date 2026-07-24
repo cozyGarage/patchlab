@@ -66,7 +66,7 @@ describe('campaign chapters', () => {
     expect(currentStage(missions, progress)?.order).toBe(1);
     expect(stageLabel(missions, progress)).toMatchObject({
       current: 1,
-      total: 22,
+      total: 26,
     });
     expect(isChapterUnlocked(CHAPTERS[0]!, missions, progress)).toBe(true);
     expect(isChapterUnlocked(CHAPTERS[1]!, missions, progress)).toBe(false);

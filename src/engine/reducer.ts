@@ -559,7 +559,10 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
         nextHop: intent.nextHop,
         enabled: true,
       };
-      const others = (dev.routes ?? []).filter((r) => r.id !== rule.id);
+      // Replace any prior entry for the same prefix (host-route overrides).
+      const others = (dev.routes ?? []).filter(
+        (r) => r.destCidr !== intent.destCidr,
+      );
       dev.routes = [rule, ...others];
       return {
         ...state,

@@ -251,6 +251,46 @@ export default function App() {
     );
   }
 
+  function dispatchFirewallDenyHostBranch() {
+    if (!engine) return;
+    apply(
+      reduce(engine, {
+        type: 'UPSERT_FIREWALL_RULE',
+        deviceId: 'fw-1',
+        rule: {
+          id: `deny-host-branch-${Date.now()}`,
+          action: 'deny',
+          srcCidr: '10.10.10.20/32',
+          dstCidr: '198.51.100.0/24',
+          note: 'Deny SERVER-07 to BRANCH',
+          enabled: true,
+        },
+      }),
+    );
+  }
+
+  function dispatchFirewallCustomRule(
+    action: 'permit' | 'deny',
+    srcCidr: string,
+    dstCidr: string,
+  ) {
+    if (!engine) return;
+    apply(
+      reduce(engine, {
+        type: 'UPSERT_FIREWALL_RULE',
+        deviceId: 'fw-1',
+        rule: {
+          id: `custom-${action}-${Date.now()}`,
+          action,
+          srcCidr: srcCidr.trim(),
+          dstCidr: dstCidr.trim(),
+          note: 'Custom ACL',
+          enabled: true,
+        },
+      }),
+    );
+  }
+
   function dispatchSetNat(insideIp: string, outsideIp: string) {
     if (!engine) return;
     apply(
@@ -371,6 +411,8 @@ export default function App() {
           onFirewallPermitLanWan={dispatchFirewallPermitLanWan}
           onFirewallPermitWanLan={dispatchFirewallPermitWanLan}
           onFirewallDenyHost={dispatchFirewallDenyHost}
+          onFirewallDenyHostBranch={dispatchFirewallDenyHostBranch}
+          onFirewallCustomRule={dispatchFirewallCustomRule}
           onSetNat={dispatchSetNat}
           onSetRoute={dispatchSetRoute}
           onFirewallPermitBranch={dispatchFirewallPermitBranch}

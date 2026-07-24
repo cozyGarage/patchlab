@@ -56,6 +56,14 @@ const ENTRIES = [
     def: 'Manual route entry: destination prefix → next-hop IP. Used when the destination is not on a directly connected interface.',
   },
   {
+    term: 'Longest-prefix match',
+    def: 'When multiple routes cover a destination, the most specific prefix wins (a /32 host route beats a /24). A poisoned host route can black-hole traffic until you override it.',
+  },
+  {
+    term: 'Admin up / no shutdown',
+    def: 'A port can be cabled correctly and still stay dark if it is administratively down. Enabling the port (no shutdown) restores the link without moving the cable.',
+  },
+  {
     term: 'Subnet mask / prefix',
     def: 'Defines which bits are the network. 10.10.10.10/24 and 10.10.10.1/16 are not “the same subnet” for routing decisions.',
   },

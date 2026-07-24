@@ -1,0 +1,113 @@
+{
+  "id": "m25-host-route",
+  "title": "Host Route",
+  "order": 25,
+  "track": "routing",
+  "lesson": "Longest-prefix match: a /32 host route beats a broader summary. A more-specific bad next hop can black-hole traffic even when a correct /24 exists — override the host route.",
+  "brief": "LAN and WAN are up. A poisoned host route 198.51.100.10/32 → 10.10.10.10 is winning over the good /24. Apply route 198.51.100.10/32 via 203.0.113.2 (same prefix, correct next hop), then ping BRANCH-01. ACL is already permitted.",
+  "constraints": [
+    "Replace the host route next hop with ISP-PEER (203.0.113.2)",
+    "Do not remove the WAN uplink",
+    "BRANCH-01 is a cloud host"
+  ],
+  "parTimeSec": 120,
+  "hintAfterWrongAttempts": 2,
+  "inventory": {
+    "copper_cat6": 2,
+    "fiber_om4": 0,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
+  "initial": {
+    "devices": [
+      {
+        "id": "fw-1",
+        "role": "firewall",
+        "name": "FW-EDGE",
+        "model": "NGFW training",
+        "rackUnitStart": 36,
+        "heightU": 1,
+        "firewallRules": [
+          {
+            "id": "permit-branch",
+            "action": "permit",
+            "srcCidr": "10.10.10.0/24",
+            "dstCidr": "198.51.100.0/24",
+            "note": "Already open",
+            "enabled": true
+          }
+        ],
+        "routes": [
+          {
+            "id": "rt-summary",
+            "destCidr": "198.51.100.0/24",
+            "nextHop": "203.0.113.2",
+            "enabled": true,
+            "note": "Good summary — loses to the poisoned /32"
+          },
+          {
+            "id": "rt-poison",
+            "destCidr": "198.51.100.10/32",
+            "nextHop": "10.10.10.10",
+            "enabled": true,
+            "note": "Poisoned host route"
+          }
+        ],
+        "ports": [
+          { "id": "fw-lan", "deviceId": "fw-1", "index": 1, "label": "LAN0", "media": "copper_cat6", "connector": "rj45", "kind": "lan", "admin": "up", "role": "lan", "vlanId": 10, "ip": { "address": "10.10.10.1", "prefix": 24 } },
+          { "id": "fw-wan", "deviceId": "fw-1", "index": 2, "label": "WAN0", "media": "copper_cat6", "connector": "rj45", "kind": "wan", "admin": "up", "role": "wan", "ip": { "address": "203.0.113.1", "prefix": 30 } },
+          { "id": "fw-con", "deviceId": "fw-1", "index": 3, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
+          { "id": "fw-psu", "deviceId": "fw-1", "index": 4, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+        ]
+      },
+      {
+        "id": "server-01",
+        "role": "server",
+        "name": "SERVER-01",
+        "model": "1U compute",
+        "rackUnitStart": 20,
+        "heightU": 1,
+        "ports": [
+          { "id": "nic-1", "deviceId": "server-01", "index": 1, "label": "eth0", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "nic", "accessVlan": 10, "ip": { "address": "10.10.10.10", "prefix": 24, "gateway": "10.10.10.1" } },
+          { "id": "srv1-con", "deviceId": "server-01", "index": 2, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
+          { "id": "srv1-psu", "deviceId": "server-01", "index": 3, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+        ]
+      }
+    ],
+    "cables": [
+      {
+        "id": "c-fw-lan",
+        "media": "copper_cat6",
+        "color": "yellow",
+        "lengthM": 1,
+        "ends": [
+          { "deviceId": "fw-1", "portId": "fw-lan" },
+          { "deviceId": "tor-1", "portId": "sw-2" }
+        ]
+      },
+      {
+        "id": "c-srv",
+        "media": "copper_cat6",
+        "color": "blue",
+        "lengthM": 2,
+        "ends": [
+          { "deviceId": "tor-1", "portId": "sw-5" },
+          { "deviceId": "server-01", "portId": "nic-1" }
+        ]
+      }
+    ]
+  },
+  "goals": [
+    {
+      "type": "route_entry",
+      "deviceId": "fw-1",
+      "destCidr": "198.51.100.10/32",
+      "nextHop": "203.0.113.2"
+    },
+    {
+      "type": "ping",
+      "fromDeviceId": "server-01",
+      "toDeviceId": "branch-01"
+    }
+  ]
+}

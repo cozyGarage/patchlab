@@ -1,0 +1,58 @@
+{
+  "id": "m23-no-shutdown",
+  "title": "No Shutdown",
+  "order": 23,
+  "track": "copper",
+  "lesson": "Admin down is not a bad cable. Earlier you moved off Gi1/0/4 — now leave the patch where docs want it and administratively enable the port (no shutdown).",
+  "brief": "Panel A-04 is already patched to Gi1/0/4, and SERVER-01 is on Gi1/0/5. The cross-connect stays dark because Gi1/0/4 is admin down. Select Gi1/0/4 and Toggle admin (no shutdown) so the link comes up.",
+  "constraints": [
+    "Do not move the A-04 ↔ Gi1/0/4 patch",
+    "Use Toggle admin on Gi1/0/4",
+    "Keep SERVER-01 on Gi1/0/5"
+  ],
+  "parTimeSec": 75,
+  "hintAfterWrongAttempts": 1,
+  "inventory": {
+    "copper_cat6": 2,
+    "fiber_om4": 0,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
+  "initial": {
+    "devices": [],
+    "cables": [
+      {
+        "id": "c-pre-1",
+        "media": "copper_cat6",
+        "color": "blue",
+        "lengthM": 1,
+        "ends": [
+          { "deviceId": "panel-a", "portId": "panel-4" },
+          { "deviceId": "tor-1", "portId": "sw-4" }
+        ]
+      },
+      {
+        "id": "c-pre-2",
+        "media": "copper_cat6",
+        "color": "blue",
+        "lengthM": 2,
+        "ends": [
+          { "deviceId": "tor-1", "portId": "sw-5" },
+          { "deviceId": "server-01", "portId": "nic-1" }
+        ]
+      }
+    ]
+  },
+  "goals": [
+    {
+      "type": "link_up",
+      "a": { "deviceId": "panel-a", "portId": "panel-4" },
+      "b": { "deviceId": "tor-1", "portId": "sw-4" }
+    },
+    {
+      "type": "link_up",
+      "a": { "deviceId": "tor-1", "portId": "sw-5" },
+      "b": { "deviceId": "server-01", "portId": "nic-1" }
+    }
+  ]
+}

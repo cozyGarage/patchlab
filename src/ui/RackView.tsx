@@ -39,6 +39,12 @@ interface RackViewProps {
   onFirewallPermitLanWan: () => void;
   onFirewallPermitWanLan: () => void;
   onFirewallDenyHost: () => void;
+  onFirewallDenyHostBranch: () => void;
+  onFirewallCustomRule: (
+    action: 'permit' | 'deny',
+    srcCidr: string,
+    dstCidr: string,
+  ) => void;
   onSetNat: (insideIp: string, outsideIp: string) => void;
   onSetRoute: (destCidr: string, nextHop: string) => void;
   onFirewallPermitBranch: () => void;
@@ -151,6 +157,8 @@ export function RackView({
   onFirewallPermitLanWan,
   onFirewallPermitWanLan,
   onFirewallDenyHost,
+  onFirewallDenyHostBranch,
+  onFirewallCustomRule,
   onSetNat,
   onSetRoute,
   onFirewallPermitBranch,
@@ -592,6 +600,8 @@ export function RackView({
           onFirewallPermitLanWan={onFirewallPermitLanWan}
           onFirewallPermitWanLan={onFirewallPermitWanLan}
           onFirewallDenyHost={onFirewallDenyHost}
+          onFirewallDenyHostBranch={onFirewallDenyHostBranch}
+          onFirewallCustomRule={onFirewallCustomRule}
           onSetNat={onSetNat}
           onSetRoute={onSetRoute}
           onFirewallPermitBranch={onFirewallPermitBranch}

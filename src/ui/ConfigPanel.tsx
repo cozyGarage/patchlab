@@ -10,6 +10,12 @@ interface ConfigPanelProps {
   onFirewallPermitLanWan: () => void;
   onFirewallPermitWanLan: () => void;
   onFirewallDenyHost: () => void;
+  onFirewallDenyHostBranch: () => void;
+  onFirewallCustomRule: (
+    action: 'permit' | 'deny',
+    srcCidr: string,
+    dstCidr: string,
+  ) => void;
   onSetNat: (insideIp: string, outsideIp: string) => void;
   onSetRoute: (destCidr: string, nextHop: string) => void;
   onFirewallPermitBranch: () => void;
@@ -28,6 +34,8 @@ export function ConfigPanel({
   onFirewallPermitLanWan,
   onFirewallPermitWanLan,
   onFirewallDenyHost,
+  onFirewallDenyHostBranch,
+  onFirewallCustomRule,
   onSetNat,
   onSetRoute,
   onFirewallPermitBranch,
@@ -58,6 +66,9 @@ export function ConfigPanel({
   const [natOutside, setNatOutside] = useState('203.0.113.10');
   const [routeDest, setRouteDest] = useState('198.51.100.0/24');
   const [routeHop, setRouteHop] = useState('203.0.113.2');
+  const [aclAction, setAclAction] = useState<'permit' | 'deny'>('deny');
+  const [aclSrc, setAclSrc] = useState('10.10.10.20/32');
+  const [aclDst, setAclDst] = useState('198.51.100.0/24');
 
   function applyPort(nextId: string) {
     setPortId(nextId);
@@ -279,10 +290,54 @@ export function ConfigPanel({
           <button
             type="button"
             className="btn btn-ghost"
+            onClick={onFirewallDenyHostBranch}
+          >
+            Insert deny host 10.10.10.20 → BRANCH
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
             onClick={onFirewallPermitBranch}
           >
             Insert permit LAN → BRANCH
           </button>
+          <div className="acl-custom">
+            <label>
+              Action
+              <select
+                value={aclAction}
+                onChange={(e) =>
+                  setAclAction(e.target.value as 'permit' | 'deny')
+                }
+              >
+                <option value="permit">permit</option>
+                <option value="deny">deny</option>
+              </select>
+            </label>
+            <label>
+              Source CIDR
+              <input
+                value={aclSrc}
+                onChange={(e) => setAclSrc(e.target.value)}
+                placeholder="10.10.10.20/32"
+              />
+            </label>
+            <label>
+              Dest CIDR
+              <input
+                value={aclDst}
+                onChange={(e) => setAclDst(e.target.value)}
+                placeholder="198.51.100.0/24"
+              />
+            </label>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => onFirewallCustomRule(aclAction, aclSrc, aclDst)}
+            >
+              Insert custom ACL
+            </button>
+          </div>
         </div>
       ) : null}
 

@@ -192,9 +192,29 @@ Five guided missions + sandbox. JSON sources live in `prototype/src/missions/`.
 **Objective:** Route 198.51.100.0/24 via ISP-PEER, permit LAN→BRANCH, ping BRANCH-01.  
 **Teaches:** Static routes for non-connected destinations (+ ACL).
 
+## Mission 23 — No Shutdown
+
+**Objective:** Keep A-04 ↔ Gi1/0/4 patched; Toggle admin on Gi1/0/4.  
+**Teaches:** Admin-down vs bad cable — enable the port instead of moving it.
+
+## Mission 24 — Wrong Gateway
+
+**Objective:** Fix SERVER-01 gateway from 10.10.20.1 to 10.10.10.1; ping ISP-PEER.  
+**Teaches:** Off-subnet reachability needs the correct default gateway.
+
+## Mission 25 — Host Route
+
+**Objective:** Override poisoned 198.51.100.10/32 via 10.10.10.10 with next hop 203.0.113.2.  
+**Teaches:** Longest-prefix match — more-specific host routes win.
+
+## Mission 26 — Deny to Branch
+
+**Objective:** Deny 10.10.10.20/32 → BRANCH while SERVER-01 still reaches BRANCH-01.  
+**Teaches:** Specific deny above a broader permit on a routed prefix.
+
 ## Campaign gating
 
-- **11 chapters** / 22 stages (pass-to-advance)
+- **13 chapters** / 26 stages (pass-to-advance)
 - Unlock next stage only with **≥5★** on the previous stage (of 9)
 - Chapter borders also require **≥4★ on every stage** in the finished chapter
 - Sandbox unlocks after **Stage 5** with the stage star gate met

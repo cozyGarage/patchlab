@@ -28,6 +28,10 @@ export const MISSION_IDS = [
   'm20-mask-trap',
   'm21-inter-vlan',
   'm22-static-route',
+  'm23-no-shutdown',
+  'm24-wrong-gateway',
+  'm25-host-route',
+  'm26-deny-branch',
 ] as const;
 
 export async function shot(page: Page, name: string) {

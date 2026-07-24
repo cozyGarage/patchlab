@@ -28,17 +28,19 @@ test.describe('home & shell', () => {
     await shot(page, '01-home');
     await expect(page.getByText('PatchLab').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /First Lights On/i })).toBeEnabled();
-    await expect(page.locator('.stage-panel')).toContainText(/Stage 1 of 22/i);
+    await expect(page.locator('.stage-panel')).toContainText(/Stage 1 of 26/i);
     await expect(page.locator('.stage-panel')).toContainText(/hard gates/i);
     await expect(page.locator('.chapter-rail')).toContainText('First Lights');
-    await expect(page.locator('.chapter-rail')).toContainText('Route Craft');
-    await expect(page.getByRole('button', { name: /Static Route/i })).toBeVisible();
+    await expect(page.locator('.chapter-rail')).toContainText('Precision Path');
+    await expect(page.getByRole('button', { name: /Deny to Branch/i })).toBeVisible();
     await page.getByRole('button', { name: 'Glossary' }).click();
     const glossary = page.getByRole('dialog', { name: 'Glossary' });
     await expect(glossary).toBeVisible();
     await expect(glossary.getByText('Firewall ACL')).toBeVisible();
     await expect(glossary.getByText('Static NAT', { exact: true })).toBeVisible();
     await expect(glossary.getByText('Default gateway')).toBeVisible();
+    await expect(glossary.getByText('Longest-prefix match')).toBeVisible();
+    await expect(glossary.getByText('Admin up / no shutdown')).toBeVisible();
     await glossary.getByRole('button', { name: 'Close' }).click();
     await page.getByRole('button', { name: /Sound:/i }).click();
     await expect(page.getByRole('button', { name: /Sound: Off/i })).toBeVisible();
@@ -338,5 +340,63 @@ test.describe('logic / security missions', () => {
     await page.getByRole('button', { name: /Insert permit LAN → BRANCH/i }).click();
     await expectDebrief(page);
     await shot(page, '27-m22-debrief');
+  });
+
+  test('Mission 23 no shutdown recovery', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 23);
+    await startMission(page, /No Shutdown/i);
+    await tapPort(page, /Gi1\/0\/4/);
+    await page.getByRole('button', { name: 'Toggle admin' }).click();
+    await expectDebrief(page);
+    await shot(page, '28-m23-debrief');
+  });
+
+  test('Mission 24 wrong gateway', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 24);
+    await startMission(page, /Wrong Gateway/i);
+    await focusDevice(page, 'SERVER-01');
+    await pingFromFocused(page, /ISP-PEER/);
+    await expectTip(page, /gateway|Ping fail/i);
+    await applyIp(page, {
+      address: '10.10.10.10',
+      prefix: '24',
+      gateway: '10.10.10.1',
+    });
+    await expectDebrief(page);
+    await shot(page, '29-m24-debrief');
+  });
+
+  test('Mission 25 host route override', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 25);
+    await startMission(page, /Host Route/i);
+    await focusDevice(page, 'FW-EDGE');
+    const panel = page.locator('.config-panel');
+    await panel
+      .locator('label', { hasText: 'Destination CIDR' })
+      .locator('input')
+      .fill('198.51.100.10/32');
+    await panel
+      .locator('label', { hasText: 'Next hop' })
+      .locator('input')
+      .fill('203.0.113.2');
+    await page.getByRole('button', { name: 'Apply route' }).click();
+    await expectTip(page, /Route 198\.51\.100\.10\/32/i);
+    await expectDebrief(page);
+    await shot(page, '30-m25-debrief');
+  });
+
+  test('Mission 26 deny host to BRANCH', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 26);
+    await startMission(page, /Deny to Branch/i);
+    await focusDevice(page, 'FW-EDGE');
+    await page
+      .getByRole('button', { name: /Insert deny host 10\.10\.10\.20 → BRANCH/i })
+      .click();
+    await expectDebrief(page);
+    await shot(page, '31-m26-debrief');
   });
 });

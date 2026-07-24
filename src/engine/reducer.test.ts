@@ -6,10 +6,10 @@ import { scoreRun } from './scoring';
 import { portKey } from '../types/schema';
 
 describe('mission catalog', () => {
-  it('loads 22 ordered missions with goals', () => {
-    expect(missions).toHaveLength(22);
+  it('loads 26 ordered missions with goals', () => {
+    expect(missions).toHaveLength(26);
     expect(missions.map((m) => m.order)).toEqual(
-      Array.from({ length: 22 }, (_, i) => i + 1),
+      Array.from({ length: 26 }, (_, i) => i + 1),
     );
     for (const m of missions) {
       expect(m.goals.length).toBeGreaterThan(0);
@@ -753,6 +753,102 @@ describe('NetPractice-inspired routing lessons', () => {
     const ping = evaluatePing(state.snapshot.rack, 'server-01', 'branch-01');
     expect(ping.ok).toBe(true);
     expect(ping.detail).toMatch(/route/i);
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M23: toggle admin (no shutdown) brings Gi1/0/4 up', () => {
+    const mission = getMission('m23-no-shutdown')!;
+    let state = createEngineState(mission, baseRack);
+    expect(
+      state.snapshot.linkTable[
+        portKey({ deviceId: 'tor-1', portId: 'sw-4' })
+      ],
+    ).toBe('down');
+
+    state = reduce(state, {
+      type: 'TOGGLE_ADMIN',
+      port: { deviceId: 'tor-1', portId: 'sw-4' },
+    });
+    expect(state.snapshot.complete).toBe(true);
+    expect(
+      state.snapshot.linkTable[
+        portKey({ deviceId: 'panel-a', portId: 'panel-4' })
+      ],
+    ).toBe('up');
+  });
+
+  it('M24: wrong gateway blocks WAN until fixed', () => {
+    const mission = getMission('m24-wrong-gateway')!;
+    let state = createEngineState(mission, baseRack);
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'wan-peer').ok).toBe(
+      false,
+    );
+
+    state = reduce(state, {
+      type: 'SET_IP',
+      port: { deviceId: 'server-01', portId: 'nic-1' },
+      address: '10.10.10.10',
+      prefix: 24,
+      gateway: '10.10.10.1',
+    });
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'wan-peer').ok).toBe(
+      true,
+    );
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M25: host-route override beats poisoned /32', () => {
+    const mission = getMission('m25-host-route')!;
+    let state = createEngineState(mission, baseRack);
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'branch-01').ok).toBe(
+      false,
+    );
+
+    state = reduce(state, {
+      type: 'SET_ROUTE',
+      deviceId: 'fw-1',
+      destCidr: '198.51.100.10/32',
+      nextHop: '203.0.113.2',
+    });
+    const fw = state.snapshot.rack.devices.find((d) => d.id === 'fw-1')!;
+    const hostRoutes = (fw.routes ?? []).filter(
+      (r) => r.destCidr === '198.51.100.10/32',
+    );
+    expect(hostRoutes).toHaveLength(1);
+    expect(hostRoutes[0]!.nextHop).toBe('203.0.113.2');
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'branch-01').ok).toBe(
+      true,
+    );
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M26: deny host to BRANCH while peer still reaches', () => {
+    const mission = getMission('m26-deny-branch')!;
+    let state = createEngineState(mission, baseRack);
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'branch-01').ok).toBe(
+      true,
+    );
+    expect(evaluatePing(state.snapshot.rack, 'server-07', 'branch-01').ok).toBe(
+      true,
+    );
+
+    state = reduce(state, {
+      type: 'UPSERT_FIREWALL_RULE',
+      deviceId: 'fw-1',
+      rule: {
+        id: 'deny-branch-host',
+        action: 'deny',
+        srcCidr: '10.10.10.20/32',
+        dstCidr: '198.51.100.0/24',
+        enabled: true,
+      },
+    });
+    expect(evaluatePing(state.snapshot.rack, 'server-07', 'branch-01').ok).toBe(
+      false,
+    );
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'branch-01').ok).toBe(
+      true,
+    );
     expect(state.snapshot.complete).toBe(true);
   });
 });

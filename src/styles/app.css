@@ -537,6 +537,14 @@ p {
   gap: 4px;
 }
 
+.acl-custom {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+
 .ok {
   color: var(--cyan);
 }
