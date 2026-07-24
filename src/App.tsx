@@ -395,7 +395,11 @@ export default function App() {
                 }
               : undefined
           }
-          nextLabel={nextMission ? `Next: ${nextMission.title}` : undefined}
+          nextLabel={
+            nextMission
+              ? `Next: Stage ${nextMission.order} — ${nextMission.title}`
+              : undefined
+          }
         />
       ) : null}
 

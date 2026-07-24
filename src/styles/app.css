@@ -163,6 +163,167 @@ p {
   font-size: 0.92rem;
 }
 
+.stage-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.stage-panel-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.stage-kicker,
+.chapter-kicker {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-bottom: 4px;
+}
+
+.stage-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.stage-sub {
+  margin-top: 4px;
+  color: var(--ink-muted);
+  font-size: 0.92rem;
+  max-width: 42ch;
+}
+
+.stage-stats {
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+.stage-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+}
+
+.stage-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2dd4bf, #3ddcb5 55%, #fbbf24);
+  transition: width 0.35s ease;
+}
+
+.chapter-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chapter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.45);
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+}
+
+.chapter-chip.active {
+  border-color: rgba(61, 220, 181, 0.55);
+  color: var(--ink);
+  background: rgba(61, 220, 181, 0.1);
+}
+
+.chapter-chip.complete {
+  border-color: rgba(251, 191, 36, 0.45);
+  color: #fbbf24;
+}
+
+.chapter-chip.locked {
+  opacity: 0.45;
+}
+
+.chapter-chip-num {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(148, 163, 184, 0.2);
+  font-weight: 700;
+  font-size: 0.7rem;
+}
+
+.chapter-chip-count {
+  opacity: 0.8;
+}
+
+.chapter-block {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.chapter-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  padding: 4px 2px 0;
+}
+
+.chapter-head h2 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.chapter-head p {
+  margin: 4px 0 0;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+  max-width: 48ch;
+}
+
+.chapter-mini-bar {
+  width: min(160px, 40vw);
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+  align-self: center;
+}
+
+.chapter-mini-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2dd4bf, #67e8f9);
+}
+
+.stage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(61, 220, 181, 0.35);
+  background: rgba(61, 220, 181, 0.08);
+  color: var(--cyan);
+  font-size: 0.82rem;
+  font-weight: 600;
+  width: fit-content;
+}
+
 .mission-list {
   display: grid;
   gap: 10px;

@@ -103,8 +103,8 @@ export async function unplugPort(page: Page, name: string | RegExp) {
 
 export async function startMission(page: Page, title: string | RegExp) {
   await page.getByRole('button', { name: title }).click();
-  await expect(page.getByRole('button', { name: /Start patching/i })).toBeVisible();
-  await page.getByRole('button', { name: /Start patching/i }).click();
+  await expect(page.getByRole('button', { name: /Start stage/i })).toBeVisible();
+  await page.getByRole('button', { name: /Start stage/i }).click();
   await expect(page.locator('svg.rack-svg')).toBeVisible();
 }
 

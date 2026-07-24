@@ -1,4 +1,6 @@
 import type { Mission, Score } from '../types/schema';
+import { chapterForMission } from '../lib/chapters';
+import { missions } from '../missions';
 
 interface DebriefProps {
   mission: Mission;
@@ -19,6 +21,18 @@ export function Debrief({
   onHome,
   nextLabel,
 }: DebriefProps) {
+  const chapter = chapterForMission(mission);
+  const next = missions.find((m) => m.order === mission.order + 1);
+  const nextChapter = next ? chapterForMission(next) : undefined;
+  const chapterClear =
+    chapter &&
+    !missions.some(
+      (m) =>
+        m.order >= chapter.from &&
+        m.order <= chapter.to &&
+        m.order > mission.order,
+    );
+
   return (
     <div className="screen-debrief">
       <div className="debrief-card panel">
@@ -26,8 +40,19 @@ export function Debrief({
           <span className="dot" aria-hidden />
           <span>PatchLab</span>
         </div>
+        <div className="stage-badge">
+          Stage {mission.order} of {missions.length} cleared
+          {chapter ? ` · Chapter ${chapter.index}` : ''}
+        </div>
         <h1>Circuit complete</h1>
-        <p>You finished {mission.title}. Here’s how the run scored.</p>
+        <p>
+          You finished <strong>{mission.title}</strong>
+          {chapterClear && chapter
+            ? ` — Chapter ${chapter.index} (${chapter.title}) complete!`
+            : next
+              ? `. Stage ${next.order} is now unlocked.`
+              : '. Campaign complete — try the Sandbox.'}
+        </p>
 
         <div className="debrief-stars">
           <div className="star-box">
@@ -49,7 +74,7 @@ export function Debrief({
           <ul className="checklist">
             <li>Reading port link lights after each patch</li>
             <li>Matching physical ports and media to the ticket</li>
-            <li>Spotting VLAN, admin-down, and media faults quickly</li>
+            <li>Spotting VLAN, admin-down, mask, route, and ACL faults quickly</li>
           </ul>
         </div>
 
@@ -67,14 +92,21 @@ export function Debrief({
         <div className="actions">
           {onNext ? (
             <button type="button" className="btn btn-primary" onClick={onNext}>
-              {nextLabel ?? 'Next mission'}
+              {nextLabel ??
+                (next
+                  ? `Next: Stage ${next.order}${
+                      nextChapter && nextChapter.id !== chapter?.id
+                        ? ` · Ch ${nextChapter.index}`
+                        : ''
+                    }`
+                  : 'Next mission')}
             </button>
           ) : null}
           <button type="button" className="btn btn-ghost" onClick={onRetry}>
-            Retry
+            Retry stage
           </button>
           <button type="button" className="btn btn-ghost" onClick={onHome}>
-            Home
+            Campaign map
           </button>
         </div>
       </div>

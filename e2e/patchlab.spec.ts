@@ -28,7 +28,9 @@ test.describe('home & shell', () => {
     await shot(page, '01-home');
     await expect(page.getByText('PatchLab').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /First Lights On/i })).toBeEnabled();
-    await expect(page.locator('.progress-strip')).toContainText('/22');
+    await expect(page.locator('.stage-panel')).toContainText(/Stage 1 of 22/i);
+    await expect(page.locator('.chapter-rail')).toContainText('Copper Path');
+    await expect(page.locator('.chapter-rail')).toContainText('Routing Lab');
     await expect(page.getByRole('button', { name: /Static Route/i })).toBeVisible();
     await page.getByRole('button', { name: 'Glossary' }).click();
     const glossary = page.getByRole('dialog', { name: 'Glossary' });

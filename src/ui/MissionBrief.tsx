@@ -1,4 +1,6 @@
 import type { Mission } from '../types/schema';
+import { chapterForMission } from '../lib/chapters';
+import { missions } from '../missions';
 
 interface MissionBriefProps {
   mission: Mission;
@@ -56,15 +58,24 @@ function goalText(mission: Mission): string[] {
 }
 
 export function MissionBrief({ mission, onBack, onStart }: MissionBriefProps) {
+  const chapter = chapterForMission(mission);
+  const total = missions.length;
+
   return (
     <div className="screen-brief">
       <button type="button" className="btn btn-ghost" onClick={onBack}>
-        ← Missions
+        ← Campaign
       </button>
       <div className="brief-card panel">
         <div className="brand-mark brand">
           <span className="dot" aria-hidden />
           <span>PatchLab</span>
+        </div>
+        <div className="stage-badge">
+          Stage {mission.order} of {total}
+          {chapter
+            ? ` · Chapter ${chapter.index}: ${chapter.title}`
+            : ''}
         </div>
         <h1>{mission.title}</h1>
         <p>{mission.brief}</p>
@@ -94,7 +105,7 @@ export function MissionBrief({ mission, onBack, onStart }: MissionBriefProps) {
         ) : null}
         <div className="actions">
           <button type="button" className="btn btn-primary" onClick={onStart}>
-            Start patching
+            Start stage {mission.order}
           </button>
         </div>
       </div>
