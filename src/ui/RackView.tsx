@@ -223,6 +223,19 @@ export function RackView({
     }
   }, [state.snapshot.complete, sandbox]);
 
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return;
+      setSelected(null);
+      dragRef.current = null;
+      setDragFrom(null);
+      setDragMoved(false);
+      setPointer(null);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   function toSvgPoint(clientX: number, clientY: number) {
     const svg = svgRef.current;
     if (!svg) return { x: 0, y: 0 };
@@ -554,7 +567,13 @@ export function RackView({
                     role="button"
                     tabIndex={0}
                     aria-label={aria}
+                    aria-pressed={isSelected}
                     onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        e.preventDefault();
+                        setSelected(null);
+                        return;
+                      }
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         if (selected && !samePort(selected, p.ref)) {
