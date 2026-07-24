@@ -11,13 +11,78 @@ const empty: ProgressSave = {
   sandboxUnlocked: false,
 };
 
+const knownMissionIds = new Set(missions.map((m) => m.id));
+
+export type ImportProgressResult =
+  | { ok: true; progress: ProgressSave }
+  | { ok: false; reason: string };
+
+function isScore(value: unknown): value is Score {
+  if (!value || typeof value !== 'object') return false;
+  const s = value as Record<string, unknown>;
+  return (
+    isStarAxis(s.correctness) &&
+    isStarAxis(s.speed) &&
+    isStarAxis(s.cleanliness)
+  );
+}
+
+function isStarAxis(value: unknown): value is 0 | 1 | 2 | 3 {
+  return value === 0 || value === 1 || value === 2 || value === 3;
+}
+
+function sanitizeProgress(parsed: unknown): ImportProgressResult {
+  if (!parsed || typeof parsed !== 'object') {
+    return { ok: false, reason: 'Progress file is not a JSON object' };
+  }
+  const raw = parsed as Record<string, unknown>;
+  if (raw.version !== 1) {
+    return { ok: false, reason: 'Unsupported progress version' };
+  }
+  if (!Array.isArray(raw.clearedMissionIds)) {
+    return { ok: false, reason: 'clearedMissionIds must be an array' };
+  }
+
+  const clearedMissionIds = raw.clearedMissionIds.filter(
+    (id): id is string => typeof id === 'string' && knownMissionIds.has(id),
+  );
+
+  const stars: Record<string, Score> = {};
+  if (raw.stars != null) {
+    if (typeof raw.stars !== 'object' || Array.isArray(raw.stars)) {
+      return { ok: false, reason: 'stars must be an object' };
+    }
+    for (const [missionId, score] of Object.entries(
+      raw.stars as Record<string, unknown>,
+    )) {
+      if (!knownMissionIds.has(missionId)) continue;
+      if (!isScore(score)) {
+        return {
+          ok: false,
+          reason: `Invalid star score for ${missionId}`,
+        };
+      }
+      stars[missionId] = score;
+    }
+  }
+
+  return {
+    ok: true,
+    progress: {
+      version: 1,
+      clearedMissionIds,
+      stars,
+      sandboxUnlocked: !!raw.sandboxUnlocked,
+    },
+  };
+}
+
 export function loadProgress(): ProgressSave {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { ...empty };
-    const parsed = JSON.parse(raw) as ProgressSave;
-    if (parsed.version !== 1) return { ...empty };
-    return parsed;
+    const result = sanitizeProgress(JSON.parse(raw));
+    return result.ok ? result.progress : { ...empty };
   } catch {
     return { ...empty };
   }
@@ -31,22 +96,14 @@ export function exportProgress(progress: ProgressSave = loadProgress()): string 
   return JSON.stringify(progress, null, 2);
 }
 
-export function importProgress(raw: string): ProgressSave | null {
+export function importProgress(raw: string): ImportProgressResult {
   try {
-    const parsed = JSON.parse(raw) as ProgressSave;
-    if (parsed.version !== 1 || !Array.isArray(parsed.clearedMissionIds)) {
-      return null;
-    }
-    const next: ProgressSave = {
-      version: 1,
-      clearedMissionIds: parsed.clearedMissionIds,
-      stars: parsed.stars ?? {},
-      sandboxUnlocked: !!parsed.sandboxUnlocked,
-    };
-    saveProgress(next);
-    return next;
+    const result = sanitizeProgress(JSON.parse(raw));
+    if (!result.ok) return result;
+    saveProgress(result.progress);
+    return result;
   } catch {
-    return null;
+    return { ok: false, reason: 'Invalid JSON' };
   }
 }
 

@@ -1,6 +1,8 @@
-# PatchLab — MVP Missions
+# PatchLab — Mission Catalog (historical MVP notes)
 
-Five guided missions + sandbox. JSON sources live in `prototype/src/missions/`.
+> **Current product:** 32 stages across 15 chapters (`src/missions/`, `src/lib/chapters.ts`),
+> plus sandbox free-play unlocked after Stage 5. This document retains early M1–M5 design
+> notes for context; authoritative mission JSON lives under `src/missions/`.
 
 ---
 

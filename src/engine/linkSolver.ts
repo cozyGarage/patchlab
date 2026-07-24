@@ -438,7 +438,7 @@ function edgeCanDeliver(
 ): boolean {
   if (edge.id === to.id) return true;
   if (deviceHasConnectedRoute(edge, toIp)) return true;
-  // Cloud branch: same subnet as any edge interface (including uncabaled cloud NIC)
+  // Cloud branch: same subnet as any edge interface (including uncabled cloud NIC)
   if (to.cloudAttached) {
     return edge.ports.some((p) => p.ip && sameSubnet(p.ip, toIp));
   }
@@ -670,6 +670,19 @@ export function evaluateTraceroute(
       detail: 'destination (same subnet)',
       ok: true,
     });
+    const sameSubnetPing = evaluatePing(rack, fromDeviceId, toDeviceId);
+    if (!sameSubnetPing.ok) {
+      hops.push({
+        ttl: hops.length + 1,
+        detail: sameSubnetPing.detail.replace(/^Ping fail — /, 'blocked — '),
+        ok: false,
+      });
+      return {
+        ok: false,
+        detail: `Traceroute path found but traffic blocked — ${sameSubnetPing.detail}`,
+        hops,
+      };
+    }
     return {
       ok: true,
       detail: `Traceroute ok — ${fromIp.address} → ${toIp.address} (1 hop)`,
@@ -722,6 +735,19 @@ export function evaluateTraceroute(
       detail: 'destination (connected)',
       ok: true,
     });
+    const connectedPing = evaluatePing(rack, fromDeviceId, toDeviceId);
+    if (!connectedPing.ok) {
+      hops.push({
+        ttl: hops.length + 1,
+        detail: connectedPing.detail.replace(/^Ping fail — /, 'blocked — '),
+        ok: false,
+      });
+      return {
+        ok: false,
+        detail: `Traceroute path found but traffic blocked — ${connectedPing.detail}`,
+        hops,
+      };
+    }
     return {
       ok: true,
       detail: `Traceroute ok — ${from.name} → ${router.name} → ${to.name}`,

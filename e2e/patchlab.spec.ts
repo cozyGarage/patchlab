@@ -53,6 +53,54 @@ test.describe('home & shell', () => {
     await expect(page.getByRole('button', { name: /Static NAT/i })).toBeDisabled();
   });
 
+  test('progress import validates and shows feedback', async ({ page }) => {
+    await clearApp(page);
+    const bad = await page.evaluate(async () => {
+      const input = document.querySelector(
+        '.import-label input[type="file"]',
+      ) as HTMLInputElement | null;
+      if (!input) return 'missing-input';
+      const file = new File(['{bad'], 'bad.json', { type: 'application/json' });
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      return 'ok';
+    });
+    expect(bad).toBe('ok');
+    await expect(page.locator('.progress-notice.bad')).toContainText(
+      /Import failed/i,
+    );
+
+    const good = await page.evaluate(async () => {
+      const input = document.querySelector(
+        '.import-label input[type="file"]',
+      ) as HTMLInputElement | null;
+      if (!input) return 'missing-input';
+      const payload = JSON.stringify({
+        version: 1,
+        clearedMissionIds: ['m1-first-lights'],
+        stars: {
+          'm1-first-lights': { correctness: 2, speed: 2, cleanliness: 1 },
+        },
+        sandboxUnlocked: false,
+      });
+      const file = new File([payload], 'good.json', {
+        type: 'application/json',
+      });
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      return 'ok';
+    });
+    expect(good).toBe('ok');
+    await expect(page.locator('.progress-notice.ok')).toContainText(
+      /Imported 1 cleared stage/i,
+    );
+    await expect(page.getByRole('button', { name: /Wrong Port/i })).toBeEnabled();
+  });
+
   test('sandbox shows PDU, firewall, config panel', async ({ page }) => {
     await clearApp(page);
     await unlockThrough(page, 6);
@@ -68,6 +116,14 @@ test.describe('home & shell', () => {
     await expect(page.getByRole('button', { name: 'Apply static NAT' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Apply route' })).toBeVisible();
     await expect(page.locator('svg.rack-svg')).toContainText('BRANCH-01');
+    // Focus sync: stale edits on FW must not stick when focusing SERVER-01.
+    const address = page.locator('.config-panel input').nth(0);
+    await address.fill('203.0.113.99');
+    await focusDevice(page, 'SERVER-01');
+    await expect(page.locator('.config-panel h3')).toHaveText('SERVER-01');
+    await expect(address).not.toHaveValue('203.0.113.99');
+    const pingSelect = page.locator('.config-panel select').last();
+    await expect(pingSelect).not.toHaveValue('server-01');
     await shot(page, '13-sandbox');
   });
 

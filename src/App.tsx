@@ -72,6 +72,10 @@ export default function App() {
   const [coachOpen, setCoachOpen] = useState(
     () => !loadSettings().onboardingDone,
   );
+  const [progressNotice, setProgressNotice] = useState<{
+    level: 'ok' | 'bad';
+    message: string;
+  } | null>(null);
   const lastTipCode = useRef<string | undefined>(undefined);
   const completedRunKey = useRef<string | null>(null);
 
@@ -433,11 +437,26 @@ export default function App() {
     a.download = 'patchlab-progress.json';
     a.click();
     URL.revokeObjectURL(url);
+    setProgressNotice({
+      level: 'ok',
+      message: 'Progress exported as patchlab-progress.json',
+    });
   }
 
   function handleImportProgress(raw: string) {
-    const next = importProgress(raw);
-    if (next) setProgress(next);
+    const result = importProgress(raw);
+    if (!result.ok) {
+      setProgressNotice({
+        level: 'bad',
+        message: `Import failed — ${result.reason}`,
+      });
+      return;
+    }
+    setProgress(result.progress);
+    setProgressNotice({
+      level: 'ok',
+      message: `Imported ${result.progress.clearedMissionIds.length} cleared stage(s)`,
+    });
   }
 
   function handleResetProgress() {
@@ -449,6 +468,10 @@ export default function App() {
       return;
     }
     setProgress(resetProgress());
+    setProgressNotice({
+      level: 'ok',
+      message: 'Campaign progress reset',
+    });
   }
 
   function handleSandboxSave() {
@@ -529,6 +552,7 @@ export default function App() {
           missions={missions}
           progress={progress}
           settings={settings}
+          progressNotice={progressNotice}
           onSelect={openBrief}
           onSandbox={() => startMission(sandboxMission, true)}
           onToggleSound={toggleSound}

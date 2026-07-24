@@ -1024,4 +1024,27 @@ describe('NetPractice-inspired routing lessons', () => {
     expect(state.snapshot.lastTrace?.ok).toBe(true);
     expect(state.snapshot.complete).toBe(true);
   });
+
+  it('traceroute agrees with ping on ACL-blocked connected path', () => {
+    const mission = getMission('m12-firewall-acl')!;
+    let state = createEngineState(mission, baseRack);
+    // Pre-mission rack often already has LAN IPs; force a deny and ensure
+    // traceroute does not report success when ping would fail.
+    state = reduce(state, {
+      type: 'UPSERT_FIREWALL_RULE',
+      deviceId: 'fw-1',
+      rule: {
+        id: 'deny-all-lan',
+        action: 'deny',
+        srcCidr: '10.10.10.0/24',
+        dstCidr: '10.10.10.0/24',
+        enabled: true,
+      },
+    });
+    const ping = evaluatePing(state.snapshot.rack, 'server-01', 'fw-1');
+    const trace = evaluateTraceroute(state.snapshot.rack, 'server-01', 'fw-1');
+    expect(ping.ok).toBe(false);
+    expect(trace.ok).toBe(false);
+    expect(trace.detail).toMatch(/blocked|fail/i);
+  });
 });

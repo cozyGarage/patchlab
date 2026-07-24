@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Device, Port, PortMode, PortRef } from '../types/schema';
 
 interface ConfigPanelProps {
@@ -31,6 +31,28 @@ interface ConfigPanelProps {
   pingTargets: { id: string; name: string }[];
 }
 
+function ipCapablePorts(device: Device): Port[] {
+  return device.ports.filter(
+    (p) =>
+      p.kind === 'data' ||
+      p.kind === 'lan' ||
+      p.kind === 'wan' ||
+      p.role === 'nic' ||
+      p.role === 'network',
+  );
+}
+
+function switchCapablePorts(device: Device): Port[] {
+  return device.ports.filter((p) => p.role === 'network');
+}
+
+function defaultPingTarget(
+  deviceId: string,
+  targets: { id: string; name: string }[],
+): string {
+  return targets.find((t) => t.id !== deviceId)?.id ?? '';
+}
+
 export function ConfigPanel({
   device,
   consoleReady,
@@ -52,21 +74,16 @@ export function ConfigPanel({
   onTraceroute,
   pingTargets,
 }: ConfigPanelProps) {
-  const ipPorts = device.ports.filter(
-    (p) =>
-      p.kind === 'data' ||
-      p.kind === 'lan' ||
-      p.kind === 'wan' ||
-      p.role === 'nic' ||
-      p.role === 'network',
-  );
-  const switchPorts = device.ports.filter((p) => p.role === 'network');
+  const ipPorts = ipCapablePorts(device);
+  const switchPorts = switchCapablePorts(device);
   const [portId, setPortId] = useState(ipPorts[0]?.id ?? '');
   const selected: Port | undefined = ipPorts.find((p) => p.id === portId) ?? ipPorts[0];
   const [address, setAddress] = useState(selected?.ip?.address ?? '');
   const [prefix, setPrefix] = useState(String(selected?.ip?.prefix ?? 24));
   const [gateway, setGateway] = useState(selected?.ip?.gateway ?? '');
-  const [pingTo, setPingTo] = useState(pingTargets[0]?.id ?? '');
+  const [pingTo, setPingTo] = useState(
+    defaultPingTarget(device.id, pingTargets),
+  );
   const [swPortId, setSwPortId] = useState(switchPorts[0]?.id ?? '');
   const swPort = switchPorts.find((p) => p.id === swPortId) ?? switchPorts[0];
   const [vlan, setVlan] = useState(String(swPort?.vlanId ?? 10));
@@ -80,6 +97,30 @@ export function ConfigPanel({
   const [aclAction, setAclAction] = useState<'permit' | 'deny'>('deny');
   const [aclSrc, setAclSrc] = useState('10.10.10.20/32');
   const [aclDst, setAclDst] = useState('198.51.100.0/24');
+
+  // Resync form fields when the focused device changes so edits never
+  // apply stale IP/gateway/ping values from the previous device.
+  useEffect(() => {
+    const nextIpPorts = ipCapablePorts(device);
+    const nextSwitchPorts = switchCapablePorts(device);
+    const nextPort = nextIpPorts[0];
+    const nextSw = nextSwitchPorts[0];
+    setPortId(nextPort?.id ?? '');
+    setAddress(nextPort?.ip?.address ?? '');
+    setPrefix(String(nextPort?.ip?.prefix ?? 24));
+    setGateway(nextPort?.ip?.gateway ?? '');
+    setSwPortId(nextSw?.id ?? '');
+    setVlan(String(nextSw?.vlanId ?? 10));
+    setPingTo(defaultPingTarget(device.id, pingTargets));
+  }, [device.id]);
+
+  // Keep ping/traceroute target off the currently focused device.
+  useEffect(() => {
+    const valid = pingTargets.filter((t) => t.id !== device.id);
+    if (!valid.some((t) => t.id === pingTo)) {
+      setPingTo(valid[0]?.id ?? '');
+    }
+  }, [device.id, pingTargets, pingTo]);
 
   function applyPort(nextId: string) {
     setPortId(nextId);

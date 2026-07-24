@@ -28,6 +28,7 @@ interface MissionListProps {
   onImportProgress?: (raw: string) => void;
   onResetProgress?: () => void;
   onReplayOnboarding?: () => void;
+  progressNotice?: { level: 'ok' | 'bad'; message: string } | null;
 }
 
 export function MissionList({
@@ -42,6 +43,7 @@ export function MissionList({
   onImportProgress,
   onResetProgress,
   onReplayOnboarding,
+  progressNotice,
 }: MissionListProps) {
   const cleared = progress.clearedMissionIds.length;
   const stage = stageLabel(missions, progress);
@@ -192,6 +194,16 @@ export function MissionList({
           </button>
         ) : null}
       </div>
+
+      {progressNotice ? (
+        <p
+          className={`progress-notice ${progressNotice.level}`}
+          role="status"
+          aria-live="polite"
+        >
+          {progressNotice.message}
+        </p>
+      ) : null}
 
       <div className="mission-list">
         {CHAPTERS.map((chapter) => {

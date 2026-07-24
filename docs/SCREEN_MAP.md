@@ -25,10 +25,10 @@ flowchart TD
 
 **Content**
 - App name **PatchLab** as hero brand mark
-- Progress strip (missions cleared, total stars)
-- Mission cards 1–5 (locked until previous cleared, except M1)
-- Sandbox button (locked until M3 complete)
-- Settings: sound, reduced motion, left/right hand tap order
+- Campaign progress strip (stages cleared, stars, chapter rail)
+- Mission cards for 32 stages / 15 chapters (hard gates: ≥5★ to advance stage, ≥4★ per stage to exit chapter)
+- Sandbox button (unlocked after Stage 5)
+- Toolbar: glossary, sound, tips/onboarding, progress export/import/reset
 
 **Desktop:** vertical list + preview thumbnail of rack.  
 **Mobile:** stacked missions; brand + one CTA above fold.
