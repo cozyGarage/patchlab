@@ -1,15 +1,30 @@
-# CI / Pages templates
+# CI / CD
 
-GitHub OAuth tokens without the `workflow` scope cannot push `.github/workflows/*`.
+Workflows live in [`.github/workflows/`](../../.github/workflows/).
 
-To enable Actions:
+| Workflow | Triggers | What it does |
+|---|---|---|
+| `ci.yml` | push / PR / manual | typecheck, unit tests, Playwright e2e, production build |
+| `deploy-pages.yml` | push to `main` / manual | build Vite app → GitHub Pages |
 
-1. Copy these files into `.github/workflows/` locally with a PAT that includes `workflow`.
-2. Or paste them in the GitHub UI under Actions → New workflow.
+## Local
 
-| Template | Purpose |
-|---|---|
-| [ci.yml](./ci.yml) | typecheck, unit, Playwright |
-| [deploy-pages.yml](./deploy-pages.yml) | build + GitHub Pages |
+```bash
+npm ci
+npm run typecheck
+npm test
+npm run test:e2e   # boots Vite via Playwright webServer
+npm run build
+```
 
-Until then, use `scripts/deploy-pages.sh` after merging to `main`.
+## Manual Pages fallback
+
+If Actions deploy is unavailable:
+
+```bash
+./scripts/deploy-pages.sh
+```
+
+## Pages source
+
+Repo Settings → Pages → **GitHub Actions** (not `gh-pages` branch) once `deploy-pages.yml` has run successfully.

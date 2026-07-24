@@ -15,9 +15,19 @@ Open the Vite URL (default `http://localhost:5173`).
 
 ```bash
 npm test         # engine unit tests
-npm run test:e2e # Playwright browser QA (dev server on :5173)
+npm run test:e2e # Playwright (auto-starts Vite)
 npm run build
+npm run ci       # typecheck + unit + build
 ```
+
+### CI / CD
+
+GitHub Actions on every push/PR:
+
+- **CI** — typecheck, Vitest, Playwright e2e, production build  
+- **Deploy Pages** — publishes https://cozygarage.github.io/patchlab/ from `main`
+
+See [docs/ci/README.md](docs/ci/README.md). Manual fallback: `npm run deploy:pages`.
 
 ## What you can do
 
