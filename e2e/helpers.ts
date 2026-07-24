@@ -55,7 +55,7 @@ export async function clearApp(page: Page) {
       'patchlab.settings.v1',
       JSON.stringify({
         version: 1,
-        sound: false,
+        sound: true,
         reducedHints: false,
         onboardingDone: true,
       }),
