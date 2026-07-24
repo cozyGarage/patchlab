@@ -262,6 +262,36 @@ export default function App() {
     );
   }
 
+  function dispatchSetRoute(destCidr: string, nextHop: string) {
+    if (!engine) return;
+    apply(
+      reduce(engine, {
+        type: 'SET_ROUTE',
+        deviceId: 'fw-1',
+        destCidr,
+        nextHop,
+      }),
+    );
+  }
+
+  function dispatchFirewallPermitBranch() {
+    if (!engine) return;
+    apply(
+      reduce(engine, {
+        type: 'UPSERT_FIREWALL_RULE',
+        deviceId: 'fw-1',
+        rule: {
+          id: `permit-branch-${Date.now()}`,
+          action: 'permit',
+          srcCidr: '10.10.10.0/24',
+          dstCidr: '198.51.100.0/24',
+          note: 'LAN → BRANCH',
+          enabled: true,
+        },
+      }),
+    );
+  }
+
   function dispatchSetVlan(port: PortRef, vlanId: number) {
     if (!engine) return;
     apply(reduce(engine, { type: 'SET_VLAN', port, vlanId }));
@@ -341,6 +371,8 @@ export default function App() {
           onFirewallPermitWanLan={dispatchFirewallPermitWanLan}
           onFirewallDenyHost={dispatchFirewallDenyHost}
           onSetNat={dispatchSetNat}
+          onSetRoute={dispatchSetRoute}
+          onFirewallPermitBranch={dispatchFirewallPermitBranch}
           onSetVlan={dispatchSetVlan}
           onSetPortMode={dispatchSetPortMode}
           onPing={dispatchPing}

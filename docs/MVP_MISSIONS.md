@@ -172,6 +172,26 @@ Five guided missions + sandbox. JSON sources live in `prototype/src/missions/`.
 **Objective:** Insert deny 10.10.10.20/32 → WAN above a broad permit; .20 fails, .10 succeeds.  
 **Teaches:** ACL order — specific deny before general permit.
 
+## Mission 19 — Broken Address
+
+**Objective:** Fix SERVER-01 from 10.10.99.10/24 to 10.10.10.10/24; ping FW.  
+**Teaches:** Same-subnet addressing (NetPractice-inspired, with live rack tips).
+
+## Mission 20 — Mask Trap
+
+**Objective:** Correct host prefix from /16 to /24; ping FW.  
+**Teaches:** Address + mask must agree with the gateway interface.
+
+## Mission 21 — Inter-VLAN Router
+
+**Objective:** Patch dual FW LANs (VLAN 10 + 20), address both servers, ping across VLANs.  
+**Teaches:** Router needs an interface in each VLAN.
+
+## Mission 22 — Static Route
+
+**Objective:** Route 198.51.100.0/24 via ISP-PEER, permit LAN→BRANCH, ping BRANCH-01.  
+**Teaches:** Static routes for non-connected destinations (+ ACL).
+
 ## Sandbox
 
 - Full rack: panel, fiber, ToR, SFP, firewall, servers, console, PDU, ISP peer

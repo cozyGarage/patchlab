@@ -40,6 +40,8 @@ interface RackViewProps {
   onFirewallPermitWanLan: () => void;
   onFirewallDenyHost: () => void;
   onSetNat: (insideIp: string, outsideIp: string) => void;
+  onSetRoute: (destCidr: string, nextHop: string) => void;
+  onFirewallPermitBranch: () => void;
   onSetVlan: (port: PortRef, vlanId: number) => void;
   onSetPortMode: (port: PortRef, mode: PortMode) => void;
   onPing: (fromId: string, toId: string) => void;
@@ -150,6 +152,8 @@ export function RackView({
   onFirewallPermitWanLan,
   onFirewallDenyHost,
   onSetNat,
+  onSetRoute,
+  onFirewallPermitBranch,
   onSetVlan,
   onSetPortMode,
   onPing,
@@ -589,6 +593,8 @@ export function RackView({
           onFirewallPermitWanLan={onFirewallPermitWanLan}
           onFirewallDenyHost={onFirewallDenyHost}
           onSetNat={onSetNat}
+          onSetRoute={onSetRoute}
+          onFirewallPermitBranch={onFirewallPermitBranch}
           onSetVlan={onSetVlan}
           onSetPortMode={onSetPortMode}
           onPing={onPing}

@@ -28,8 +28,8 @@ test.describe('home & shell', () => {
     await shot(page, '01-home');
     await expect(page.getByText('PatchLab').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /First Lights On/i })).toBeEnabled();
-    await expect(page.locator('.progress-strip')).toContainText('/18');
-    await expect(page.getByRole('button', { name: /Deny One Host/i })).toBeVisible();
+    await expect(page.locator('.progress-strip')).toContainText('/22');
+    await expect(page.getByRole('button', { name: /Static Route/i })).toBeVisible();
     await page.getByRole('button', { name: 'Glossary' }).click();
     const glossary = page.getByRole('dialog', { name: 'Glossary' });
     await expect(glossary).toBeVisible();
@@ -60,6 +60,8 @@ test.describe('home & shell', () => {
     await expect(page.getByRole('button', { name: 'Mode trunk' })).toBeVisible();
     await focusDevice(page, 'FW-EDGE');
     await expect(page.getByRole('button', { name: 'Apply static NAT' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Apply route' })).toBeVisible();
+    await expect(page.locator('svg.rack-svg')).toContainText('BRANCH-01');
     await shot(page, '13-sandbox');
   });
 
@@ -293,5 +295,45 @@ test.describe('logic / security missions', () => {
     await page.getByRole('button', { name: /Insert deny host 10\.10\.10\.20/i }).click();
     await expectDebrief(page);
     await shot(page, '25-m18-debrief');
+  });
+
+  test('Mission 19 broken address fix', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 19);
+    await startMission(page, /Broken Address/i);
+    await focusDevice(page, 'SERVER-01');
+    await applyIp(page, {
+      address: '10.10.10.10',
+      prefix: '24',
+      gateway: '10.10.10.1',
+    });
+    await expectDebrief(page);
+  });
+
+  test('Mission 20 mask trap', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 20);
+    await startMission(page, /Mask Trap/i);
+    await focusDevice(page, 'SERVER-01');
+    await pingFromFocused(page, /FW-EDGE/);
+    await expectTip(page, /prefix|Ping fail/i);
+    await applyIp(page, {
+      address: '10.10.10.10',
+      prefix: '24',
+      gateway: '10.10.10.1',
+    });
+    await expectDebrief(page);
+  });
+
+  test('Mission 22 static route to BRANCH', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 22);
+    await startMission(page, /Static Route/i);
+    await focusDevice(page, 'FW-EDGE');
+    await page.getByRole('button', { name: 'Apply route' }).click();
+    await expectTip(page, /Route 198\.51\.100\.0\/24/i);
+    await page.getByRole('button', { name: /Insert permit LAN → BRANCH/i }).click();
+    await expectDebrief(page);
+    await shot(page, '27-m22-debrief');
   });
 });

@@ -1,0 +1,72 @@
+{
+  "id": "m20-mask-trap",
+  "title": "Mask Trap",
+  "order": 20,
+  "track": "routing",
+  "lesson": "Address and mask are a pair. 10.10.10.10/16 is not the same network as the gateway 10.10.10.1/24 — prefixes must match for same-subnet logic. PatchLab refuses the lazy 'it looks close enough' answer.",
+  "brief": "SERVER-01 shows 10.10.10.10 with a /16 mask. Correct it to /24 (keep gateway 10.10.10.1) and ping FW-EDGE.",
+  "constraints": [
+    "Keep address 10.10.10.10",
+    "Prefix must be 24"
+  ],
+  "parTimeSec": 75,
+  "hintAfterWrongAttempts": 2,
+  "inventory": {
+    "copper_cat6": 2,
+    "fiber_om4": 0,
+    "power_c13": 0,
+    "console_rj45": 0
+  },
+  "initial": {
+    "devices": [
+      {
+        "id": "server-01",
+        "role": "server",
+        "name": "SERVER-01",
+        "model": "1U compute",
+        "rackUnitStart": 20,
+        "heightU": 1,
+        "ports": [
+          { "id": "nic-1", "deviceId": "server-01", "index": 1, "label": "eth0", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "nic", "accessVlan": 10, "ip": { "address": "10.10.10.10", "prefix": 16, "gateway": "10.10.10.1" } },
+          { "id": "srv1-con", "deviceId": "server-01", "index": 2, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
+          { "id": "srv1-psu", "deviceId": "server-01", "index": 3, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+        ]
+      }
+    ],
+    "cables": [
+      {
+        "id": "c-fw-lan",
+        "media": "copper_cat6",
+        "color": "yellow",
+        "lengthM": 1,
+        "ends": [
+          { "deviceId": "fw-1", "portId": "fw-lan" },
+          { "deviceId": "tor-1", "portId": "sw-2" }
+        ]
+      },
+      {
+        "id": "c-srv",
+        "media": "copper_cat6",
+        "color": "blue",
+        "lengthM": 2,
+        "ends": [
+          { "deviceId": "tor-1", "portId": "sw-5" },
+          { "deviceId": "server-01", "portId": "nic-1" }
+        ]
+      }
+    ]
+  },
+  "goals": [
+    {
+      "type": "iface_ip",
+      "port": { "deviceId": "server-01", "portId": "nic-1" },
+      "address": "10.10.10.10",
+      "prefix": 24
+    },
+    {
+      "type": "ping",
+      "fromDeviceId": "server-01",
+      "toDeviceId": "fw-1"
+    }
+  ]
+}

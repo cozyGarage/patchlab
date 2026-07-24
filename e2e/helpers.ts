@@ -24,6 +24,10 @@ export const MISSION_IDS = [
   'm16-trunk-uplink',
   'm17-static-nat',
   'm18-deny-host',
+  'm19-broken-address',
+  'm20-mask-trap',
+  'm21-inter-vlan',
+  'm22-static-route',
 ] as const;
 
 export async function shot(page: Page, name: string) {
@@ -40,7 +44,9 @@ export async function clearApp(page: Page) {
   });
   await page.reload();
   await expect(
-    page.getByRole('heading', { name: /Rack\. Power\. VLAN\. IP\. Firewall/i }),
+    page.getByRole('heading', {
+      name: /Rack\. Power\. VLAN\. Route\. Firewall/i,
+    }),
   ).toBeVisible();
 }
 

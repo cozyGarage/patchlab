@@ -141,7 +141,21 @@
       "heightU": 1,
       "poweredByDefault": true,
       "ports": [
-        { "id": "peer-eth", "deviceId": "wan-peer", "index": 1, "label": "PEERING", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "nic", "ip": { "address": "203.0.113.2", "prefix": 30 } }
+        { "id": "peer-eth", "deviceId": "wan-peer", "index": 1, "label": "PEERING", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "nic", "ip": { "address": "203.0.113.2", "prefix": 30 } },
+        { "id": "peer-cloud", "deviceId": "wan-peer", "index": 2, "label": "CLOUD", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "nic", "ip": { "address": "198.51.100.1", "prefix": 24 } }
+      ]
+    },
+    {
+      "id": "branch-01",
+      "role": "server",
+      "name": "BRANCH-01",
+      "model": "Remote branch (cloud)",
+      "rackUnitStart": 38,
+      "heightU": 1,
+      "poweredByDefault": true,
+      "cloudAttached": true,
+      "ports": [
+        { "id": "nic-1", "deviceId": "branch-01", "index": 1, "label": "eth0", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "nic", "ip": { "address": "198.51.100.10", "prefix": 24, "gateway": "198.51.100.1" } }
       ]
     },
     {

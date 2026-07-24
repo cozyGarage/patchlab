@@ -13,7 +13,7 @@ import {
   samePort,
   portKey,
 } from '../types/schema';
-import { isValidHostIp } from './ip';
+import { isValidHostIp, parseCidr, parseIpv4 } from './ip';
 import {
   buildConsoleMap,
   buildLinkTable,
@@ -527,6 +527,50 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
             level: 'success',
             code: 'NAT_UPDATED',
             message: `NAT ${intent.insideIp} → ${intent.outsideIp}`,
+          },
+          null,
+        ),
+      };
+    }
+
+    case 'SET_ROUTE': {
+      const rack = cloneRack(state.snapshot.rack);
+      const dev = rack.devices.find((d) => d.id === intent.deviceId);
+      if (!dev || (dev.role !== 'firewall' && dev.role !== 'switch')) {
+        return state;
+      }
+      if (!parseCidr(intent.destCidr) || !parseIpv4(intent.nextHop)) {
+        return {
+          ...state,
+          wrongAttempts: state.wrongAttempts + 1,
+          snapshot: {
+            ...state.snapshot,
+            lastTip: {
+              level: 'error',
+              code: 'ROUTE_UPDATED',
+              message: 'Invalid route — use CIDR (e.g. 198.51.100.0/24) and next-hop IP',
+            },
+          },
+        };
+      }
+      const rule = {
+        id: `rt-${intent.destCidr}-${intent.nextHop}`,
+        destCidr: intent.destCidr,
+        nextHop: intent.nextHop,
+        enabled: true,
+      };
+      const others = (dev.routes ?? []).filter((r) => r.id !== rule.id);
+      dev.routes = [rule, ...others];
+      return {
+        ...state,
+        snapshot: snapshotOf(
+          rack,
+          mission,
+          state.snapshot.inventory,
+          {
+            level: 'success',
+            code: 'ROUTE_UPDATED',
+            message: `Route ${intent.destCidr} via ${intent.nextHop}`,
           },
           null,
         ),

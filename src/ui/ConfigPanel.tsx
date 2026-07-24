@@ -11,6 +11,8 @@ interface ConfigPanelProps {
   onFirewallPermitWanLan: () => void;
   onFirewallDenyHost: () => void;
   onSetNat: (insideIp: string, outsideIp: string) => void;
+  onSetRoute: (destCidr: string, nextHop: string) => void;
+  onFirewallPermitBranch: () => void;
   onSetVlan: (port: PortRef, vlanId: number) => void;
   onSetPortMode: (port: PortRef, mode: PortMode) => void;
   onPing: (fromId: string, toId: string) => void;
@@ -27,6 +29,8 @@ export function ConfigPanel({
   onFirewallPermitWanLan,
   onFirewallDenyHost,
   onSetNat,
+  onSetRoute,
+  onFirewallPermitBranch,
   onSetVlan,
   onSetPortMode,
   onPing,
@@ -52,6 +56,8 @@ export function ConfigPanel({
   const [vlan, setVlan] = useState(String(swPort?.vlanId ?? 10));
   const [natInside, setNatInside] = useState('10.10.10.10');
   const [natOutside, setNatOutside] = useState('203.0.113.10');
+  const [routeDest, setRouteDest] = useState('198.51.100.0/24');
+  const [routeHop, setRouteHop] = useState('203.0.113.2');
 
   function applyPort(nextId: string) {
     setPortId(nextId);
@@ -269,6 +275,53 @@ export function ConfigPanel({
             onClick={onFirewallDenyHost}
           >
             Insert deny host 10.10.10.20 → WAN
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={onFirewallPermitBranch}
+          >
+            Insert permit LAN → BRANCH
+          </button>
+        </div>
+      ) : null}
+
+      {device.role === 'firewall' ? (
+        <div className="config-block">
+          <h4>Routes</h4>
+          <ul className="rule-list">
+            {(device.routes ?? []).length === 0 ? (
+              <li className="muted">No static routes (connected only)</li>
+            ) : (
+              (device.routes ?? []).map((r) => (
+                <li key={r.id}>
+                  {r.destCidr} via {r.nextHop} {r.enabled ? '' : '(disabled)'}
+                </li>
+              ))
+            )}
+          </ul>
+          <label>
+            Destination CIDR
+            <input
+              value={routeDest}
+              onChange={(e) => setRouteDest(e.target.value)}
+              placeholder="198.51.100.0/24"
+            />
+          </label>
+          <label>
+            Next hop
+            <input
+              value={routeHop}
+              onChange={(e) => setRouteHop(e.target.value)}
+              placeholder="203.0.113.2"
+            />
+          </label>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => onSetRoute(routeDest.trim(), routeHop.trim())}
+          >
+            Apply route
           </button>
         </div>
       ) : null}

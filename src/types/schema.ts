@@ -50,7 +50,8 @@ export type TipCode =
   | 'PING_OK'
   | 'PING_FAIL'
   | 'NAT_UPDATED'
-  | 'MODE_UPDATED';
+  | 'MODE_UPDATED'
+  | 'ROUTE_UPDATED';
 
 export interface PortRef {
   deviceId: string;
@@ -95,6 +96,15 @@ export interface NatRule {
   enabled: boolean;
 }
 
+/** Static / default route on a router or firewall (first longest-prefix match wins). */
+export interface RouteEntry {
+  id: string;
+  destCidr: string;
+  nextHop: string;
+  enabled: boolean;
+  note?: string;
+}
+
 export interface Device {
   id: string;
   role: DeviceRole;
@@ -105,7 +115,13 @@ export interface Device {
   ports: Port[];
   firewallRules?: FirewallRule[];
   natRules?: NatRule[];
+  routes?: RouteEntry[];
   poweredByDefault?: boolean;
+  /**
+   * Cloud / remote host: reachable via WAN routing without a rack data cable
+   * (e.g. BRANCH behind ISP-PEER).
+   */
+  cloudAttached?: boolean;
 }
 
 export interface Cable {
@@ -151,6 +167,12 @@ export type Goal =
       deviceId: string;
       insideIp: string;
       outsideIp: string;
+    }
+  | {
+      type: 'route_entry';
+      deviceId: string;
+      destCidr: string;
+      nextHop: string;
     };
 
 export interface Inventory {
@@ -179,7 +201,8 @@ export interface Mission {
     | 'logic'
     | 'security'
     | 'switching'
-    | 'services';
+    | 'services'
+    | 'routing';
   /** When false, do not merge rackBase facility cables (power harness). Default true. */
   useBaseCables?: boolean;
   lesson?: string;
@@ -250,6 +273,12 @@ export type Intent =
       deviceId: string;
       insideIp: string;
       outsideIp: string;
+    }
+  | {
+      type: 'SET_ROUTE';
+      deviceId: string;
+      destCidr: string;
+      nextHop: string;
     };
 
 export interface Score {

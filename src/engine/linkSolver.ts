@@ -12,7 +12,7 @@ import {
   samePort,
   portKey,
 } from '../types/schema';
-import { inCidr, sameSubnet } from './ip';
+import { inCidr, parseCidr, sameSubnet } from './ip';
 
 function indexPorts(devices: Device[]): Map<string, Port> {
   const map = new Map<string, Port>();
@@ -328,11 +328,61 @@ function firewallAllows(
 }
 
 function hasDataCable(device: Device, rack: RackState): boolean {
+  if (device.cloudAttached) return true;
   return device.ports.some(
     (p) =>
       (p.kind === 'data' || p.kind === 'lan' || p.kind === 'wan' || p.role === 'nic') &&
       findCableOnPort(rack.cables, { deviceId: device.id, portId: p.id }),
   );
+}
+
+function longestPrefixRoute(
+  routes: NonNullable<Device['routes']>,
+  destIp: string,
+) {
+  let best: (typeof routes)[number] | null = null;
+  let bestPrefix = -1;
+  for (const route of routes) {
+    if (!route.enabled) continue;
+    const parsed = parseCidr(route.destCidr);
+    if (!parsed || !inCidr(destIp, route.destCidr)) continue;
+    if (parsed.prefix > bestPrefix) {
+      best = route;
+      bestPrefix = parsed.prefix;
+    }
+  }
+  return best;
+}
+
+function deviceHasConnectedRoute(
+  device: Device,
+  dest: { address: string; prefix: number },
+): boolean {
+  return device.ports.some((p) => p.ip && sameSubnet(p.ip, dest));
+}
+
+/** Next-hop device that owns this IP on a live interface. */
+function deviceOwningIp(rack: RackState, ip: string): Device | undefined {
+  return rack.devices.find((d) => d.ports.some((p) => p.ip?.address === ip));
+}
+
+/**
+ * After a packet is delivered to `edge` (e.g. ISP-PEER), can it reach `to`?
+ * Supports cloud branch hosts on a logical network behind the WAN peer.
+ */
+function edgeCanDeliver(
+  rack: RackState,
+  edge: Device,
+  to: Device,
+  toIp: { address: string; prefix: number },
+): boolean {
+  if (edge.id === to.id) return true;
+  if (deviceHasConnectedRoute(edge, toIp)) return true;
+  // Cloud branch: same subnet as any edge interface (including uncabaled cloud NIC)
+  if (to.cloudAttached) {
+    return edge.ports.some((p) => p.ip && sameSubnet(p.ip, toIp));
+  }
+  return false;
 }
 
 export function evaluatePing(
@@ -361,7 +411,7 @@ export function evaluatePing(
   const fw = rack.devices.find((d) => d.role === 'firewall');
 
   if (sameSubnet(fromIp, toIp)) {
-    if (fw && isDevicePowered(rack, fw.id)) {
+    if (fw && isDevicePowered(rack, fw.id) && !from.cloudAttached && !to.cloudAttached) {
       const check = firewallAllows(fw.firewallRules, fromIp.address, toIp.address);
       if (!check.ok) return { ok: false, detail: `Ping fail — ${check.detail}` };
     }
@@ -388,6 +438,28 @@ export function evaluatePing(
         detail: `Ping fail — gateway ${gateway} not found on a live router/FW`,
       };
     }
+    const gwIface = router.ports.find((p) => p.ip?.address === gateway)?.ip;
+    if (gwIface) {
+      // Mask trap lesson: host prefix must match the gateway interface mask,
+      // and the host address must fall inside that interface subnet.
+      if (fromIp.prefix !== gwIface.prefix) {
+        return {
+          ok: false,
+          detail: `Ping fail — host prefix /${fromIp.prefix} does not match gateway interface /${gwIface.prefix}`,
+        };
+      }
+      if (
+        !sameSubnet(
+          { address: fromIp.address, prefix: gwIface.prefix },
+          gwIface,
+        )
+      ) {
+        return {
+          ok: false,
+          detail: 'Ping fail — host IP is outside the gateway interface subnet',
+        };
+      }
+    }
   } else {
     // WAN peers may use a directly attached firewall without configuring a gateway.
     // LAN hosts must set an explicit default gateway (CCNA lesson).
@@ -407,9 +479,7 @@ export function evaluatePing(
     }
   }
 
-  const routerReachesDst = router.ports.some(
-    (p) => p.ip && sameSubnet(p.ip, toIp),
-  );
+  const routerReachesDst = deviceHasConnectedRoute(router, toIp);
 
   const fromOnWan = router.ports.some(
     (p) => p.kind === 'wan' && p.ip && sameSubnet(fromIp, p.ip),
@@ -441,23 +511,60 @@ export function evaluatePing(
     };
   }
 
-  if (!routerReachesDst) {
+  if (router.role === 'firewall') {
+    const check = firewallAllows(router.firewallRules, fromIp.address, toIp.address);
+    if (!check.ok) return { ok: false, detail: `Ping fail — ${check.detail}` };
+  }
+
+  if (routerReachesDst) {
+    const via =
+      gateway ??
+      router.ports.find((p) => p.ip && sameSubnet(fromIp, p.ip))?.ip?.address;
+    return {
+      ok: true,
+      detail: `Ping ok — ${fromIp.address} → ${toIp.address} via ${via ?? router.name}`,
+    };
+  }
+
+  // Static / default routes on the gateway (NetPractice-style, with better tips)
+  const route = longestPrefixRoute(router.routes ?? [], toIp.address);
+  if (!route) {
     return {
       ok: false,
       detail: 'Ping fail — no route on gateway to destination subnet',
     };
   }
 
-  if (router.role === 'firewall') {
-    const check = firewallAllows(router.firewallRules, fromIp.address, toIp.address);
-    if (!check.ok) return { ok: false, detail: `Ping fail — ${check.detail}` };
+  const nextHopOnLink = router.ports.some(
+    (p) =>
+      p.ip &&
+      sameSubnet(p.ip, { address: route.nextHop, prefix: p.ip.prefix }),
+  );
+  if (!nextHopOnLink) {
+    return {
+      ok: false,
+      detail: `Ping fail — next hop ${route.nextHop} is not on a connected interface`,
+    };
   }
 
-  const via = gateway ?? router.ports.find((p) => p.ip && sameSubnet(fromIp, p.ip))?.ip
-    ?.address;
+  const edge = deviceOwningIp(rack, route.nextHop);
+  if (!edge || !isDevicePowered(rack, edge.id)) {
+    return {
+      ok: false,
+      detail: `Ping fail — next hop ${route.nextHop} not found on a live device`,
+    };
+  }
+
+  if (!edgeCanDeliver(rack, edge, to, toIp)) {
+    return {
+      ok: false,
+      detail: `Ping fail — ${edge.name} has no path to ${toIp.address}`,
+    };
+  }
+
   return {
     ok: true,
-    detail: `Ping ok — ${fromIp.address} → ${toIp.address} via ${via ?? router.name}`,
+    detail: `Ping ok — ${fromIp.address} → ${toIp.address} via route ${route.destCidr} → ${route.nextHop}`,
   };
 }
 
@@ -545,6 +652,15 @@ export function evaluateGoals(
             r.outsideIp === g.outsideIp,
         );
       }
+      case 'route_entry': {
+        const dev = getDevice(rack, g.deviceId);
+        return !!dev?.routes?.some(
+          (r) =>
+            r.enabled &&
+            r.destCidr === g.destCidr &&
+            r.nextHop === g.nextHop,
+        );
+      }
       default:
         return false;
     }
@@ -627,7 +743,11 @@ export function hintForGoal(goal: Goal | undefined): {
       return {
         message: `Hint: static NAT ${goal.insideIp} → ${goal.outsideIp} on ${goal.deviceId}`,
       };
+    case 'route_entry':
+      return {
+        message: `Hint: add route ${goal.destCidr} via ${goal.nextHop} on ${goal.deviceId}`,
+      };
     default:
-      return { message: 'Check power, media, VLAN, IP, gateway, and firewall rules' };
+      return { message: 'Check power, media, VLAN, IP, gateway, route, and firewall rules' };
   }
 }

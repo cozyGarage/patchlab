@@ -394,6 +394,11 @@ p {
   border-color: rgba(196, 181, 253, 0.45);
 }
 
+.track-pill.track-routing {
+  color: #86efac;
+  border-color: rgba(134, 239, 172, 0.45);
+}
+
 .btn-row {
   display: flex;
   flex-wrap: wrap;

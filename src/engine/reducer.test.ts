@@ -6,10 +6,10 @@ import { scoreRun } from './scoring';
 import { portKey } from '../types/schema';
 
 describe('mission catalog', () => {
-  it('loads 18 ordered missions with goals', () => {
-    expect(missions).toHaveLength(18);
+  it('loads 22 ordered missions with goals', () => {
+    expect(missions).toHaveLength(22);
     expect(missions.map((m) => m.order)).toEqual(
-      Array.from({ length: 18 }, (_, i) => i + 1),
+      Array.from({ length: 22 }, (_, i) => i + 1),
     );
     for (const m of missions) {
       expect(m.goals.length).toBeGreaterThan(0);
@@ -649,5 +649,110 @@ describe('engine helpers', () => {
     expect(state.snapshot.rack.cables.some((c) => c.id === 'c-pre-1')).toBe(
       true,
     );
+  });
+});
+
+describe('NetPractice-inspired routing lessons', () => {
+  it('M19: fixing broken host IP unlocks ping', () => {
+    const mission = getMission('m19-broken-address')!;
+    let state = createEngineState(mission, baseRack);
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'fw-1').ok).toBe(
+      false,
+    );
+    state = reduce(state, {
+      type: 'SET_IP',
+      port: { deviceId: 'server-01', portId: 'nic-1' },
+      address: '10.10.10.10',
+      prefix: 24,
+      gateway: '10.10.10.1',
+    });
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M20: wrong mask blocks gateway path until /24', () => {
+    const mission = getMission('m20-mask-trap')!;
+    let state = createEngineState(mission, baseRack);
+    const bad = evaluatePing(state.snapshot.rack, 'server-01', 'fw-1');
+    expect(bad.ok).toBe(false);
+    expect(bad.detail).toMatch(/prefix/i);
+
+    state = reduce(state, {
+      type: 'SET_IP',
+      port: { deviceId: 'server-01', portId: 'nic-1' },
+      address: '10.10.10.10',
+      prefix: 24,
+      gateway: '10.10.10.1',
+    });
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M21: inter-VLAN routing via dual FW LAN interfaces', () => {
+    const mission = getMission('m21-inter-vlan')!;
+    let state = createEngineState(mission, baseRack);
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'tor-1', portId: 'sw-5' },
+      b: { deviceId: 'server-01', portId: 'nic-1' },
+    });
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'tor-1', portId: 'sw-7' },
+      b: { deviceId: 'server-07', portId: 'nic-1' },
+    });
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'fw-1', portId: 'fw-lan' },
+      b: { deviceId: 'tor-1', portId: 'sw-2' },
+    });
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'fw-1', portId: 'fw-lan20' },
+      b: { deviceId: 'tor-1', portId: 'sw-8' },
+    });
+    state = reduce(state, {
+      type: 'SET_IP',
+      port: { deviceId: 'server-01', portId: 'nic-1' },
+      address: '10.10.10.10',
+      prefix: 24,
+      gateway: '10.10.10.1',
+    });
+    state = reduce(state, {
+      type: 'SET_IP',
+      port: { deviceId: 'server-07', portId: 'nic-1' },
+      address: '10.10.20.10',
+      prefix: 24,
+      gateway: '10.10.20.1',
+    });
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M22: static route + permit reaches BRANCH-01', () => {
+    const mission = getMission('m22-static-route')!;
+    let state = createEngineState(mission, baseRack);
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'branch-01').ok).toBe(
+      false,
+    );
+
+    state = reduce(state, {
+      type: 'SET_ROUTE',
+      deviceId: 'fw-1',
+      destCidr: '198.51.100.0/24',
+      nextHop: '203.0.113.2',
+    });
+    state = reduce(state, {
+      type: 'UPSERT_FIREWALL_RULE',
+      deviceId: 'fw-1',
+      rule: {
+        id: 'permit-branch',
+        action: 'permit',
+        srcCidr: '10.10.10.0/24',
+        dstCidr: '198.51.100.0/24',
+        enabled: true,
+      },
+    });
+    const ping = evaluatePing(state.snapshot.rack, 'server-01', 'branch-01');
+    expect(ping.ok).toBe(true);
+    expect(ping.detail).toMatch(/route/i);
+    expect(state.snapshot.complete).toBe(true);
   });
 });

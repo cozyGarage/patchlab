@@ -47,6 +47,8 @@ function goalText(mission: Mission): string[] {
         return `Set ${g.port.portId} mode ${g.mode}`;
       case 'nat_static':
         return `Static NAT ${g.insideIp} ↔ ${g.outsideIp}`;
+      case 'route_entry':
+        return `Route ${g.destCidr} via ${g.nextHop}`;
       default:
         return `Goal ${i + 1}`;
     }

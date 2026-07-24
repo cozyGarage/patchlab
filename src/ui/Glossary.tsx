@@ -48,6 +48,18 @@ const ENTRIES = [
     def: 'One-to-one mapping: one public outside IP ↔ one private inside host. Used to publish a server to WAN peers.',
   },
   {
+    term: 'Inter-VLAN routing',
+    def: 'Hosts in different VLANs cannot talk at L2. A router/firewall needs an interface (or SVI) in each VLAN — then it routes between them.',
+  },
+  {
+    term: 'Static route',
+    def: 'Manual route entry: destination prefix → next-hop IP. Used when the destination is not on a directly connected interface.',
+  },
+  {
+    term: 'Subnet mask / prefix',
+    def: 'Defines which bits are the network. 10.10.10.10/24 and 10.10.10.1/16 are not “the same subnet” for routing decisions.',
+  },
+  {
     term: 'OM4 fiber / LC',
     def: 'Multimode fiber patching with LC connectors. Never seat Cat6 into an SFP cage.',
   },

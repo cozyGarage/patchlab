@@ -25,7 +25,7 @@ npm run build
 - Realistic rack chassis: panel, fiber tray, ToR switch, SFP, firewall, servers, console station, PDU, ISP peer
 - Plug data / fiber / power / console cords (tap-tap or drag)
 - Side config panel: IPv4/gateway, switchport VLAN/mode, ping, firewall ACLs, static NAT
-- 18 missions: copper/fiber → power/console → subnet ping → firewall → VLAN/trunk → gateway → NAT → host deny
+- 22 missions: copper/fiber → power/console → VLAN/trunk → gateway/NAT/ACL → addressing fixes → inter-VLAN → static routes
 - Glossary, sound toggle, hints, local progress
 
 ## Docs

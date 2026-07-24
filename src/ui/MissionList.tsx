@@ -33,10 +33,11 @@ export function MissionList({
           <span className="dot" aria-hidden />
           <span>PatchLab</span>
         </div>
-        <h1 className="brand">Rack. Power. VLAN. IP. Firewall.</h1>
+        <h1 className="brand">Rack. Power. VLAN. Route. Firewall.</h1>
         <p>
           Patch copper and fiber, then climb the CCNA stack — VLANs, trunks,
-          gateways, NAT, and ACLs — with instant link and ping feedback.
+          addressing, routes, NAT, and ACLs — with instant link and ping
+          feedback.
         </p>
       </header>
 
