@@ -14,14 +14,26 @@ import {
   type EngineState,
 } from './engine/reducer';
 import { scoreRun } from './engine/scoring';
-import { loadProgress, recordMissionClear } from './lib/progress';
+import {
+  exportProgress,
+  importProgress,
+  loadProgress,
+  recordMissionClear,
+  resetProgress,
+} from './lib/progress';
 import { loadSettings, saveSettings } from './lib/settings';
 import { playTipSound } from './lib/sound';
+import {
+  SANDBOX_PRESETS,
+  loadSandboxSnapshot,
+  saveSandboxSnapshot,
+} from './lib/sandboxLab';
 import { MissionList } from './ui/MissionList';
 import { MissionBrief } from './ui/MissionBrief';
 import { RackView } from './ui/RackView';
 import { Debrief } from './ui/Debrief';
 import { Glossary } from './ui/Glossary';
+import { Onboarding } from './ui/Onboarding';
 
 type Screen = 'home' | 'brief' | 'rack' | 'debrief';
 
@@ -56,6 +68,10 @@ export default function App() {
   const [elapsedSec, setElapsedSec] = useState(0);
   const [sandbox, setSandbox] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
+  const [coachStep, setCoachStep] = useState(0);
+  const [coachOpen, setCoachOpen] = useState(
+    () => !loadSettings().onboardingDone,
+  );
   const lastTipCode = useRef<string | undefined>(undefined);
   const completedRunKey = useRef<string | null>(null);
 
@@ -109,6 +125,10 @@ export default function App() {
           'PING_FAIL',
           'IP_UPDATED',
           'FIREWALL_UPDATED',
+          'NAT_UPDATED',
+          'ROUTE_UPDATED',
+          'TRACEROUTE_OK',
+          'TRACEROUTE_FAIL',
         ].includes(tip.code)
       ) {
         playTipSound(settings.sound, tip.level);
@@ -303,7 +323,11 @@ export default function App() {
     );
   }
 
-  function dispatchSetRoute(destCidr: string, nextHop: string) {
+  function dispatchSetRoute(
+    destCidr: string,
+    nextHop: string,
+    adminDistance?: number,
+  ) {
     if (!engine) return;
     apply(
       reduce(engine, {
@@ -311,6 +335,19 @@ export default function App() {
         deviceId: 'fw-1',
         destCidr,
         nextHop,
+        adminDistance,
+      }),
+    );
+  }
+
+  function dispatchSetPat(insideCidr: string, outsideIp: string) {
+    if (!engine) return;
+    apply(
+      reduce(engine, {
+        type: 'SET_PAT',
+        deviceId: 'fw-1',
+        insideCidr,
+        outsideIp,
       }),
     );
   }
@@ -357,15 +394,117 @@ export default function App() {
     );
   }
 
+  function dispatchTraceroute(fromId: string, toId: string) {
+    if (!engine) return;
+    apply(
+      reduce(engine, {
+        type: 'TRACEROUTE',
+        fromDeviceId: fromId,
+        toDeviceId: toId,
+      }),
+    );
+  }
+
   function dispatchReset() {
     if (!mission) return;
     startMission(mission, sandbox);
+  }
+
+  function finishOnboarding() {
+    const next = { ...settings, onboardingDone: true };
+    setSettings(next);
+    saveSettings(next);
+    setCoachOpen(false);
   }
 
   function toggleSound() {
     const next = { ...settings, sound: !settings.sound };
     setSettings(next);
     saveSettings(next);
+  }
+
+  function handleExportProgress() {
+    const blob = new Blob([exportProgress(progress)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'patchlab-progress.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImportProgress(raw: string) {
+    const next = importProgress(raw);
+    if (next) setProgress(next);
+  }
+
+  function handleResetProgress() {
+    if (
+      !window.confirm(
+        'Reset all campaign progress? This cannot be undone (export first if you care).',
+      )
+    ) {
+      return;
+    }
+    setProgress(resetProgress());
+  }
+
+  function handleSandboxSave() {
+    if (!engine) return;
+    saveSandboxSnapshot(engine.snapshot.rack, engine.snapshot.inventory);
+    apply({
+      ...engine,
+      snapshot: {
+        ...engine.snapshot,
+        lastTip: {
+          level: 'success',
+          code: 'SANDBOX_SAVED',
+          message: 'Sandbox rack saved in this browser',
+        },
+      },
+    });
+  }
+
+  function handleSandboxLoad() {
+    if (!engine) return;
+    const snap = loadSandboxSnapshot();
+    if (!snap) {
+      apply({
+        ...engine,
+        snapshot: {
+          ...engine.snapshot,
+          lastTip: {
+            level: 'warn',
+            code: 'SANDBOX_SAVED',
+            message: 'No sandbox save found yet',
+          },
+        },
+      });
+      return;
+    }
+    apply(
+      reduce(engine, {
+        type: 'LOAD_RACK',
+        rack: snap.rack,
+        inventory: snap.inventory,
+      }),
+    );
+  }
+
+  function handleSandboxPreset(presetId: string) {
+    if (!engine) return;
+    const preset = SANDBOX_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+    const built = preset.build();
+    apply(
+      reduce(engine, {
+        type: 'LOAD_RACK',
+        rack: built.rack,
+        inventory: built.inventory,
+      }),
+    );
   }
 
   const nextMission = useMemo(() => {
@@ -375,6 +514,16 @@ export default function App() {
 
   return (
     <div className="app-shell wide">
+      <Onboarding
+        open={coachOpen && screen === 'home'}
+        step={coachStep}
+        onNext={() => {
+          if (coachStep >= 2) finishOnboarding();
+          else setCoachStep((s) => s + 1);
+        }}
+        onSkip={finishOnboarding}
+      />
+
       {screen === 'home' ? (
         <MissionList
           missions={missions}
@@ -384,6 +533,13 @@ export default function App() {
           onSandbox={() => startMission(sandboxMission, true)}
           onToggleSound={toggleSound}
           onOpenGlossary={() => setGlossaryOpen(true)}
+          onExportProgress={handleExportProgress}
+          onImportProgress={handleImportProgress}
+          onResetProgress={handleResetProgress}
+          onReplayOnboarding={() => {
+            setCoachStep(0);
+            setCoachOpen(true);
+          }}
         />
       ) : null}
 
@@ -414,11 +570,21 @@ export default function App() {
           onFirewallDenyHostBranch={dispatchFirewallDenyHostBranch}
           onFirewallCustomRule={dispatchFirewallCustomRule}
           onSetNat={dispatchSetNat}
+          onSetPat={dispatchSetPat}
           onSetRoute={dispatchSetRoute}
           onFirewallPermitBranch={dispatchFirewallPermitBranch}
           onSetVlan={dispatchSetVlan}
           onSetPortMode={dispatchSetPortMode}
           onPing={dispatchPing}
+          onTraceroute={dispatchTraceroute}
+          onSandboxSave={sandbox ? handleSandboxSave : undefined}
+          onSandboxLoad={sandbox ? handleSandboxLoad : undefined}
+          onSandboxPreset={sandbox ? handleSandboxPreset : undefined}
+          sandboxPresets={
+            sandbox
+              ? SANDBOX_PRESETS.map((p) => ({ id: p.id, title: p.title }))
+              : undefined
+          }
           onBack={() => setScreen(sandbox ? 'home' : 'brief')}
         />
       ) : null}

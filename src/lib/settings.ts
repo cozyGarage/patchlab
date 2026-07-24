@@ -6,6 +6,7 @@ const defaults: SettingsSave = {
   version: 1,
   sound: true,
   reducedHints: false,
+  onboardingDone: false,
 };
 
 export function loadSettings(): SettingsSave {

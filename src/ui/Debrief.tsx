@@ -2,6 +2,7 @@ import type { Mission, ProgressSave, Score } from '../types/schema';
 import {
   GATE,
   chapterForMission,
+  chapterProgress,
   meetsStageGate,
   missionGate,
   starTotal,
@@ -46,6 +47,10 @@ export function Debrief({
         m.order <= chapter.to &&
         m.order > mission.order,
     );
+  const chapterProg = chapter
+    ? chapterProgress(chapter, missions, progress)
+    : null;
+  const chapterCelebrated = !!(chapterProg?.gatedComplete && chapterClear);
 
   return (
     <div className="screen-debrief">
@@ -58,6 +63,11 @@ export function Debrief({
           Stage {mission.order} of {missions.length} · {earned}★ / 9
           {chapter ? ` · Chapter ${chapter.index}` : ''}
         </div>
+        {chapterCelebrated && chapter ? (
+          <div className="chapter-celebrate" role="status">
+            Chapter {chapter.index} cleared — {chapter.title}
+          </div>
+        ) : null}
         <h1>Circuit complete</h1>
         <p>
           You finished <strong>{mission.title}</strong>
@@ -76,11 +86,11 @@ export function Debrief({
 
         {!stageOk ? (
           <div className="gate-callout">
-            <strong>Hard gate</strong>
+            <strong>Hard gate — retry for stars</strong>
             <p>
               Score {GATE.minStarsToAdvance}★+ (correctness + speed +
               cleanliness). Fewer wrong attempts, fewer hints, and finishing near
-              par time raise your stars.
+              par time raise your stars. Soft clears do not unlock the next stage.
             </p>
           </div>
         ) : null}

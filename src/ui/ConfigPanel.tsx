@@ -17,11 +17,17 @@ interface ConfigPanelProps {
     dstCidr: string,
   ) => void;
   onSetNat: (insideIp: string, outsideIp: string) => void;
-  onSetRoute: (destCidr: string, nextHop: string) => void;
+  onSetPat: (insideCidr: string, outsideIp: string) => void;
+  onSetRoute: (
+    destCidr: string,
+    nextHop: string,
+    adminDistance?: number,
+  ) => void;
   onFirewallPermitBranch: () => void;
   onSetVlan: (port: PortRef, vlanId: number) => void;
   onSetPortMode: (port: PortRef, mode: PortMode) => void;
   onPing: (fromId: string, toId: string) => void;
+  onTraceroute: (fromId: string, toId: string) => void;
   pingTargets: { id: string; name: string }[];
 }
 
@@ -37,11 +43,13 @@ export function ConfigPanel({
   onFirewallDenyHostBranch,
   onFirewallCustomRule,
   onSetNat,
+  onSetPat,
   onSetRoute,
   onFirewallPermitBranch,
   onSetVlan,
   onSetPortMode,
   onPing,
+  onTraceroute,
   pingTargets,
 }: ConfigPanelProps) {
   const ipPorts = device.ports.filter(
@@ -66,6 +74,9 @@ export function ConfigPanel({
   const [natOutside, setNatOutside] = useState('203.0.113.10');
   const [routeDest, setRouteDest] = useState('198.51.100.0/24');
   const [routeHop, setRouteHop] = useState('203.0.113.2');
+  const [routeAd, setRouteAd] = useState('1');
+  const [patInside, setPatInside] = useState('10.10.10.0/24');
+  const [patOutside, setPatOutside] = useState('203.0.113.1');
   const [aclAction, setAclAction] = useState<'permit' | 'deny'>('deny');
   const [aclSrc, setAclSrc] = useState('10.10.10.20/32');
   const [aclDst, setAclDst] = useState('198.51.100.0/24');
@@ -350,7 +361,8 @@ export function ConfigPanel({
             ) : (
               (device.routes ?? []).map((r) => (
                 <li key={r.id}>
-                  {r.destCidr} via {r.nextHop} {r.enabled ? '' : '(disabled)'}
+                  {r.destCidr} via {r.nextHop} (AD{r.adminDistance ?? 1}){' '}
+                  {r.enabled ? '' : '(disabled)'}
                 </li>
               ))
             )}
@@ -371,10 +383,25 @@ export function ConfigPanel({
               placeholder="203.0.113.2"
             />
           </label>
+          <label>
+            Admin distance
+            <input
+              value={routeAd}
+              onChange={(e) => setRouteAd(e.target.value)}
+              placeholder="1"
+            />
+          </label>
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => onSetRoute(routeDest.trim(), routeHop.trim())}
+            onClick={() => {
+              const ad = Number(routeAd);
+              onSetRoute(
+                routeDest.trim(),
+                routeHop.trim(),
+                Number.isFinite(ad) ? ad : 1,
+              );
+            }}
           >
             Apply route
           </button>
@@ -383,20 +410,25 @@ export function ConfigPanel({
 
       {device.role === 'firewall' ? (
         <div className="config-block">
-          <h4>Static NAT</h4>
+          <h4>NAT / PAT</h4>
           <ul className="rule-list">
             {(device.natRules ?? []).length === 0 ? (
               <li className="muted">No NAT mappings</li>
             ) : (
               (device.natRules ?? []).map((r) => (
                 <li key={r.id}>
-                  {r.insideIp} ↔ {r.outsideIp} {r.enabled ? '' : '(disabled)'}
+                  {r.mode === 'pat'
+                    ? `PAT ${r.insideCidr} → ${r.outsideIp}${
+                        r.overload ? ' overload' : ''
+                      }`
+                    : `${r.insideIp} ↔ ${r.outsideIp}`}{' '}
+                  {r.enabled ? '' : '(disabled)'}
                 </li>
               ))
             )}
           </ul>
           <label>
-            Inside IP
+            Inside IP (static)
             <input
               value={natInside}
               onChange={(e) => setNatInside(e.target.value)}
@@ -404,7 +436,7 @@ export function ConfigPanel({
             />
           </label>
           <label>
-            Outside IP
+            Outside IP (static)
             <input
               value={natOutside}
               onChange={(e) => setNatOutside(e.target.value)}
@@ -418,11 +450,34 @@ export function ConfigPanel({
           >
             Apply static NAT
           </button>
+          <label>
+            Inside CIDR (PAT)
+            <input
+              value={patInside}
+              onChange={(e) => setPatInside(e.target.value)}
+              placeholder="10.10.10.0/24"
+            />
+          </label>
+          <label>
+            Outside IP (PAT)
+            <input
+              value={patOutside}
+              onChange={(e) => setPatOutside(e.target.value)}
+              placeholder="203.0.113.1"
+            />
+          </label>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => onSetPat(patInside.trim(), patOutside.trim())}
+          >
+            Apply PAT overload
+          </button>
         </div>
       ) : null}
 
       <div className="config-block">
-        <h4>Ping</h4>
+        <h4>Ping / Traceroute</h4>
         <label>
           Target
           <select value={pingTo} onChange={(e) => setPingTo(e.target.value)}>
@@ -442,6 +497,14 @@ export function ConfigPanel({
           onClick={() => onPing(device.id, pingTo)}
         >
           Ping from {device.name}
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          disabled={!pingTo}
+          onClick={() => onTraceroute(device.id, pingTo)}
+        >
+          Traceroute from {device.name}
         </button>
       </div>
     </aside>

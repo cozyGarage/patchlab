@@ -1,16 +1,16 @@
 {
-  "id": "m25-host-route",
-  "title": "Host Route",
-  "order": 25,
+  "id": "m30-floating-static",
+  "title": "Floating Static",
+  "order": 30,
   "track": "routing",
-  "lesson": "Longest-prefix match: a /32 host route beats a broader summary. A more-specific bad next hop can black-hole traffic even when a correct /24 exists — override the host route.",
-  "brief": "LAN and WAN are up. A poisoned host route 198.51.100.10/32 → 10.10.10.10 black-holes BRANCH. Override it with 198.51.100.10/32 via 203.0.113.2, then ping BRANCH-01. ACL is already permitted.",
+  "lesson": "Floating statics share a prefix but differ by admin distance. The lower-AD route is preferred; if its next hop cannot deliver, the higher-AD backup takes over.",
+  "brief": "A poisoned primary route 198.51.100.0/24 via 10.10.10.10 (AD1) black-holes BRANCH. Add a floating backup via 203.0.113.2 with AD 10, keep the LAN→BRANCH permit, then ping SERVER-01 → BRANCH-01.",
   "constraints": [
-    "Replace the host route next hop with ISP-PEER (203.0.113.2)",
-    "Do not remove the WAN uplink",
-    "BRANCH-01 is a cloud host"
+    "Keep the AD1 primary (do not delete it)",
+    "Backup next hop must be ISP-PEER (203.0.113.2) with AD 10",
+    "ACL is already permitted"
   ],
-  "parTimeSec": 120,
+  "parTimeSec": 150,
   "hintAfterWrongAttempts": 2,
   "inventory": {
     "copper_cat6": 2,
@@ -33,17 +33,17 @@
             "action": "permit",
             "srcCidr": "10.10.10.0/24",
             "dstCidr": "198.51.100.0/24",
-            "note": "Already open",
             "enabled": true
           }
         ],
         "routes": [
           {
-            "id": "rt-poison",
-            "destCidr": "198.51.100.10/32",
+            "id": "rt-primary-poison",
+            "destCidr": "198.51.100.0/24",
             "nextHop": "10.10.10.10",
+            "adminDistance": 1,
             "enabled": true,
-            "note": "Poisoned host route — override next hop"
+            "note": "Preferred but black-hole next hop"
           }
         ],
         "ports": [
@@ -94,8 +94,16 @@
     {
       "type": "route_entry",
       "deviceId": "fw-1",
-      "destCidr": "198.51.100.10/32",
-      "nextHop": "203.0.113.2"
+      "destCidr": "198.51.100.0/24",
+      "nextHop": "10.10.10.10",
+      "adminDistance": 1
+    },
+    {
+      "type": "route_entry",
+      "deviceId": "fw-1",
+      "destCidr": "198.51.100.0/24",
+      "nextHop": "203.0.113.2",
+      "adminDistance": 10
     },
     {
       "type": "ping",

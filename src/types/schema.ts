@@ -51,7 +51,10 @@ export type TipCode =
   | 'PING_FAIL'
   | 'NAT_UPDATED'
   | 'MODE_UPDATED'
-  | 'ROUTE_UPDATED';
+  | 'ROUTE_UPDATED'
+  | 'TRACEROUTE_OK'
+  | 'TRACEROUTE_FAIL'
+  | 'SANDBOX_SAVED';
 
 export interface PortRef {
   deviceId: string;
@@ -91,17 +94,26 @@ export interface FirewallRule {
 
 export interface NatRule {
   id: string;
+  /** Omit / `static` = 1:1 static NAT. `pat` = overload / PAT. */
+  mode?: 'static' | 'pat';
+  /** Required for static NAT (inside host). Unused for PAT. */
   insideIp: string;
+  /** Inside source pool for PAT, e.g. 10.10.10.0/24. */
+  insideCidr?: string;
   outsideIp: string;
   enabled: boolean;
+  overload?: boolean;
+  note?: string;
 }
 
-/** Static / default route on a router or firewall (first longest-prefix match wins). */
+/** Static / default route — longest prefix, then lowest admin distance, with failover. */
 export interface RouteEntry {
   id: string;
   destCidr: string;
   nextHop: string;
   enabled: boolean;
+  /** Lower wins (Cisco-style). Default 1. */
+  adminDistance?: number;
   note?: string;
 }
 
@@ -122,6 +134,23 @@ export interface Device {
    * (e.g. BRANCH behind ISP-PEER).
    */
   cloudAttached?: boolean;
+  /** When true, LAN→WAN/off-subnet egress needs a matching PAT/overload rule. */
+  requiresOutboundNat?: boolean;
+}
+
+export interface TraceHop {
+  ttl: number;
+  deviceId?: string;
+  name?: string;
+  ip?: string;
+  detail: string;
+  ok: boolean;
+}
+
+export interface TraceResult {
+  ok: boolean;
+  detail: string;
+  hops: TraceHop[];
 }
 
 export interface Cable {
@@ -169,10 +198,22 @@ export type Goal =
       outsideIp: string;
     }
   | {
+      type: 'nat_pat';
+      deviceId: string;
+      insideCidr: string;
+      outsideIp: string;
+    }
+  | {
       type: 'route_entry';
       deviceId: string;
       destCidr: string;
       nextHop: string;
+      adminDistance?: number;
+    }
+  | {
+      type: 'traceroute_ok';
+      fromDeviceId: string;
+      toDeviceId: string;
     };
 
 export interface Inventory {
@@ -237,6 +278,7 @@ export interface SimSnapshot {
   hintGhost?: HintGhost | null;
   glowingPortIds: string[];
   lastPing?: { ok: boolean; detail: string };
+  lastTrace?: TraceResult;
 }
 
 export type Intent =
@@ -266,6 +308,11 @@ export type Intent =
       rule: FirewallRule;
     }
   | { type: 'PING'; fromDeviceId: string; toDeviceId: string }
+  | {
+      type: 'TRACEROUTE';
+      fromDeviceId: string;
+      toDeviceId: string;
+    }
   | { type: 'SET_VLAN'; port: PortRef; vlanId: number }
   | { type: 'SET_PORT_MODE'; port: PortRef; mode: PortMode }
   | {
@@ -275,10 +322,22 @@ export type Intent =
       outsideIp: string;
     }
   | {
+      type: 'SET_PAT';
+      deviceId: string;
+      insideCidr: string;
+      outsideIp: string;
+    }
+  | {
       type: 'SET_ROUTE';
       deviceId: string;
       destCidr: string;
       nextHop: string;
+      adminDistance?: number;
+    }
+  | {
+      type: 'LOAD_RACK';
+      rack: RackState;
+      inventory?: Inventory;
     };
 
 export interface Score {
@@ -298,6 +357,8 @@ export interface SettingsSave {
   version: 1;
   sound: boolean;
   reducedHints: boolean;
+  /** First-run coach marks dismissed. */
+  onboardingDone?: boolean;
 }
 
 export function portKey(ref: PortRef): string {

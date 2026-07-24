@@ -29,6 +29,9 @@ import m26 from './m26-deny-branch.json';
 import m27 from './m27-branch-exception.json';
 import m28 from './m28-fiber-no-shutdown.json';
 import m29 from './m29-spare-pdu.json';
+import m30 from './m30-floating-static.json';
+import m31 from './m31-pat-overload.json';
+import m32 from './m32-traceroute.json';
 
 export const baseRack = rackBase as unknown as RackState;
 
@@ -75,6 +78,9 @@ export const missions: Mission[] = [
   asMission(m27),
   asMission(m28),
   asMission(m29),
+  asMission(m30),
+  asMission(m31),
+  asMission(m32),
 ].sort((a, b) => a.order - b.order);
 
 export function getMission(id: string): Mission | undefined {

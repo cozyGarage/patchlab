@@ -1,14 +1,14 @@
 {
-  "id": "m25-host-route",
-  "title": "Host Route",
-  "order": 25,
-  "track": "routing",
-  "lesson": "Longest-prefix match: a /32 host route beats a broader summary. A more-specific bad next hop can black-hole traffic even when a correct /24 exists — override the host route.",
-  "brief": "LAN and WAN are up. A poisoned host route 198.51.100.10/32 → 10.10.10.10 black-holes BRANCH. Override it with 198.51.100.10/32 via 203.0.113.2, then ping BRANCH-01. ACL is already permitted.",
+  "id": "m31-pat-overload",
+  "title": "PAT Overload",
+  "order": 31,
+  "track": "services",
+  "lesson": "Private LAN hosts often need PAT/overload to leave for the WAN — many insides share one outside IP. Without translation, egress fails even when the route and ACL look fine.",
+  "brief": "LAN is up and LAN→WAN is permitted, but FW-EDGE requires outbound NAT. Apply PAT 10.10.10.0/24 → 203.0.113.1 (overload), then ping SERVER-01 → ISP-PEER.",
   "constraints": [
-    "Replace the host route next hop with ISP-PEER (203.0.113.2)",
-    "Do not remove the WAN uplink",
-    "BRANCH-01 is a cloud host"
+    "PAT inside pool 10.10.10.0/24",
+    "Outside IP 203.0.113.1 (FW WAN)",
+    "Do not remove the WAN uplink"
   ],
   "parTimeSec": 120,
   "hintAfterWrongAttempts": 2,
@@ -27,25 +27,17 @@
         "model": "NGFW training",
         "rackUnitStart": 36,
         "heightU": 1,
+        "requiresOutboundNat": true,
         "firewallRules": [
           {
-            "id": "permit-branch",
+            "id": "permit-lan-wan",
             "action": "permit",
             "srcCidr": "10.10.10.0/24",
-            "dstCidr": "198.51.100.0/24",
-            "note": "Already open",
+            "dstCidr": "203.0.113.0/30",
             "enabled": true
           }
         ],
-        "routes": [
-          {
-            "id": "rt-poison",
-            "destCidr": "198.51.100.10/32",
-            "nextHop": "10.10.10.10",
-            "enabled": true,
-            "note": "Poisoned host route — override next hop"
-          }
-        ],
+        "natRules": [],
         "ports": [
           { "id": "fw-lan", "deviceId": "fw-1", "index": 1, "label": "LAN0", "media": "copper_cat6", "connector": "rj45", "kind": "lan", "admin": "up", "role": "lan", "vlanId": 10, "ip": { "address": "10.10.10.1", "prefix": 24 } },
           { "id": "fw-wan", "deviceId": "fw-1", "index": 2, "label": "WAN0", "media": "copper_cat6", "connector": "rj45", "kind": "wan", "admin": "up", "role": "wan", "ip": { "address": "203.0.113.1", "prefix": 30 } },
@@ -92,15 +84,15 @@
   },
   "goals": [
     {
-      "type": "route_entry",
+      "type": "nat_pat",
       "deviceId": "fw-1",
-      "destCidr": "198.51.100.10/32",
-      "nextHop": "203.0.113.2"
+      "insideCidr": "10.10.10.0/24",
+      "outsideIp": "203.0.113.1"
     },
     {
       "type": "ping",
       "fromDeviceId": "server-01",
-      "toDeviceId": "branch-01"
+      "toDeviceId": "wan-peer"
     }
   ]
 }

@@ -227,9 +227,24 @@ Five guided missions + sandbox. JSON sources live in `prototype/src/missions/`.
 **Objective:** Power FW→OUT5 and SERVER-07→OUT6; ping recovers.  
 **Teaches:** Spare outlet moves during maintenance.
 
+## Mission 30 — Floating Static
+
+**Objective:** Keep poisoned AD1 route; add AD10 via ISP-PEER; ping BRANCH.  
+**Teaches:** Admin-distance failover when preferred next hop cannot deliver.
+
+## Mission 31 — PAT Overload
+
+**Objective:** Apply PAT 10.10.10.0/24 → 203.0.113.1; ping ISP-PEER.  
+**Teaches:** Outbound PAT when the edge requires source translation.
+
+## Mission 32 — Traceroute Path
+
+**Objective:** Add route + permit, then Traceroute SERVER-01 → BRANCH-01.  
+**Teaches:** Hop-by-hop path proof beyond a silent ping.
+
 ## Campaign gating
 
-- **14 chapters** / 29 stages (pass-to-advance)
+- **15 chapters** / 32 stages (pass-to-advance)
 - Unlock next stage only with **≥5★** on the previous stage (of 9)
 - Chapter borders also require **≥4★ on every stage** in the finished chapter
 - Sandbox unlocks after **Stage 5** with the stage star gate met

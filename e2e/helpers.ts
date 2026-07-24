@@ -35,6 +35,9 @@ export const MISSION_IDS = [
   'm27-branch-exception',
   'm28-fiber-no-shutdown',
   'm29-spare-pdu',
+  'm30-floating-static',
+  'm31-pat-overload',
+  'm32-traceroute',
 ] as const;
 
 export async function shot(page: Page, name: string) {
@@ -48,6 +51,15 @@ export async function clearApp(page: Page) {
   await page.goto('/');
   await page.evaluate(() => {
     localStorage.clear();
+    localStorage.setItem(
+      'patchlab.settings.v1',
+      JSON.stringify({
+        version: 1,
+        sound: false,
+        reducedHints: false,
+        onboardingDone: true,
+      }),
+    );
   });
   await page.reload();
   await expect(

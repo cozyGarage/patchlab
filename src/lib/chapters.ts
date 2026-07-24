@@ -134,6 +134,14 @@ export const CHAPTERS: Chapter[] = [
     from: 27,
     to: 29,
   },
+  {
+    id: 'path-mastery',
+    index: 15,
+    title: 'Path Mastery',
+    blurb: 'Floating statics, PAT overload, and traceroute proof.',
+    from: 30,
+    to: 32,
+  },
 ];
 
 export function starTotal(score?: Score): number {

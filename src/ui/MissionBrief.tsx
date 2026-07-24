@@ -49,8 +49,14 @@ function goalText(mission: Mission): string[] {
         return `Set ${g.port.portId} mode ${g.mode}`;
       case 'nat_static':
         return `Static NAT ${g.insideIp} ↔ ${g.outsideIp}`;
+      case 'nat_pat':
+        return `PAT ${g.insideCidr} → ${g.outsideIp}`;
       case 'route_entry':
-        return `Route ${g.destCidr} via ${g.nextHop}`;
+        return `Route ${g.destCidr} via ${g.nextHop}${
+          g.adminDistance != null ? ` AD${g.adminDistance}` : ''
+        }`;
+      case 'traceroute_ok':
+        return `Traceroute ${g.fromDeviceId} → ${g.toDeviceId}`;
       default:
         return `Goal ${i + 1}`;
     }

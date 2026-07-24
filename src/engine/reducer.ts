@@ -19,6 +19,7 @@ import {
   buildLinkTable,
   evaluateGoals,
   evaluatePing,
+  evaluateTraceroute,
   findPath,
   getPort,
   glowingPortsFromGoals,
@@ -534,6 +535,7 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
       if (!fw || fw.role !== 'firewall') return state;
       const rule = {
         id: `nat-${intent.insideIp}-${intent.outsideIp}`,
+        mode: 'static' as const,
         insideIp: intent.insideIp,
         outsideIp: intent.outsideIp,
         enabled: true,
@@ -550,6 +552,53 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
             level: 'success',
             code: 'NAT_UPDATED',
             message: `NAT ${intent.insideIp} → ${intent.outsideIp}`,
+          },
+          null,
+        ),
+      };
+    }
+
+    case 'SET_PAT': {
+      const rack = cloneRack(state.snapshot.rack);
+      const fw = rack.devices.find((d) => d.id === intent.deviceId);
+      if (!fw || fw.role !== 'firewall') return state;
+      if (!parseCidr(intent.insideCidr) || !parseIpv4(intent.outsideIp)) {
+        return {
+          ...state,
+          wrongAttempts: state.wrongAttempts + 1,
+          snapshot: {
+            ...state.snapshot,
+            lastTip: {
+              level: 'error',
+              code: 'NAT_UPDATED',
+              message:
+                'Invalid PAT — use inside CIDR (e.g. 10.10.10.0/24) and outside IP',
+            },
+          },
+        };
+      }
+      const rule = {
+        id: `pat-${intent.insideCidr}-${intent.outsideIp}`,
+        mode: 'pat' as const,
+        insideIp: '',
+        insideCidr: intent.insideCidr,
+        outsideIp: intent.outsideIp,
+        overload: true,
+        enabled: true,
+        note: 'PAT overload',
+      };
+      const others = (fw.natRules ?? []).filter((r) => r.id !== rule.id);
+      fw.natRules = [rule, ...others];
+      return {
+        ...state,
+        snapshot: snapshotOf(
+          rack,
+          mission,
+          state.snapshot.inventory,
+          {
+            level: 'success',
+            code: 'NAT_UPDATED',
+            message: `PAT ${intent.insideCidr} → ${intent.outsideIp} (overload)`,
           },
           null,
         ),
@@ -576,17 +625,24 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
           },
         };
       }
+      const ad = intent.adminDistance ?? 1;
       const rule = {
-        id: `rt-${intent.destCidr}-${intent.nextHop}`,
+        id: `rt-${intent.destCidr}-${intent.nextHop}-ad${ad}`,
         destCidr: intent.destCidr,
         nextHop: intent.nextHop,
+        adminDistance: ad,
         enabled: true,
       };
-      // Replace any prior entry for the same prefix (host-route overrides).
-      const others = (dev.routes ?? []).filter(
-        (r) => r.destCidr !== intent.destCidr,
+      // Drop exact dest+nextHop duplicate; keep floating siblings when AD is set.
+      const withoutExact = (dev.routes ?? []).filter(
+        (r) =>
+          !(r.destCidr === intent.destCidr && r.nextHop === intent.nextHop),
       );
-      dev.routes = [rule, ...others];
+      const base =
+        intent.adminDistance != null
+          ? withoutExact
+          : withoutExact.filter((r) => r.destCidr !== intent.destCidr);
+      dev.routes = [rule, ...base];
       return {
         ...state,
         snapshot: snapshotOf(
@@ -596,7 +652,52 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
           {
             level: 'success',
             code: 'ROUTE_UPDATED',
-            message: `Route ${intent.destCidr} via ${intent.nextHop}`,
+            message: `Route ${intent.destCidr} via ${intent.nextHop} (AD${ad})`,
+          },
+          null,
+        ),
+      };
+    }
+
+    case 'TRACEROUTE': {
+      const result = evaluateTraceroute(
+        state.snapshot.rack,
+        intent.fromDeviceId,
+        intent.toDeviceId,
+      );
+      return {
+        ...state,
+        wrongAttempts: result.ok ? state.wrongAttempts : state.wrongAttempts + 1,
+        snapshot: {
+          ...snapshotOf(
+            state.snapshot.rack,
+            mission,
+            state.snapshot.inventory,
+            {
+              level: result.ok ? 'success' : 'warn',
+              code: result.ok ? 'TRACEROUTE_OK' : 'TRACEROUTE_FAIL',
+              message: result.detail,
+            },
+            null,
+          ),
+          lastTrace: result,
+        },
+      };
+    }
+
+    case 'LOAD_RACK': {
+      const inventory =
+        intent.inventory ?? state.snapshot.inventory;
+      return {
+        ...state,
+        snapshot: snapshotOf(
+          cloneRack(intent.rack),
+          mission,
+          inventory,
+          {
+            level: 'info',
+            code: 'SANDBOX_SAVED',
+            message: 'Sandbox rack loaded',
           },
           null,
         ),

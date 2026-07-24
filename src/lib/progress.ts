@@ -27,6 +27,35 @@ export function saveProgress(next: ProgressSave): void {
   localStorage.setItem(KEY, JSON.stringify(next));
 }
 
+export function exportProgress(progress: ProgressSave = loadProgress()): string {
+  return JSON.stringify(progress, null, 2);
+}
+
+export function importProgress(raw: string): ProgressSave | null {
+  try {
+    const parsed = JSON.parse(raw) as ProgressSave;
+    if (parsed.version !== 1 || !Array.isArray(parsed.clearedMissionIds)) {
+      return null;
+    }
+    const next: ProgressSave = {
+      version: 1,
+      clearedMissionIds: parsed.clearedMissionIds,
+      stars: parsed.stars ?? {},
+      sandboxUnlocked: !!parsed.sandboxUnlocked,
+    };
+    saveProgress(next);
+    return next;
+  } catch {
+    return null;
+  }
+}
+
+export function resetProgress(): ProgressSave {
+  const next = { ...empty, clearedMissionIds: [], stars: {} };
+  saveProgress(next);
+  return next;
+}
+
 export function recordMissionClear(
   missionId: string,
   score: Score,

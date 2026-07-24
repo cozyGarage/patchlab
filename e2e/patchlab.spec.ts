@@ -28,11 +28,12 @@ test.describe('home & shell', () => {
     await shot(page, '01-home');
     await expect(page.getByText('PatchLab').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /First Lights On/i })).toBeEnabled();
-    await expect(page.locator('.stage-panel')).toContainText(/Stage 1 of 29/i);
+    await expect(page.locator('.stage-panel')).toContainText(/Stage 1 of 32/i);
     await expect(page.locator('.stage-panel')).toContainText(/hard gates/i);
     await expect(page.locator('.chapter-rail')).toContainText('First Lights');
-    await expect(page.locator('.chapter-rail')).toContainText('Hardening');
-    await expect(page.getByRole('button', { name: /Spare PDU/i })).toBeVisible();
+    await expect(page.locator('.chapter-rail')).toContainText('Path Mastery');
+    await expect(page.getByRole('button', { name: /Traceroute Path/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Export progress/i })).toBeVisible();
     await page.getByRole('button', { name: 'Glossary' }).click();
     const glossary = page.getByRole('dialog', { name: 'Glossary' });
     await expect(glossary).toBeVisible();
@@ -472,5 +473,47 @@ test.describe('logic / security missions', () => {
     await connectPorts(page, /SERVER-07 PSU power/, /PDU-A OUT6 power/);
     await expectDebrief(page);
     await shot(page, '34-m29-debrief');
+  });
+
+  test('Mission 30 floating static failover', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 30);
+    await startMission(page, /Floating Static/i);
+    await focusDevice(page, 'FW-EDGE');
+    const panel = page.locator('.config-panel');
+    await panel
+      .locator('label', { hasText: 'Admin distance' })
+      .locator('input')
+      .fill('10');
+    await page.getByRole('button', { name: 'Apply route' }).click();
+    await expectTip(page, /AD10/i);
+    await expectDebrief(page);
+  });
+
+  test('Mission 31 PAT overload', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 31);
+    await startMission(page, /PAT Overload/i);
+    await focusDevice(page, 'FW-EDGE');
+    await page.getByRole('button', { name: /Apply PAT overload/i }).click();
+    await expectDebrief(page);
+  });
+
+  test('Mission 32 traceroute path', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 32);
+    await startMission(page, /Traceroute Path/i);
+    await focusDevice(page, 'FW-EDGE');
+    await page.getByRole('button', { name: 'Apply route' }).click();
+    await page.getByRole('button', { name: /Insert permit LAN → BRANCH/i }).click();
+    await focusDevice(page, 'SERVER-01');
+    await pingFromFocused(page, /BRANCH-01/);
+    // Switch to traceroute target BRANCH and run traceroute
+    const select = page.locator('.config-panel').getByRole('combobox').last();
+    const option = select.locator('option', { hasText: /BRANCH-01/ });
+    const value = await option.getAttribute('value');
+    await select.selectOption(value!);
+    await page.getByRole('button', { name: /^Traceroute from /i }).click();
+    await expectDebrief(page);
   });
 });

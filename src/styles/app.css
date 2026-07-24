@@ -270,6 +270,86 @@ p {
   background: rgba(251, 191, 36, 0.08);
 }
 
+.coach-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(8, 12, 18, 0.72);
+  backdrop-filter: blur(4px);
+  animation: coach-in 280ms ease-out;
+}
+
+.coach-card {
+  width: min(440px, 100%);
+  display: grid;
+  gap: 12px;
+  padding: 22px;
+}
+
+.coach-kicker {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.coach-card h2 {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.coach-card p {
+  margin: 0;
+  color: var(--ink-muted);
+  line-height: 1.45;
+}
+
+@keyframes coach-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.chapter-celebrate {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(61, 220, 181, 0.35);
+  background: rgba(61, 220, 181, 0.1);
+  color: var(--cyan);
+  font-family: var(--font-display);
+  font-weight: 600;
+  animation: celebrate-pop 420ms ease-out;
+}
+
+@keyframes celebrate-pop {
+  from {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.sandbox-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 12px 8px;
+}
+
+.import-label {
+  cursor: pointer;
+}
+
 .gate-callout p {
   margin-top: 6px;
   color: var(--ink-muted);

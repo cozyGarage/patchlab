@@ -9,6 +9,7 @@ import {
   PortRef,
   RackState,
   Tip,
+  TraceResult,
   samePort,
   portKey,
 } from '../types/schema';
@@ -336,22 +337,81 @@ function hasDataCable(device: Device, rack: RackState): boolean {
   );
 }
 
+/** Candidate routes: longest prefix first, then lowest admin distance. */
+function candidateRoutes(
+  routes: NonNullable<Device['routes']>,
+  destIp: string,
+) {
+  return routes
+    .filter((route) => {
+      if (!route.enabled) return false;
+      const parsed = parseCidr(route.destCidr);
+      return !!parsed && inCidr(destIp, route.destCidr);
+    })
+    .sort((a, b) => {
+      const pa = parseCidr(a.destCidr)!.prefix;
+      const pb = parseCidr(b.destCidr)!.prefix;
+      if (pb !== pa) return pb - pa;
+      return (a.adminDistance ?? 1) - (b.adminDistance ?? 1);
+    });
+}
+
 function longestPrefixRoute(
   routes: NonNullable<Device['routes']>,
   destIp: string,
 ) {
-  let best: (typeof routes)[number] | null = null;
-  let bestPrefix = -1;
-  for (const route of routes) {
-    if (!route.enabled) continue;
-    const parsed = parseCidr(route.destCidr);
-    if (!parsed || !inCidr(destIp, route.destCidr)) continue;
-    if (parsed.prefix > bestPrefix) {
-      best = route;
-      bestPrefix = parsed.prefix;
-    }
+  return candidateRoutes(routes, destIp)[0] ?? null;
+}
+
+function findPatRule(router: Device, srcIp: string) {
+  return (router.natRules ?? []).find(
+    (r) =>
+      r.enabled &&
+      r.mode === 'pat' &&
+      !!r.insideCidr &&
+      inCidr(srcIp, r.insideCidr),
+  );
+}
+
+function tryRouteDelivery(
+  rack: RackState,
+  router: Device,
+  to: Device,
+  toIp: { address: string; prefix: number },
+): { ok: true; route: NonNullable<Device['routes']>[number]; edge: Device } | {
+  ok: false;
+  detail: string;
+} {
+  const candidates = candidateRoutes(router.routes ?? [], toIp.address);
+  if (candidates.length === 0) {
+    return {
+      ok: false,
+      detail: 'Ping fail — no route on gateway to destination subnet',
+    };
   }
-  return best;
+  let lastDetail = 'Ping fail — no usable route';
+  for (const route of candidates) {
+    const nextHopOnLink = router.ports.some(
+      (p) =>
+        p.ip &&
+        sameSubnet(p.ip, { address: route.nextHop, prefix: p.ip.prefix }),
+    );
+    if (!nextHopOnLink) {
+      lastDetail = `Ping fail — next hop ${route.nextHop} is not on a connected interface`;
+      continue;
+    }
+    const edge = deviceOwningIp(rack, route.nextHop);
+    if (!edge || !isDevicePowered(rack, edge.id)) {
+      lastDetail = `Ping fail — next hop ${route.nextHop} not found on a live device`;
+      continue;
+    }
+    if (!edgeCanDeliver(rack, edge, to, toIp)) {
+      lastDetail = `Ping fail — ${edge.name} has no path to ${toIp.address} (trying floating backup if any)`;
+      continue;
+    }
+    return { ok: true, route, edge };
+  }
+  return { ok: false, detail: lastDetail };
 }
 
 function deviceHasConnectedRoute(
@@ -491,7 +551,10 @@ export function evaluatePing(
   // Inbound WAN→LAN requires static NAT publishing the inside host
   if (router.role === 'firewall' && fromOnWan && toOnLan) {
     const nat = (router.natRules ?? []).find(
-      (r) => r.enabled && r.insideIp === toIp.address,
+      (r) =>
+        r.enabled &&
+        (!r.mode || r.mode === 'static') &&
+        r.insideIp === toIp.address,
     );
     if (!nat) {
       return {
@@ -516,55 +579,213 @@ export function evaluatePing(
     if (!check.ok) return { ok: false, detail: `Ping fail — ${check.detail}` };
   }
 
+  const fromOnLan = router.ports.some(
+    (p) => p.kind === 'lan' && p.ip && sameSubnet(fromIp, p.ip),
+  );
+  const toOnWanOrRemote =
+    router.ports.some(
+      (p) => p.kind === 'wan' && p.ip && sameSubnet(toIp, p.ip),
+    ) || !!to.cloudAttached;
+
+  // Outbound PAT when the firewall requires it for LAN egress
+  let patNote = '';
+  if (
+    router.role === 'firewall' &&
+    router.requiresOutboundNat &&
+    fromOnLan &&
+    toOnWanOrRemote
+  ) {
+    const pat = findPatRule(router, fromIp.address);
+    if (!pat) {
+      return {
+        ok: false,
+        detail:
+          'Ping fail — outbound PAT/overload required (private source needs translation)',
+      };
+    }
+    patNote = ` via PAT ${pat.insideCidr} → ${pat.outsideIp}`;
+  }
+
   if (routerReachesDst) {
     const via =
       gateway ??
       router.ports.find((p) => p.ip && sameSubnet(fromIp, p.ip))?.ip?.address;
     return {
       ok: true,
-      detail: `Ping ok — ${fromIp.address} → ${toIp.address} via ${via ?? router.name}`,
+      detail: `Ping ok — ${fromIp.address} → ${toIp.address} via ${via ?? router.name}${patNote}`,
     };
   }
 
-  // Static / default routes on the gateway (NetPractice-style, with better tips)
-  const route = longestPrefixRoute(router.routes ?? [], toIp.address);
-  if (!route) {
+  const delivered = tryRouteDelivery(rack, router, to, toIp);
+  if (!delivered.ok) return delivered;
+
+  const ad =
+    delivered.route.adminDistance != null
+      ? ` AD${delivered.route.adminDistance}`
+      : '';
+  return {
+    ok: true,
+    detail: `Ping ok — ${fromIp.address} → ${toIp.address} via route ${delivered.route.destCidr} → ${delivered.route.nextHop}${ad}${patNote}`,
+  };
+}
+
+export function evaluateTraceroute(
+  rack: RackState,
+  fromDeviceId: string,
+  toDeviceId: string,
+): TraceResult {
+  const hops: TraceResult['hops'] = [];
+  const from = getDevice(rack, fromDeviceId);
+  const to = getDevice(rack, toDeviceId);
+  if (!from || !to) {
+    return { ok: false, detail: 'Unknown device', hops };
+  }
+
+  const fromIpFull = from.ports.find((p) => p.ip?.address)?.ip;
+  const fromIp = primaryIp(from);
+  const toIp = primaryIp(to);
+  if (!fromIp || !toIp || !fromIpFull) {
     return {
       ok: false,
-      detail: 'Ping fail — no route on gateway to destination subnet',
+      detail: 'Traceroute fail — configure IPv4 on both hosts',
+      hops,
     };
   }
 
-  const nextHopOnLink = router.ports.some(
-    (p) =>
-      p.ip &&
-      sameSubnet(p.ip, { address: route.nextHop, prefix: p.ip.prefix }),
+  hops.push({
+    ttl: 1,
+    deviceId: from.id,
+    name: from.name,
+    ip: fromIp.address,
+    detail: 'source',
+    ok: true,
+  });
+
+  if (sameSubnet(fromIp, toIp)) {
+    hops.push({
+      ttl: 2,
+      deviceId: to.id,
+      name: to.name,
+      ip: toIp.address,
+      detail: 'destination (same subnet)',
+      ok: true,
+    });
+    return {
+      ok: true,
+      detail: `Traceroute ok — ${fromIp.address} → ${toIp.address} (1 hop)`,
+      hops,
+    };
+  }
+
+  const gateway = fromIpFull.gateway;
+  if (!gateway) {
+    hops.push({
+      ttl: 2,
+      detail: 'no default gateway',
+      ok: false,
+    });
+    return { ok: false, detail: 'Traceroute fail — no default gateway', hops };
+  }
+
+  const router = rack.devices.find((d) =>
+    d.ports.some((p) => p.ip?.address === gateway),
   );
-  if (!nextHopOnLink) {
+  if (!router || !isDevicePowered(rack, router.id)) {
+    hops.push({
+      ttl: 2,
+      ip: gateway,
+      detail: 'gateway unreachable',
+      ok: false,
+    });
     return {
       ok: false,
-      detail: `Ping fail — next hop ${route.nextHop} is not on a connected interface`,
+      detail: `Traceroute fail — gateway ${gateway} unreachable`,
+      hops,
     };
   }
 
-  const edge = deviceOwningIp(rack, route.nextHop);
-  if (!edge || !isDevicePowered(rack, edge.id)) {
+  hops.push({
+    ttl: 2,
+    deviceId: router.id,
+    name: router.name,
+    ip: gateway,
+    detail: 'default gateway',
+    ok: true,
+  });
+
+  if (deviceHasConnectedRoute(router, toIp)) {
+    hops.push({
+      ttl: 3,
+      deviceId: to.id,
+      name: to.name,
+      ip: toIp.address,
+      detail: 'destination (connected)',
+      ok: true,
+    });
     return {
-      ok: false,
-      detail: `Ping fail — next hop ${route.nextHop} not found on a live device`,
+      ok: true,
+      detail: `Traceroute ok — ${from.name} → ${router.name} → ${to.name}`,
+      hops,
     };
   }
 
-  if (!edgeCanDeliver(rack, edge, to, toIp)) {
+  const delivered = tryRouteDelivery(rack, router, to, toIp);
+  if (!delivered.ok) {
+    hops.push({
+      ttl: 3,
+      detail: delivered.detail.replace(/^Ping fail — /, ''),
+      ok: false,
+    });
     return {
       ok: false,
-      detail: `Ping fail — ${edge.name} has no path to ${toIp.address}`,
+      detail: `Traceroute fail — ${delivered.detail.replace(/^Ping fail — /, '')}`,
+      hops,
+    };
+  }
+
+  hops.push({
+    ttl: 3,
+    deviceId: delivered.edge.id,
+    name: delivered.edge.name,
+    ip: delivered.route.nextHop,
+    detail: `via ${delivered.route.destCidr}${
+      delivered.route.adminDistance != null
+        ? ` AD${delivered.route.adminDistance}`
+        : ''
+    }`,
+    ok: true,
+  });
+  hops.push({
+    ttl: 4,
+    deviceId: to.id,
+    name: to.name,
+    ip: toIp.address,
+    detail: 'destination',
+    ok: true,
+  });
+
+  // Still require ping-level policy (ACL/PAT) to count as complete path
+  const ping = evaluatePing(rack, fromDeviceId, toDeviceId);
+  if (!ping.ok) {
+    hops.push({
+      ttl: hops.length + 1,
+      detail: ping.detail.replace(/^Ping fail — /, 'blocked — '),
+      ok: false,
+    });
+    return {
+      ok: false,
+      detail: `Traceroute path found but traffic blocked — ${ping.detail}`,
+      hops,
     };
   }
 
   return {
     ok: true,
-    detail: `Ping ok — ${fromIp.address} → ${toIp.address} via route ${route.destCidr} → ${route.nextHop}`,
+    detail: `Traceroute ok — ${hops
+      .filter((h) => h.ok && h.name)
+      .map((h) => h.name)
+      .join(' → ')}`,
+    hops,
   };
 }
 
@@ -648,7 +869,18 @@ export function evaluateGoals(
         return !!dev?.natRules?.some(
           (r) =>
             r.enabled &&
+            (!r.mode || r.mode === 'static') &&
             r.insideIp === g.insideIp &&
+            r.outsideIp === g.outsideIp,
+        );
+      }
+      case 'nat_pat': {
+        const dev = getDevice(rack, g.deviceId);
+        return !!dev?.natRules?.some(
+          (r) =>
+            r.enabled &&
+            r.mode === 'pat' &&
+            r.insideCidr === g.insideCidr &&
             r.outsideIp === g.outsideIp,
         );
       }
@@ -658,9 +890,13 @@ export function evaluateGoals(
           (r) =>
             r.enabled &&
             r.destCidr === g.destCidr &&
-            r.nextHop === g.nextHop,
+            r.nextHop === g.nextHop &&
+            (g.adminDistance == null ||
+              (r.adminDistance ?? 1) === g.adminDistance),
         );
       }
+      case 'traceroute_ok':
+        return evaluateTraceroute(rack, g.fromDeviceId, g.toDeviceId).ok;
       default:
         return false;
     }
@@ -743,9 +979,19 @@ export function hintForGoal(goal: Goal | undefined): {
       return {
         message: `Hint: static NAT ${goal.insideIp} → ${goal.outsideIp} on ${goal.deviceId}`,
       };
+    case 'nat_pat':
+      return {
+        message: `Hint: PAT/overload ${goal.insideCidr} → ${goal.outsideIp} on ${goal.deviceId}`,
+      };
     case 'route_entry':
       return {
-        message: `Hint: add route ${goal.destCidr} via ${goal.nextHop} on ${goal.deviceId}`,
+        message: `Hint: add route ${goal.destCidr} via ${goal.nextHop}${
+          goal.adminDistance != null ? ` AD${goal.adminDistance}` : ''
+        } on ${goal.deviceId}`,
+      };
+    case 'traceroute_ok':
+      return {
+        message: `Hint: fix path then Traceroute ${goal.fromDeviceId} → ${goal.toDeviceId}`,
       };
     default:
       return { message: 'Check power, media, VLAN, IP, gateway, route, and firewall rules' };

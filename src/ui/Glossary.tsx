@@ -68,6 +68,18 @@ const ENTRIES = [
     def: 'A more-specific permit (often /32) placed above a broader deny so one host can reach a destination while the rest of the subnet stays blocked.',
   },
   {
+    term: 'Floating static',
+    def: 'Two (or more) static routes to the same prefix with different admin distances. Lower AD is preferred; if that next hop fails, the higher-AD backup is used.',
+  },
+  {
+    term: 'PAT / overload',
+    def: 'Many private inside addresses share one public outside IP for egress. Required when the firewall demands outbound translation.',
+  },
+  {
+    term: 'Traceroute',
+    def: 'Shows the hop path host → gateway → next hop → destination. Useful when ping alone hides where the path breaks.',
+  },
+  {
     term: 'Subnet mask / prefix',
     def: 'Defines which bits are the network. 10.10.10.10/24 and 10.10.10.1/16 are not “the same subnet” for routing decisions.',
   },

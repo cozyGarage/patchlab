@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { baseRack, getMission, missions } from '../missions';
 import { createEngineState, reduce } from './reducer';
-import { evaluatePing } from './linkSolver';
+import { evaluatePing, evaluateTraceroute } from './linkSolver';
 import { scoreRun } from './scoring';
 import { portKey } from '../types/schema';
 
 describe('mission catalog', () => {
-  it('loads 29 ordered missions with goals', () => {
-    expect(missions).toHaveLength(29);
+  it('loads 32 ordered missions with goals', () => {
+    expect(missions).toHaveLength(32);
     expect(missions.map((m) => m.order)).toEqual(
-      Array.from({ length: 29 }, (_, i) => i + 1),
+      Array.from({ length: 32 }, (_, i) => i + 1),
     );
     for (const m of missions) {
       expect(m.goals.length).toBeGreaterThan(0);
@@ -953,6 +953,75 @@ describe('NetPractice-inspired routing lessons', () => {
     expect(state.snapshot.poweredDevices['fw-1']).toBe(true);
     expect(state.snapshot.poweredDevices['server-07']).toBe(true);
     expect(evaluatePing(state.snapshot.rack, 'server-07', 'fw-1').ok).toBe(true);
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M30: floating static failover to AD10 backup', () => {
+    const mission = getMission('m30-floating-static')!;
+    let state = createEngineState(mission, baseRack);
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'branch-01').ok).toBe(
+      false,
+    );
+    state = reduce(state, {
+      type: 'SET_ROUTE',
+      deviceId: 'fw-1',
+      destCidr: '198.51.100.0/24',
+      nextHop: '203.0.113.2',
+      adminDistance: 10,
+    });
+    const ping = evaluatePing(state.snapshot.rack, 'server-01', 'branch-01');
+    expect(ping.ok).toBe(true);
+    expect(ping.detail).toMatch(/AD10/i);
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M31: PAT overload required for LAN→WAN', () => {
+    const mission = getMission('m31-pat-overload')!;
+    let state = createEngineState(mission, baseRack);
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'wan-peer').ok).toBe(
+      false,
+    );
+    state = reduce(state, {
+      type: 'SET_PAT',
+      deviceId: 'fw-1',
+      insideCidr: '10.10.10.0/24',
+      outsideIp: '203.0.113.1',
+    });
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'wan-peer').ok).toBe(
+      true,
+    );
+    expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('M32: traceroute succeeds after route + permit', () => {
+    const mission = getMission('m32-traceroute')!;
+    let state = createEngineState(mission, baseRack);
+    expect(
+      evaluateTraceroute(state.snapshot.rack, 'server-01', 'branch-01').ok,
+    ).toBe(false);
+    state = reduce(state, {
+      type: 'SET_ROUTE',
+      deviceId: 'fw-1',
+      destCidr: '198.51.100.0/24',
+      nextHop: '203.0.113.2',
+    });
+    state = reduce(state, {
+      type: 'UPSERT_FIREWALL_RULE',
+      deviceId: 'fw-1',
+      rule: {
+        id: 'permit-branch',
+        action: 'permit',
+        srcCidr: '10.10.10.0/24',
+        dstCidr: '198.51.100.0/24',
+        enabled: true,
+      },
+    });
+    state = reduce(state, {
+      type: 'TRACEROUTE',
+      fromDeviceId: 'server-01',
+      toDeviceId: 'branch-01',
+    });
+    expect(state.snapshot.lastTrace?.ok).toBe(true);
     expect(state.snapshot.complete).toBe(true);
   });
 });

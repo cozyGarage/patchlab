@@ -24,6 +24,10 @@ interface MissionListProps {
   onSandbox: () => void;
   onToggleSound: () => void;
   onOpenGlossary: () => void;
+  onExportProgress?: () => void;
+  onImportProgress?: (raw: string) => void;
+  onResetProgress?: () => void;
+  onReplayOnboarding?: () => void;
 }
 
 export function MissionList({
@@ -34,6 +38,10 @@ export function MissionList({
   onSandbox,
   onToggleSound,
   onOpenGlossary,
+  onExportProgress,
+  onImportProgress,
+  onResetProgress,
+  onReplayOnboarding,
 }: MissionListProps) {
   const cleared = progress.clearedMissionIds.length;
   const stage = stageLabel(missions, progress);
@@ -139,6 +147,50 @@ export function MissionList({
         <button type="button" className="btn btn-ghost" onClick={onToggleSound}>
           Sound: {settings.sound ? 'On' : 'Off'}
         </button>
+        {onReplayOnboarding ? (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={onReplayOnboarding}
+          >
+            Tips
+          </button>
+        ) : null}
+        {onExportProgress ? (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={onExportProgress}
+          >
+            Export progress
+          </button>
+        ) : null}
+        {onImportProgress ? (
+          <label className="btn btn-ghost import-label">
+            Import
+            <input
+              type="file"
+              accept="application/json,.json"
+              hidden
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const text = await file.text();
+                onImportProgress(text);
+                e.target.value = '';
+              }}
+            />
+          </label>
+        ) : null}
+        {onResetProgress ? (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={onResetProgress}
+          >
+            Reset progress
+          </button>
+        ) : null}
       </div>
 
       <div className="mission-list">

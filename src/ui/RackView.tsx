@@ -46,11 +46,21 @@ interface RackViewProps {
     dstCidr: string,
   ) => void;
   onSetNat: (insideIp: string, outsideIp: string) => void;
-  onSetRoute: (destCidr: string, nextHop: string) => void;
+  onSetPat: (insideCidr: string, outsideIp: string) => void;
+  onSetRoute: (
+    destCidr: string,
+    nextHop: string,
+    adminDistance?: number,
+  ) => void;
   onFirewallPermitBranch: () => void;
   onSetVlan: (port: PortRef, vlanId: number) => void;
   onSetPortMode: (port: PortRef, mode: PortMode) => void;
   onPing: (fromId: string, toId: string) => void;
+  onTraceroute: (fromId: string, toId: string) => void;
+  onSandboxSave?: () => void;
+  onSandboxLoad?: () => void;
+  onSandboxPreset?: (presetId: string) => void;
+  sandboxPresets?: { id: string; title: string }[];
   elapsedSec: number;
 }
 
@@ -160,11 +170,17 @@ export function RackView({
   onFirewallDenyHostBranch,
   onFirewallCustomRule,
   onSetNat,
+  onSetPat,
   onSetRoute,
   onFirewallPermitBranch,
   onSetVlan,
   onSetPortMode,
   onPing,
+  onTraceroute,
+  onSandboxSave,
+  onSandboxLoad,
+  onSandboxPreset,
+  sandboxPresets,
   elapsedSec,
 }: RackViewProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -327,8 +343,11 @@ export function RackView({
     state.snapshot.rack.devices[0]!;
 
   const pingTargets = state.snapshot.rack.devices
-    .filter((d) =>
-      ['server', 'firewall', 'switch'].includes(d.role),
+    .filter(
+      (d) =>
+        ['server', 'firewall', 'switch'].includes(d.role) ||
+        d.cloudAttached ||
+        d.id === 'wan-peer',
     )
     .map((d) => ({ id: d.id, name: d.name }));
 
@@ -341,11 +360,36 @@ export function RackView({
         <h2>{sandbox ? 'Sandbox' : state.mission.title}</h2>
         <div className="rack-stats">
           {!sandbox ? <span>{elapsedSec}s</span> : <span>Live rack</span>}
+          {sandbox && onSandboxSave ? (
+            <button type="button" className="btn btn-ghost" onClick={onSandboxSave}>
+              Save rack
+            </button>
+          ) : null}
+          {sandbox && onSandboxLoad ? (
+            <button type="button" className="btn btn-ghost" onClick={onSandboxLoad}>
+              Load save
+            </button>
+          ) : null}
           <button type="button" className="btn btn-ghost" onClick={onReset}>
             Reset
           </button>
         </div>
       </div>
+
+      {sandbox && sandboxPresets && onSandboxPreset ? (
+        <div className="sandbox-presets">
+          {sandboxPresets.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => onSandboxPreset(p.id)}
+            >
+              {p.title}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <div className="rack-workspace">
         <div className="rack-stage panel">
@@ -609,11 +653,13 @@ export function RackView({
           onFirewallDenyHostBranch={onFirewallDenyHostBranch}
           onFirewallCustomRule={onFirewallCustomRule}
           onSetNat={onSetNat}
+          onSetPat={onSetPat}
           onSetRoute={onSetRoute}
           onFirewallPermitBranch={onFirewallPermitBranch}
           onSetVlan={onSetVlan}
           onSetPortMode={onSetPortMode}
           onPing={onPing}
+          onTraceroute={onTraceroute}
           pingTargets={pingTargets}
         />
       </div>
