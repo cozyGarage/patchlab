@@ -297,7 +297,9 @@ test.describe('logic / security missions', () => {
     await pingFromFocused(page, /ISP-PEER/);
     await expectTip(page, /Ping ok/i);
     await focusDevice(page, 'FW-EDGE');
-    await page.getByRole('button', { name: /Insert deny host 10\.10\.10\.20/i }).click();
+    await page
+      .getByRole('button', { name: /Insert deny host 10\.10\.10\.20 → WAN/i })
+      .click();
     await expectDebrief(page);
     await shot(page, '25-m18-debrief');
   });
