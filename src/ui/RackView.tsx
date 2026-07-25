@@ -18,6 +18,13 @@ import type { EngineState } from '../engine/reducer';
 import { TipBar } from './TipBar';
 import { goalText } from './MissionBrief';
 import { ConfigPanel } from './ConfigPanel';
+import {
+  DRAG_THRESHOLD,
+  HIT_RADIUS,
+  SNAP_RADIUS,
+  nearestPort,
+  portIsBusy,
+} from './patching';
 
 interface RackViewProps {
   state: EngineState;
@@ -195,7 +202,12 @@ export function RackView({
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
   const [dragFrom, setDragFrom] = useState<PortRef | null>(null);
   const [dragMoved, setDragMoved] = useState(false);
+  const [snapTarget, setSnapTarget] = useState<PortRef | null>(null);
+  const [flashPorts, setFlashPorts] = useState<string[]>([]);
   const selectedBeforeDrag = useRef<PortRef | null>(null);
+  const flashTimer = useRef<number | null>(null);
+  /** After unplug, the next tap should re-aim, not instantly patch. */
+  const suppressTapConnect = useRef(false);
 
   const { ports, width, height, ordered } = useMemo(
     () => layoutPorts(state.snapshot.rack.devices),
@@ -219,6 +231,7 @@ export function RackView({
       dragRef.current = null;
       setDragFrom(null);
       setDragMoved(false);
+      setSnapTarget(null);
       setPointer(null);
     }
   }, [state.snapshot.complete, sandbox]);
@@ -230,10 +243,17 @@ export function RackView({
       dragRef.current = null;
       setDragFrom(null);
       setDragMoved(false);
+      setSnapTarget(null);
       setPointer(null);
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (flashTimer.current != null) window.clearTimeout(flashTimer.current);
+    };
   }, []);
 
   function toSvgPoint(clientX: number, clientY: number) {
@@ -248,15 +268,47 @@ export function RackView({
     return { x: local.x, y: local.y };
   }
 
-  function hitTest(x: number, y: number): LaidOutPort | undefined {
-    return ports.find((p) => Math.hypot(p.x - x, p.y - (y - 8)) < 24);
+  function preferMediaFor(ref: PortRef): Port['media'] | undefined {
+    return byKey.get(portKey(ref))?.port.media;
+  }
+
+  function hitTest(
+    x: number,
+    y: number,
+    exclude?: PortRef | null,
+    radius = HIT_RADIUS,
+  ): LaidOutPort | undefined {
+    return nearestPort(
+      ports,
+      x,
+      y,
+      radius,
+      exclude,
+      exclude ? preferMediaFor(exclude) : undefined,
+    ) as LaidOutPort | undefined;
+  }
+
+  function flashConnect(a: PortRef, b: PortRef) {
+    setFlashPorts([portKey(a), portKey(b)]);
+    if (flashTimer.current != null) window.clearTimeout(flashTimer.current);
+    flashTimer.current = window.setTimeout(() => setFlashPorts([]), 280);
+  }
+
+  function completePatch(a: PortRef, b: PortRef) {
+    onConnect(a, b);
+    flashConnect(a, b);
+    setSelected(null);
+    setFocusDeviceId(b.deviceId);
   }
 
   function onPortPointerDown(e: ReactPointerEvent, ref: PortRef) {
     e.preventDefault();
     e.stopPropagation();
     (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
-    selectedBeforeDrag.current = selected;
+    selectedBeforeDrag.current = suppressTapConnect.current
+      ? null
+      : selected;
+    suppressTapConnect.current = false;
     const local = toSvgPoint(e.clientX, e.clientY);
     dragRef.current = {
       from: ref,
@@ -266,36 +318,48 @@ export function RackView({
     };
     setDragFrom(ref);
     setDragMoved(false);
+    setSnapTarget(null);
     setPointer(local);
     setFocusDeviceId(ref.deviceId);
+    // Instant arm feedback — feels like picking up a cord.
+    setSelected(ref);
   }
 
   function onSvgPointerMove(e: ReactPointerEvent) {
     const drag = dragRef.current;
     if (!drag) return;
     const local = toSvgPoint(e.clientX, e.clientY);
-    if (Math.hypot(local.x - drag.startX, local.y - drag.startY) > 10) {
+    if (Math.hypot(local.x - drag.startX, local.y - drag.startY) > DRAG_THRESHOLD) {
       drag.moved = true;
       setDragMoved(true);
     }
     setPointer(local);
+    const snap = hitTest(local.x, local.y, drag.from, SNAP_RADIUS);
+    setSnapTarget(snap && !samePort(snap.ref, drag.from) ? snap.ref : null);
   }
 
   function onSvgPointerUp(e: ReactPointerEvent) {
     const drag = dragRef.current;
     if (!drag) return;
     const local = toSvgPoint(e.clientX, e.clientY);
-    const hit = hitTest(local.x, local.y);
+    const hit =
+      hitTest(local.x, local.y, drag.from, drag.moved ? SNAP_RADIUS : HIT_RADIUS) ??
+      (snapTarget ? byKey.get(portKey(snapTarget)) : undefined);
 
-    if (drag.moved && hit && !samePort(hit.ref, drag.from)) {
-      onConnect(drag.from, hit.ref);
-      setSelected(null);
-    } else if (!drag.moved) {
+    if (drag.moved) {
+      if (hit && !samePort(hit.ref, drag.from)) {
+        completePatch(drag.from, hit.ref);
+      } else {
+        // Missed drop: keep the cord in-hand on the source port.
+        setSelected(drag.from);
+        setFocusDeviceId(drag.from.deviceId);
+      }
+    } else {
       const prev = selectedBeforeDrag.current;
       if (prev && !samePort(prev, drag.from)) {
-        onConnect(prev, drag.from);
-        setSelected(null);
+        completePatch(prev, drag.from);
       } else if (prev && samePort(prev, drag.from)) {
+        // Second tap on same port = disarm (still easy to unplug via button).
         setSelected(null);
       } else {
         setSelected(drag.from);
@@ -305,6 +369,7 @@ export function RackView({
     dragRef.current = null;
     setDragFrom(null);
     setDragMoved(false);
+    setSnapTarget(null);
     setPointer(null);
   }
 
@@ -337,9 +402,15 @@ export function RackView({
     !state.snapshot.complete;
 
   const fromLayout = dragFrom ? byKey.get(portKey(dragFrom)) : null;
+  const snapLayout = snapTarget ? byKey.get(portKey(snapTarget)) : null;
   const ghostDrag =
-    fromLayout && pointer && dragMoved
-      ? curvePath(fromLayout.x, fromLayout.y + 8, pointer.x, pointer.y)
+    fromLayout && pointer
+      ? curvePath(
+          fromLayout.x,
+          fromLayout.y + 8,
+          snapLayout ? snapLayout.x : pointer.x,
+          snapLayout ? snapLayout.y + 8 : pointer.y,
+        )
       : null;
 
   const hintGhost = state.snapshot.hintGhost;
@@ -540,13 +611,18 @@ export function RackView({
 
               {ports.map((p) => {
                 const status = state.snapshot.linkTable[portKey(p.ref)];
+                const key = portKey(p.ref);
                 const isSelected = !!selected && samePort(selected, p.ref);
+                const isSnap =
+                  !!snapTarget && samePort(snapTarget, p.ref) && !isSelected;
+                const isFlash = flashPorts.includes(key);
                 const vlan = p.port.vlanId ?? p.port.accessVlan;
                 const isFiber = p.port.media === 'fiber_om4';
                 const isPower = p.port.kind === 'power';
                 const isConsole = p.port.kind === 'console';
-                const glowing = glowSet.has(portKey(p.ref));
+                const glowing = glowSet.has(key);
                 const powered = !!state.snapshot.poweredDevices[p.device.id];
+                const busy = portIsBusy(state.snapshot.rack.cables, p.ref);
                 const aria = [
                   p.device.name,
                   p.port.label,
@@ -554,13 +630,26 @@ export function RackView({
                   isFiber ? 'fiber' : null,
                   isPower ? 'power' : null,
                   isConsole ? 'console' : null,
+                  busy ? 'patched' : 'open',
+                ]
+                  .filter(Boolean)
+                  .join(' ');
+                const shellClass = [
+                  'port-shell',
+                  isPower ? 'power' : '',
+                  isFiber ? 'fiber' : '',
+                  isConsole ? 'console' : '',
+                  isSelected ? 'selected' : '',
+                  isSnap ? 'snap-target' : '',
+                  isFlash ? 'flash' : '',
+                  glowing ? 'glowing' : '',
                 ]
                   .filter(Boolean)
                   .join(' ');
 
                 return (
                   <g
-                    key={portKey(p.ref)}
+                    key={key}
                     className="port-hit"
                     transform={`translate(${p.x}, ${p.y})`}
                     onPointerDown={(e) => onPortPointerDown(e, p.ref)}
@@ -577,8 +666,7 @@ export function RackView({
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         if (selected && !samePort(selected, p.ref)) {
-                          onConnect(selected, p.ref);
-                          setSelected(null);
+                          completePatch(selected, p.ref);
                         } else if (selected && samePort(selected, p.ref)) {
                           setSelected(null);
                         } else {
@@ -588,11 +676,10 @@ export function RackView({
                       }
                     }}
                   >
+                    <circle className="port-hit-pad" r={22} cx={0} cy={8} />
                     {isPower ? (
                       <rect
-                        className={`port-shell power ${isSelected ? 'selected' : ''} ${
-                          glowing ? 'glowing' : ''
-                        }`}
+                        className={shellClass}
                         x={-11}
                         y={-2}
                         width={22}
@@ -601,9 +688,7 @@ export function RackView({
                       />
                     ) : isFiber ? (
                       <rect
-                        className={`port-shell fiber ${isSelected ? 'selected' : ''} ${
-                          glowing ? 'glowing' : ''
-                        }`}
+                        className={shellClass}
                         x={-13}
                         y={-5}
                         width={26}
@@ -613,9 +698,7 @@ export function RackView({
                       />
                     ) : (
                       <rect
-                        className={`port-shell ${isConsole ? 'console' : ''} ${
-                          isSelected ? 'selected' : ''
-                        } ${glowing ? 'glowing' : ''}`}
+                        className={shellClass}
                         x={-12}
                         y={-2}
                         width={24}
@@ -692,6 +775,11 @@ export function RackView({
         onHint={onHint}
         canUnplug={canUnplug}
         sandbox={sandbox}
+        armedLabel={
+          selectedPort
+            ? `${byKey.get(portKey(selected!))?.device.name ?? ''} ${selectedPort.label}`.trim()
+            : undefined
+        }
         canCycleVlan={canCycleVlan}
         canToggleAdmin={canToggleAdmin}
         onCycleVlan={
@@ -703,8 +791,13 @@ export function RackView({
         onUnplugSelected={
           selected
             ? () => {
-                onDisconnectPort(selected);
-                setSelected(null);
+                const keep = selected;
+                onDisconnectPort(keep);
+                // Keep the free jack highlighted; next tap aims a new cord
+                // (does not auto-patch — use drag/tap from a busy port to move).
+                setSelected(keep);
+                setFocusDeviceId(keep.deviceId);
+                suppressTapConnect.current = true;
               }
             : undefined
         }
@@ -728,21 +821,35 @@ function CablePath({
   const b = byKey.get(portKey(cable.ends[1]));
   if (!a || !b) return null;
   const d = curvePath(a.x, a.y + 8, b.x, b.y + 8);
+  const stroke = CABLE_COLORS[cable.color] ?? CABLE_COLORS.blue;
+  const width = cable.media === 'power_c13' ? 5 : 4;
   return (
-    <path
-      className={`cable-path ${glowing ? 'cable-glow' : ''} media-${cable.media}`}
-      d={d}
-      stroke={CABLE_COLORS[cable.color] ?? CABLE_COLORS.blue}
-      strokeWidth={cable.media === 'power_c13' ? 5 : 4}
-      filter={glowing ? 'url(#glow)' : undefined}
-      onClick={(e) => {
+    <g
+      className="cable-hit"
+      onPointerDown={(e) => {
         e.stopPropagation();
         onSelect(cable.ends[0]);
       }}
     >
-      <title>
-        {a.port.label} ↔ {b.port.label} ({cable.media})
-      </title>
-    </path>
+      <path
+        className="cable-path-hit"
+        d={d}
+        stroke="transparent"
+        strokeWidth={18}
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        className={`cable-path ${glowing ? 'cable-glow' : ''} media-${cable.media}`}
+        d={d}
+        stroke={stroke}
+        strokeWidth={width}
+        filter={glowing ? 'url(#glow)' : undefined}
+      >
+        <title>
+          {a.port.label} ↔ {b.port.label} ({cable.media})
+        </title>
+      </path>
+    </g>
   );
 }

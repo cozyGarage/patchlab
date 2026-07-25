@@ -14,6 +14,8 @@ interface TipBarProps {
   onToggleAdmin?: () => void;
   canCycleVlan?: boolean;
   canToggleAdmin?: boolean;
+  /** Port currently armed for tap-tap / drag patching. */
+  armedLabel?: string;
 }
 
 export function TipBar({
@@ -30,14 +32,24 @@ export function TipBar({
   onToggleAdmin,
   canCycleVlan,
   canToggleAdmin,
+  armedLabel,
 }: TipBarProps) {
   const level = tip?.level ?? 'info';
   return (
-    <div className={`tip-bar ${level}`} role="status" aria-live="polite">
+    <div
+      className={`tip-bar ${level}${armedLabel ? ' armed' : ''}`}
+      role="status"
+      aria-live="polite"
+    >
       <div className="row">
         <div className="tip-msg">
           {tip?.message ??
-            'Plug data, power, or console — then configure IP / firewall as needed.'}
+            (armedLabel
+              ? `Armed: ${armedLabel} — tap or drag to a free port`
+              : 'Plug data, power, or console — then configure IP / firewall as needed.')}
+          {armedLabel && tip?.message ? (
+            <span className="armed-chip"> Armed: {armedLabel}</span>
+          ) : null}
         </div>
         <div className="rack-stats">
           <span>Cu {inventory.copper_cat6}</span>
