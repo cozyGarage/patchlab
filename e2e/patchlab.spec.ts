@@ -153,8 +153,8 @@ test.describe('copper missions', () => {
     await clearApp(page);
     await unlockThrough(page, 2);
     await startMission(page, /Wrong Port/i);
-    await unplugPort(page, /Panel-A A-03/);
-    await connectPorts(page, /Panel-A A-01/, /ToR-SW-A Gi1\/0\/1 VLAN 10/);
+    // Drag/tap move: pull the busy A-03 end onto A-01 (peer stays on ToR).
+    await connectPorts(page, /Panel-A A-03/, /Panel-A A-01/);
     await expectDebrief(page);
   });
 

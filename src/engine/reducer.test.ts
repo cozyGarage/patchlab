@@ -585,7 +585,7 @@ describe('engine helpers', () => {
     expect(state.snapshot.hintGhost?.a.portId).toBe('panel-1');
   });
 
-  it('rejects self-patch and busy-port connects', () => {
+  it('rejects self-patch and both-busy connects', () => {
     const mission = getMission('m1-first-lights')!;
     let state = createEngineState(mission, baseRack);
     state = reduce(state, {
@@ -600,6 +600,12 @@ describe('engine helpers', () => {
       a: { deviceId: 'panel-a', portId: 'panel-1' },
       b: { deviceId: 'tor-1', portId: 'sw-1' },
     });
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'panel-a', portId: 'panel-2' },
+      b: { deviceId: 'tor-1', portId: 'sw-2' },
+    });
+    // Both ends occupied — cannot move or create a new cord.
     state = reduce(state, {
       type: 'CONNECT',
       a: { deviceId: 'panel-a', portId: 'panel-1' },
@@ -1023,6 +1029,44 @@ describe('NetPractice-inspired routing lessons', () => {
     });
     expect(state.snapshot.lastTrace?.ok).toBe(true);
     expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('moves a cable end from a busy port onto a free port', () => {
+    const mission = getMission('m1-first-lights')!;
+    let state = createEngineState(mission, baseRack);
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'panel-a', portId: 'panel-1' },
+      b: { deviceId: 'tor-1', portId: 'sw-1' },
+    });
+    expect(
+      state.snapshot.rack.cables.some(
+        (c) =>
+          c.ends.some((e) => e.portId === 'sw-1') &&
+          c.ends.some((e) => e.portId === 'panel-1'),
+      ),
+    ).toBe(true);
+
+    const beforeInventory = state.snapshot.inventory.copper_cat6;
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'tor-1', portId: 'sw-1' },
+      b: { deviceId: 'tor-1', portId: 'sw-2' },
+    });
+    expect(state.snapshot.inventory.copper_cat6).toBe(beforeInventory);
+    expect(
+      state.snapshot.rack.cables.some(
+        (c) =>
+          c.ends.some((e) => e.portId === 'panel-1') &&
+          c.ends.some((e) => e.portId === 'sw-2'),
+      ),
+    ).toBe(true);
+    expect(
+      state.snapshot.rack.cables.some((c) =>
+        c.ends.some((e) => e.portId === 'sw-1'),
+      ),
+    ).toBe(false);
+    expect(state.snapshot.lastTip?.message).toMatch(/Moved/i);
   });
 
   it('traceroute agrees with ping on ACL-blocked connected path', () => {
