@@ -29,7 +29,7 @@ export function scoreRun(
   else if (elapsedSec <= par * 1.5) speed = 2;
 
   let cleanliness: number = 3;
-  cleanliness -= state.hintsUsed;
+  // Help-seeking is tracked separately; cleanliness measures the final work path.
   // Leftover unused plugged cables beyond goal graph — soft penalty via inventory waste
   if (state.snapshot.inventory.copper_cat6 === 0 && state.connectCount > 4) {
     cleanliness -= 1;

@@ -1,12 +1,5 @@
 import type { Mission, ProgressSave, Score } from '../types/schema';
-import {
-  GATE,
-  chapterForMission,
-  chapterProgress,
-  meetsStageGate,
-  missionGate,
-  starTotal,
-} from '../lib/chapters';
+import { chapterForMission, starTotal } from '../lib/chapters';
 import { missions } from '../missions';
 
 interface DebriefProps {
@@ -18,39 +11,37 @@ interface DebriefProps {
   onRetry: () => void;
   onHome: () => void;
   nextLabel?: string;
+  hintLevel?: number;
 }
 
 export function Debrief({
   mission,
   score,
-  progress,
   tipHistory,
   onNext,
   onRetry,
   onHome,
   nextLabel,
+  hintLevel = 0,
 }: DebriefProps) {
   const chapter = chapterForMission(mission);
   const next = missions.find((m) => m.order === mission.order + 1);
   const nextChapter = next ? chapterForMission(next) : undefined;
   const earned = starTotal(score);
-  const stageOk = meetsStageGate(score);
-  const nextGate = next
-    ? missionGate(next.order, missions, progress)
-    : { unlocked: true as const };
-  const canAdvance = !!next && nextGate.unlocked;
-  const chapterClear =
+  const canContinue = Boolean(onNext);
+  const chapterClear = Boolean(
     chapter &&
-    !missions.some(
-      (m) =>
-        m.order >= chapter.from &&
-        m.order <= chapter.to &&
-        m.order > mission.order,
-    );
-  const chapterProg = chapter
-    ? chapterProgress(chapter, missions, progress)
-    : null;
-  const chapterCelebrated = !!(chapterProg?.gatedComplete && chapterClear);
+      !missions.some(
+        (m) =>
+          m.order >= chapter.from &&
+          m.order <= chapter.to &&
+          m.order > mission.order,
+      ),
+  );
+  const debrief = mission.learning?.debrief;
+  const conceptsPracticed = mission.learning?.conceptsPracticed ?? [];
+  const stars = (value: number) =>
+    `${'★'.repeat(value)}${'☆'.repeat(Math.max(0, 3 - value))}`;
 
   return (
     <div className="screen-debrief">
@@ -60,64 +51,109 @@ export function Debrief({
           <span>PatchLab</span>
         </div>
         <div className="stage-badge">
-          Stage {mission.order} of {missions.length} · {earned}★ / 9
-          {chapter ? ` · Chapter ${chapter.index}` : ''}
+          Stage {mission.order} of {missions.length}
+          {chapter ? ` · Arc ${chapter.index}` : ''}
         </div>
-        {chapterCelebrated && chapter ? (
+        {chapterClear && chapter ? (
           <div className="chapter-celebrate" role="status">
-            Chapter {chapter.index} cleared — {chapter.title}
+            Arc {chapter.index} completed — {chapter.title}
           </div>
         ) : null}
-        <h1>Circuit complete</h1>
+        <h1>{debrief?.outcome ?? 'Mission complete'}</h1>
         <p>
-          You finished <strong>{mission.title}</strong>
-          {!stageOk
-            ? `. Gate not met — earn at least ${GATE.minStarsToAdvance}★ to unlock the next stage (you scored ${earned}★).`
-            : chapterClear && chapter
-              ? next && !canAdvance
-                ? ` — chapter stages done, but boost every stage in Chapter ${chapter.index} to ≥${GATE.minStarsPerMissionForChapter}★ to open the next chapter.`
-                : ` — Chapter ${chapter.index} (${chapter.title}) gate ready!`
-              : next
-                ? canAdvance
-                  ? `. Stage ${next.order} is unlocked.`
-                  : `. Next stage is still gated.`
-                : '. Campaign complete — try the Sandbox.'}
+          You finished <strong>{mission.title}</strong>.
         </p>
 
-        {!stageOk ? (
-          <div className="gate-callout">
-            <strong>Hard gate — retry for stars</strong>
-            <p>
-              Score {GATE.minStarsToAdvance}★+ (correctness + speed +
-              cleanliness). Fewer wrong attempts, fewer hints, and finishing near
-              par time raise your stars. Soft clears do not unlock the next stage.
-            </p>
-          </div>
+        {debrief ? (
+          <section aria-labelledby="debrief-explanation-heading">
+            <h3 id="debrief-explanation-heading" style={{ marginBottom: 8 }}>
+              Why it worked
+            </h3>
+            <p>{debrief.explanation}</p>
+          </section>
+        ) : mission.lesson ? (
+          <section aria-labelledby="debrief-explanation-heading">
+            <h3 id="debrief-explanation-heading" style={{ marginBottom: 8 }}>
+              Why it worked
+            </h3>
+            <p>{mission.lesson}</p>
+          </section>
         ) : null}
 
-        <div className="debrief-stars">
-          <div className="star-box">
-            <strong>{'★'.repeat(score.correctness) || '☆'}</strong>
-            <span>Correctness</span>
-          </div>
-          <div className="star-box">
-            <strong>{'★'.repeat(score.speed) || '☆'}</strong>
-            <span>Speed</span>
-          </div>
-          <div className="star-box">
-            <strong>{'★'.repeat(score.cleanliness) || '☆'}</strong>
-            <span>Cleanliness</span>
-          </div>
-        </div>
+        {debrief ? (
+          <section aria-labelledby="reflection-question-heading">
+            <h3 id="reflection-question-heading" style={{ marginBottom: 8 }}>
+              Check your understanding
+            </h3>
+            <p>{debrief.question}</p>
+            <details>
+              <summary>Reveal answer</summary>
+              <p style={{ marginTop: 8 }}>{debrief.answer}</p>
+            </details>
+          </section>
+        ) : null}
 
-        <div>
-          <h3 style={{ marginBottom: 8 }}>What you practiced</h3>
-          <ul className="checklist">
-            <li>Reading port link lights after each patch</li>
-            <li>Matching physical ports and media to the ticket</li>
-            <li>Spotting VLAN, admin-down, mask, route, and ACL faults quickly</li>
-          </ul>
-        </div>
+        {mission.learning.deviceUnlocks?.length ? (
+          <section aria-labelledby="equipment-unlocked-heading">
+            <h3 id="equipment-unlocked-heading" style={{ marginBottom: 8 }}>
+              Equipment unlocked
+            </h3>
+            <ul className="checklist">
+              {mission.learning.deviceUnlocks.map((device) => (
+                <li key={device}>{device}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {conceptsPracticed.length ? (
+          <section aria-labelledby="concepts-practiced-heading">
+            <h3 id="concepts-practiced-heading" style={{ marginBottom: 8 }}>
+              Concepts practiced
+            </h3>
+            <ul className="checklist">
+              {conceptsPracticed.map((concept) => (
+                <li key={concept}>{concept}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        <section aria-labelledby="optional-achievements-heading">
+          <h3 id="optional-achievements-heading" style={{ marginBottom: 8 }}>
+            Optional achievements · {earned}/9 stars
+          </h3>
+          <p>
+            Achievements celebrate efficient diagnosis, an optional SLA pace,
+            a clean rack, and independent work. They never block the next lesson.
+          </p>
+          <div className="debrief-stars">
+            <div className="star-box">
+              <strong aria-label={`${score.correctness} of 3 diagnostic efficiency stars`}>
+                <span aria-hidden="true">{stars(score.correctness)}</span>
+              </strong>
+              <span>Efficient diagnosis</span>
+            </div>
+            <div className="star-box">
+              <strong aria-label={`${score.speed} of 3 speed stars`}>
+                <span aria-hidden="true">{stars(score.speed)}</span>
+              </strong>
+              <span>Under SLA</span>
+            </div>
+            <div className="star-box">
+              <strong aria-label={`${score.cleanliness} of 3 cleanliness stars`}>
+                <span aria-hidden="true">{stars(score.cleanliness)}</span>
+              </strong>
+              <span>Clean rack</span>
+            </div>
+            <div className="star-box">
+              <strong aria-label={hintLevel <= 2 ? 'Independent achievement earned' : 'Independent achievement not earned'}>
+                <span aria-hidden="true">{hintLevel <= 2 ? '★' : '☆'}</span>
+              </strong>
+              <span>Independent</span>
+            </div>
+          </div>
+        </section>
 
         {tipHistory.length > 0 ? (
           <div>
@@ -131,7 +167,7 @@ export function Debrief({
         ) : null}
 
         <div className="actions">
-          {canAdvance && onNext ? (
+          {onNext ? (
             <button type="button" className="btn btn-primary" onClick={onNext}>
               {nextLabel ??
                 (next
@@ -145,18 +181,15 @@ export function Debrief({
           ) : null}
           <button
             type="button"
-            className={canAdvance ? 'btn btn-ghost' : 'btn btn-primary'}
+            className={canContinue ? 'btn btn-ghost' : 'btn btn-primary'}
             onClick={onRetry}
           >
-            {stageOk ? 'Retry for more ★' : 'Retry — beat the gate'}
+            Replay mission
           </button>
           <button type="button" className="btn btn-ghost" onClick={onHome}>
             Campaign map
           </button>
         </div>
-        {!canAdvance && next && !nextGate.unlocked ? (
-          <p className="gate-hint">{nextGate.reason}</p>
-        ) : null}
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ interface TipBarProps {
   onUnplugSelected?: () => void;
   canUnplug?: boolean;
   showHint?: boolean;
+  hintLevel?: number;
   sandbox?: boolean;
   onCycleVlan?: () => void;
   onToggleAdmin?: () => void;
@@ -25,6 +26,7 @@ export function TipBar({
   onUnplugSelected,
   canUnplug,
   showHint,
+  hintLevel = 0,
   sandbox,
   onCycleVlan,
   onToggleAdmin,
@@ -62,7 +64,11 @@ export function TipBar({
       <div className="actions">
         {showHint && onHint ? (
           <button type="button" className="btn btn-ghost" onClick={onHint}>
-            Hint
+            {hintLevel === 0
+              ? 'Get a hint'
+              : hintLevel < 4
+                ? `Next hint (${hintLevel + 1}/4)`
+                : 'Show hint again'}
           </button>
         ) : null}
         {canUnplug && onUnplugSelected ? (

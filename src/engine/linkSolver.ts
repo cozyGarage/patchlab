@@ -328,12 +328,106 @@ function firewallAllows(
   return { ok: true, detail: 'No firewall filter matched (open)' };
 }
 
-function hasDataCable(device: Device, rack: RackState): boolean {
-  if (device.cloudAttached) return true;
-  return device.ports.some(
-    (p) =>
-      (p.kind === 'data' || p.kind === 'lan' || p.kind === 'wan' || p.role === 'nic') &&
-      findCableOnPort(rack.cables, { deviceId: device.id, portId: p.id }),
+function portVlan(port: Port): number | undefined {
+  return port.role === 'nic' ? port.accessVlan : port.vlanId;
+}
+
+function switchPortsCanForward(a: Port, b: Port): boolean {
+  const vlanA = portVlan(a);
+  const vlanB = portVlan(b);
+  if (a.mode === 'trunk' && b.mode === 'trunk') {
+    const allowedA = a.allowedVlans ?? [];
+    const allowedB = b.allowedVlans ?? [];
+    return allowedA.some((vlanId) => allowedB.includes(vlanId));
+  }
+  if (a.mode === 'trunk') {
+    return vlanB == null || (a.allowedVlans ?? []).includes(vlanB);
+  }
+  if (b.mode === 'trunk') {
+    return vlanA == null || (b.allowedVlans ?? []).includes(vlanA);
+  }
+  return vlanA == null || vlanB == null || vlanA === vlanB;
+}
+
+/** Operational L2 reachability through live cables and switch forwarding. */
+function hasLayer2Path(rack: RackState, from: PortRef, to: PortRef): boolean {
+  if (samePort(from, to)) return true;
+  const { linkTable } = buildLinkTable(rack);
+  const adjacency = new Map<string, Set<string>>();
+  const addEdge = (a: string, b: string) => {
+    const peers = adjacency.get(a) ?? new Set<string>();
+    peers.add(b);
+    adjacency.set(a, peers);
+  };
+
+  for (const cable of rack.cables) {
+    if (
+      cable.media === 'power_c13' ||
+      cable.media === 'console_rj45' ||
+      linkTable[portKey(cable.ends[0])] !== 'up' ||
+      linkTable[portKey(cable.ends[1])] !== 'up'
+    ) {
+      continue;
+    }
+    const a = portKey(cable.ends[0]);
+    const b = portKey(cable.ends[1]);
+    addEdge(a, b);
+    addEdge(b, a);
+  }
+
+  for (const device of rack.devices) {
+    if (device.role !== 'switch') continue;
+    const forwarding = device.ports.filter(
+      (p) =>
+        (p.kind === 'data' || p.kind === 'lan' || p.kind === 'wan') &&
+        p.admin === 'up',
+    );
+    for (let i = 0; i < forwarding.length; i += 1) {
+      for (let j = i + 1; j < forwarding.length; j += 1) {
+        const a = forwarding[i]!;
+        const b = forwarding[j]!;
+        if (!switchPortsCanForward(a, b)) continue;
+        const aKey = portKey({ deviceId: device.id, portId: a.id });
+        const bKey = portKey({ deviceId: device.id, portId: b.id });
+        addEdge(aKey, bKey);
+        addEdge(bKey, aKey);
+      }
+    }
+  }
+
+  const target = portKey(to);
+  const queue = [portKey(from)];
+  const seen = new Set(queue);
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (current === target) return true;
+    for (const peer of adjacency.get(current) ?? []) {
+      if (seen.has(peer)) continue;
+      seen.add(peer);
+      queue.push(peer);
+    }
+  }
+  return false;
+}
+
+function ipPort(device: Device, address?: string): Port | undefined {
+  return device.ports.find(
+    (port) => port.ip?.address && (address == null || port.ip.address === address),
+  );
+}
+
+function interfacesShareLiveSegment(
+  rack: RackState,
+  fromDevice: Device,
+  fromPort: Port,
+  toDevice: Device,
+  toPort: Port,
+): boolean {
+  if (fromDevice.cloudAttached || toDevice.cloudAttached) return true;
+  return hasLayer2Path(
+    rack,
+    { deviceId: fromDevice.id, portId: fromPort.id },
+    { deviceId: toDevice.id, portId: toPort.id },
   );
 }
 
@@ -344,7 +438,7 @@ function candidateRoutes(
 ) {
   return routes
     .filter((route) => {
-      if (!route.enabled) return false;
+      if (!route.enabled || route.trackedUp === false) return false;
       const parsed = parseCidr(route.destCidr);
       return !!parsed && inCidr(destIp, route.destCidr);
     })
@@ -391,18 +485,23 @@ function tryRouteDelivery(
   }
   let lastDetail = 'Ping fail — no usable route';
   for (const route of candidates) {
-    const nextHopOnLink = router.ports.some(
+    const routerEgress = router.ports.find(
       (p) =>
         p.ip &&
         sameSubnet(p.ip, { address: route.nextHop, prefix: p.ip.prefix }),
     );
-    if (!nextHopOnLink) {
+    if (!routerEgress) {
       lastDetail = `Ping fail — next hop ${route.nextHop} is not on a connected interface`;
       continue;
     }
     const edge = deviceOwningIp(rack, route.nextHop);
-    if (!edge || !isDevicePowered(rack, edge.id)) {
+    const edgePort = edge ? ipPort(edge, route.nextHop) : undefined;
+    if (!edge || !edgePort || !isDevicePowered(rack, edge.id)) {
       lastDetail = `Ping fail — next hop ${route.nextHop} not found on a live device`;
+      continue;
+    }
+    if (!interfacesShareLiveSegment(rack, router, routerEgress, edge, edgePort)) {
+      lastDetail = `Ping fail — next hop ${route.nextHop} is not reachable on the live egress segment`;
       continue;
     }
     if (!edgeCanDeliver(rack, edge, to, toIp)) {
@@ -457,20 +556,24 @@ export function evaluatePing(
     return { ok: false, detail: 'Ping fail — a device is unpowered' };
   }
 
-  const fromIpFull = from.ports.find((p) => p.ip?.address)?.ip;
+  const fromPort = ipPort(from);
+  const toPort = ipPort(to);
+  const fromIpFull = fromPort?.ip;
   const fromIp = primaryIp(from);
   const toIp = primaryIp(to);
-  if (!fromIp || !toIp || !fromIpFull) {
+  if (!fromIp || !toIp || !fromIpFull || !fromPort || !toPort) {
     return { ok: false, detail: 'Ping fail — configure IPv4 on both hosts' };
-  }
-
-  if (!hasDataCable(from, rack) || !hasDataCable(to, rack)) {
-    return { ok: false, detail: 'Ping fail — host missing data cable' };
   }
 
   const fw = rack.devices.find((d) => d.role === 'firewall');
 
   if (sameSubnet(fromIp, toIp)) {
+    if (!interfacesShareLiveSegment(rack, from, fromPort, to, toPort)) {
+      return {
+        ok: false,
+        detail: 'Ping fail — no live Layer-2 path in the required VLAN',
+      };
+    }
     if (fw && isDevicePowered(rack, fw.id) && !from.cloudAttached && !to.cloudAttached) {
       const check = firewallAllows(fw.firewallRules, fromIp.address, toIp.address);
       if (!check.ok) return { ok: false, detail: `Ping fail — ${check.detail}` };
@@ -498,8 +601,9 @@ export function evaluatePing(
         detail: `Ping fail — gateway ${gateway} not found on a live router/FW`,
       };
     }
-    const gwIface = router.ports.find((p) => p.ip?.address === gateway)?.ip;
-    if (gwIface) {
+    const gwPort = router.ports.find((p) => p.ip?.address === gateway);
+    const gwIface = gwPort?.ip;
+    if (gwIface && gwPort) {
       // Mask trap lesson: host prefix must match the gateway interface mask,
       // and the host address must fall inside that interface subnet.
       if (fromIp.prefix !== gwIface.prefix) {
@@ -517,6 +621,12 @@ export function evaluatePing(
         return {
           ok: false,
           detail: 'Ping fail — host IP is outside the gateway interface subnet',
+        };
+      }
+      if (!interfacesShareLiveSegment(rack, from, fromPort, router, gwPort)) {
+        return {
+          ok: false,
+          detail: `Ping fail — gateway ${gateway} is not reachable on the host VLAN`,
         };
       }
     }
@@ -537,9 +647,39 @@ export function evaluatePing(
         detail: `Ping fail — different subnets and no default gateway on ${from.name}`,
       };
     }
+    const ingressPort = router.ports.find(
+      (p) => p.ip && sameSubnet(fromIp, p.ip),
+    );
+    if (
+      !ingressPort ||
+      !interfacesShareLiveSegment(rack, from, fromPort, router, ingressPort)
+    ) {
+      return {
+        ok: false,
+        detail: `Ping fail — ${router.name} is not reachable from the source segment`,
+      };
+    }
   }
 
-  const routerReachesDst = deviceHasConnectedRoute(router, toIp);
+  const routerDstPort = router.ports.find(
+    (p) => p.ip && sameSubnet(p.ip, toIp),
+  );
+  const routerReachesDst =
+    !!routerDstPort &&
+    (to.cloudAttached ||
+      interfacesShareLiveSegment(rack, router, routerDstPort, to, toPort));
+
+  if (
+    routerDstPort?.kind === 'lan' &&
+    to.role === 'server' &&
+    !to.cloudAttached &&
+    toPort.ip?.gateway !== routerDstPort.ip?.address
+  ) {
+    return {
+      ok: false,
+      detail: `Ping fail — ${to.name} has no valid return gateway for ${fromIp.address}`,
+    };
+  }
 
   const fromOnWan = router.ports.some(
     (p) => p.kind === 'wan' && p.ip && sameSubnet(fromIp, p.ip),
@@ -627,6 +767,40 @@ export function evaluatePing(
     ok: true,
     detail: `Ping ok — ${fromIp.address} → ${toIp.address} via route ${delivered.route.destCidr} → ${delivered.route.nextHop}${ad}${patNote}`,
   };
+}
+
+export function evaluatePingToPublicIp(
+  rack: RackState,
+  fromDeviceId: string,
+  targetIp: string,
+): { ok: boolean; detail: string } {
+  const firewall = rack.devices.find((device) => device.role === 'firewall');
+  const nat = firewall?.natRules?.find(
+    (rule) =>
+      rule.enabled &&
+      (!rule.mode || rule.mode === 'static') &&
+      rule.outsideIp === targetIp,
+  );
+  if (!nat) {
+    return {
+      ok: false,
+      detail: `Ping fail — no static NAT publishes ${targetIp}`,
+    };
+  }
+  const inside = deviceOwningIp(rack, nat.insideIp);
+  if (!inside) {
+    return {
+      ok: false,
+      detail: `Ping fail — NAT inside address ${nat.insideIp} is not assigned`,
+    };
+  }
+  const result = evaluatePing(rack, fromDeviceId, inside.id);
+  return result.ok
+    ? {
+        ok: true,
+        detail: `Ping ok — ${targetIp} translated to ${nat.insideIp} (${inside.name})`,
+      }
+    : result;
 }
 
 export function evaluateTraceroute(
@@ -819,6 +993,12 @@ export function evaluateGoals(
   rack: RackState,
   goals: Goal[],
   linkTable: Record<string, LinkStatus>,
+  lastPing?: {
+    ok: boolean;
+    fromDeviceId?: string;
+    toDeviceId?: string;
+    targetIp?: string;
+  },
   lastTrace?: TraceResult & { fromDeviceId: string; toDeviceId: string },
 ): boolean[] {
   return goals.map((g) => {
@@ -882,6 +1062,27 @@ export function evaluateGoals(
         return evaluatePing(rack, g.fromDeviceId, g.toDeviceId).ok;
       case 'ping_fail':
         return !evaluatePing(rack, g.fromDeviceId, g.toDeviceId).ok;
+      case 'ping_public': {
+        const inside = getDevice(rack, g.insideDeviceId);
+        const mapping = rack.devices
+          .find((device) => device.role === 'firewall')
+          ?.natRules?.find(
+            (rule) =>
+              rule.enabled &&
+              (!rule.mode || rule.mode === 'static') &&
+              rule.outsideIp === g.publicIp,
+          );
+        return (
+          !!inside &&
+          !!mapping &&
+          inside.ports.some((port) => port.ip?.address === mapping.insideIp) &&
+          lastPing?.ok === true &&
+          lastPing.fromDeviceId === g.fromDeviceId &&
+          lastPing.targetIp === g.publicIp &&
+          deviceOwningIp(rack, g.publicIp) == null &&
+          evaluatePingToPublicIp(rack, g.fromDeviceId, g.publicIp).ok
+        );
+      }
       case 'firewall_rule': {
         const fw = rack.devices.find((d) => d.role === 'firewall');
         return !!fw?.firewallRules?.some(
@@ -900,6 +1101,13 @@ export function evaluateGoals(
       case 'port_mode': {
         const port = getPort(rack, g.port);
         return (port?.mode ?? 'access') === g.mode;
+      }
+      case 'trunk_vlans': {
+        const port = getPort(rack, g.port);
+        return (
+          port?.mode === 'trunk' &&
+          g.vlanIds.every((vlanId) => port.allowedVlans?.includes(vlanId))
+        );
       }
       case 'nat_static': {
         const dev = getDevice(rack, g.deviceId);
@@ -957,7 +1165,12 @@ export function glowingPortsFromGoals(
       ids.add(portKey(g.b));
     } else if (g.type === 'path_up') {
       findPath(rack, g.from, g.to)?.portIds.forEach((id) => ids.add(id));
-    } else if (g.type === 'iface_ip' || g.type === 'port_vlan' || g.type === 'port_mode') {
+    } else if (
+      g.type === 'iface_ip' ||
+      g.type === 'port_vlan' ||
+      g.type === 'port_mode' ||
+      g.type === 'trunk_vlans'
+    ) {
       ids.add(portKey(g.port));
     }
   });

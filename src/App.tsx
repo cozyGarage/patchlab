@@ -24,6 +24,7 @@ import {
 import { loadSettings, saveSettings } from './lib/settings';
 import { playTipSound } from './lib/sound';
 import {
+  SANDBOX_LEARNING,
   SANDBOX_PRESETS,
   loadSandboxSnapshot,
   saveSandboxSnapshot,
@@ -55,6 +56,7 @@ const sandboxMission: Mission = {
   initial: { devices: [], cables: [] },
   goals: [],
   track: 'mixed',
+  learning: SANDBOX_LEARNING,
 };
 
 export default function App() {
@@ -91,15 +93,12 @@ export default function App() {
     const result = scoreRun(engine);
     setScore(result);
     if (mission && mission.id !== 'sandbox') {
-      setProgress(recordMissionClear(mission.id, result));
+      setProgress(
+        recordMissionClear(mission.id, result, progress, engine.hintLevel),
+      );
     }
     playTipSound(settings.sound, 'success');
-    const timeoutId = window.setTimeout(() => {
-      if (completedRunKey.current !== runKey) return;
-      setScreen((current) => (current === 'rack' ? 'debrief' : current));
-    }, 450);
-    return () => window.clearTimeout(timeoutId);
-  }, [engine, sandbox, screen, mission, settings.sound]);
+  }, [engine, sandbox, screen, mission, progress, settings.sound]);
 
   function trackTip(next: EngineState) {
     const tip = next.snapshot.lastTip;
@@ -391,6 +390,17 @@ export default function App() {
     );
   }
 
+  function dispatchPingIp(fromId: string, targetIp: string) {
+    if (!engine) return;
+    apply(
+      reduce(engine, {
+        type: 'PING_IP',
+        fromDeviceId: fromId,
+        targetIp,
+      }),
+    );
+  }
+
   function dispatchTraceroute(fromId: string, toId: string) {
     if (!engine) return;
     apply(
@@ -592,7 +602,11 @@ export default function App() {
           onSetVlan={dispatchSetVlan}
           onSetPortMode={dispatchSetPortMode}
           onPing={dispatchPing}
+          onPingIp={dispatchPingIp}
           onTraceroute={dispatchTraceroute}
+          onComplete={
+            !sandbox && score ? () => setScreen('debrief') : undefined
+          }
           onSandboxSave={sandbox ? handleSandboxSave : undefined}
           onSandboxLoad={sandbox ? handleSandboxLoad : undefined}
           onSandboxPreset={sandbox ? handleSandboxPreset : undefined}
@@ -611,6 +625,7 @@ export default function App() {
           score={score}
           progress={progress}
           tipHistory={tipHistory}
+          hintLevel={engine?.hintLevel ?? 0}
           onHome={() => setScreen('home')}
           onRetry={() => startMission(mission, false)}
           onNext={

@@ -3,10 +3,10 @@
   "title": "Floating Static",
   "order": 30,
   "track": "routing",
-  "lesson": "Floating statics share a prefix but differ by admin distance. The lower-AD route is preferred; if its next hop cannot deliver, the higher-AD backup takes over.",
-  "brief": "A poisoned primary route 198.51.100.0/24 via 10.10.10.10 (AD1) black-holes BRANCH. Add a floating backup via 203.0.113.2 with AD 10, keep the LAN→BRANCH permit, then ping SERVER-01 → BRANCH-01.",
+  "lesson": "Floating statics share a prefix but differ by administrative distance. The lower-AD route is preferred while its tracked next hop is healthy; when tracking withdraws it, the higher-AD backup is installed.",
+  "brief": "The configured AD1 route to BRANCH has been withdrawn by failed reachability tracking. Add a floating backup via 203.0.113.2 with AD 10, keep the LAN→BRANCH permit, then verify SERVER-01 → BRANCH-01.",
   "constraints": [
-    "Keep the AD1 primary (do not delete it)",
+    "Keep the tracked-down AD1 primary configured",
     "Backup next hop must be ISP-PEER (203.0.113.2) with AD 10",
     "ACL is already permitted"
   ],
@@ -43,7 +43,8 @@
             "nextHop": "10.10.10.10",
             "adminDistance": 1,
             "enabled": true,
-            "note": "Preferred but black-hole next hop"
+            "trackedUp": false,
+            "note": "Configured primary; withdrawn by failed tracking"
           }
         ],
         "ports": [

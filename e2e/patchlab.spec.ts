@@ -7,7 +7,9 @@ import {
   expectDebrief,
   expectTip,
   focusDevice,
+  insertCustomAcl,
   pingFromFocused,
+  pingPublicIpFromFocused,
   setAccessVlan,
   setTrunkMode,
   shot,
@@ -29,9 +31,9 @@ test.describe('home & shell', () => {
     await expect(page.getByText('PatchLab').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /First Lights On/i })).toBeEnabled();
     await expect(page.locator('.stage-panel')).toContainText(/Stage 1 of 32/i);
-    await expect(page.locator('.stage-panel')).toContainText(/hard gates/i);
-    await expect(page.locator('.chapter-rail')).toContainText('First Lights');
-    await expect(page.locator('.chapter-rail')).toContainText('Path Mastery');
+    await expect(page.locator('.stage-panel')).toContainText(/Optional stars/i);
+    await expect(page.locator('.chapter-rail')).toContainText('First Shift');
+    await expect(page.locator('.chapter-rail')).toContainText('Incident Commander');
     await expect(page.getByRole('button', { name: /Traceroute Path/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /Export progress/i })).toBeVisible();
     await page.getByRole('button', { name: 'Glossary' }).click();
@@ -143,7 +145,6 @@ test.describe('copper missions', () => {
     await startMission(page, /First Lights On/i);
     await shot(page, '03-m1-rack');
     await connectPorts(page, /Panel-A A-01/, /ToR-SW-A Gi1\/0\/1 VLAN 10/);
-    await expect(page.locator('.goal-pill.met')).toHaveCount(1);
     await connectPorts(page, /ToR-SW-A Gi1\/0\/5 VLAN 10/, /SERVER-01 eth0 VLAN 10/);
     await expectDebrief(page);
     await shot(page, '05-m1-debrief');
@@ -297,11 +298,11 @@ test.describe('logic / security missions', () => {
     await connectPorts(page, /ToR-SW-A Gi1\/0\/7 VLAN 20/, /SERVER-07 eth0 VLAN 20/);
     await focusDevice(page, 'SERVER-01');
     await applyIp(page, { address: '10.10.10.10', prefix: '24' });
+    await focusDevice(page, 'SERVER-07');
+    await applyIp(page, { address: '10.10.10.20', prefix: '24' });
     await focusDevice(page, 'SERVER-01');
     await pingFromFocused(page, /SERVER-07/);
-    await expectTip(page, /Ping fail|different subnets|no default gateway|configure IPv4/i);
-    await focusDevice(page, 'SERVER-07');
-    await applyIp(page, { address: '10.10.20.10', prefix: '24' });
+    await expectTip(page, /Ping fail|Layer-2|VLAN/i);
     await expectDebrief(page);
   });
 
@@ -342,6 +343,8 @@ test.describe('logic / security missions', () => {
     await page.getByRole('button', { name: 'Apply static NAT' }).click();
     await expectTip(page, /NAT 10\.10\.10\.10/i);
     await page.getByRole('button', { name: /Insert permit WAN → LAN/i }).click();
+    await focusDevice(page, 'ISP-PEER');
+    await pingPublicIpFromFocused(page, '203.0.113.10');
     await expectDebrief(page);
     await shot(page, '24-m17-debrief');
   });
@@ -354,9 +357,7 @@ test.describe('logic / security missions', () => {
     await pingFromFocused(page, /ISP-PEER/);
     await expectTip(page, /Ping ok/i);
     await focusDevice(page, 'FW-EDGE');
-    await page
-      .getByRole('button', { name: /Insert deny host 10\.10\.10\.20 → WAN/i })
-      .click();
+    await insertCustomAcl(page, 'deny', '10.10.10.20/32', '203.0.113.0/30');
     await expectDebrief(page);
     await shot(page, '25-m18-debrief');
   });
@@ -561,15 +562,18 @@ test.describe('logic / security missions', () => {
     await startMission(page, /Traceroute Path/i);
     await focusDevice(page, 'FW-EDGE');
     await page.getByRole('button', { name: 'Apply route' }).click();
-    await page.getByRole('button', { name: /Insert permit LAN → BRANCH/i }).click();
+    await insertCustomAcl(page, 'permit', '10.10.10.0/24', '198.51.100.0/24');
     await focusDevice(page, 'SERVER-01');
-    await pingFromFocused(page, /BRANCH-01/);
-    // Switch to traceroute target BRANCH and run traceroute
-    const select = page.locator('.config-panel').getByRole('combobox').last();
-    const option = select.locator('option', { hasText: /BRANCH-01/ });
-    const value = await option.getAttribute('value');
-    await select.selectOption(value!);
-    await page.getByRole('button', { name: /^Traceroute from /i }).click();
+    const diagnostics = page.locator('.config-block', {
+      has: page.getByRole('heading', { name: /Traceroute/ }),
+    });
+    const target = diagnostics.getByLabel('Target');
+    const branchValue = await target
+      .locator('option', { hasText: /BRANCH-01/ })
+      .getAttribute('value');
+    expect(branchValue).toBeTruthy();
+    await target.selectOption(branchValue!);
+    await diagnostics.getByRole('button', { name: /^Traceroute from /i }).click();
     await expectDebrief(page);
   });
 });

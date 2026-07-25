@@ -57,8 +57,9 @@ Every connect/disconnect updates LEDs, path highlights, and a one-line tip in un
 1. **Action → truth → tip** — never a wall of text before doing
 2. **One job per screen** — mission brief OR rack work OR debrief
 3. **Fail clearly** — red path + short reason (`Wrong VLAN`, `Label mismatch`, `Open circuit`)
-4. **Ghost hint** after 2 failed attempts (costs a star)
-5. **Sandbox unlocked** after Mission 3
+4. **Graduated hints** available voluntarily: prompt → evidence → action → exact solution
+5. **Completion unlocks learning** — stars and help use never block the next lesson
+6. **Sandbox unlocked** after the first boss at Mission 3
 
 ---
 

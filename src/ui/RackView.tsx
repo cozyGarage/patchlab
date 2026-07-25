@@ -16,7 +16,7 @@ import type {
 import { portKey, samePort } from '../types/schema';
 import type { EngineState } from '../engine/reducer';
 import { TipBar } from './TipBar';
-import { goalText } from './MissionBrief';
+
 import { ConfigPanel } from './ConfigPanel';
 
 interface RackViewProps {
@@ -56,7 +56,9 @@ interface RackViewProps {
   onSetVlan: (port: PortRef, vlanId: number) => void;
   onSetPortMode: (port: PortRef, mode: PortMode) => void;
   onPing: (fromId: string, toId: string) => void;
+  onPingIp: (fromId: string, targetIp: string) => void;
   onTraceroute: (fromId: string, toId: string) => void;
+  onComplete?: () => void;
   onSandboxSave?: () => void;
   onSandboxLoad?: () => void;
   onSandboxPreset?: (presetId: string) => void;
@@ -191,7 +193,9 @@ export function RackView({
   onSetVlan,
   onSetPortMode,
   onPing,
+  onPingIp,
   onTraceroute,
+  onComplete,
   onSandboxSave,
   onSandboxLoad,
   onSandboxPreset,
@@ -349,10 +353,7 @@ export function RackView({
       selectedPort.kind === 'lan' ||
       selectedPort.kind === 'wan');
 
-  const showHint =
-    !sandbox &&
-    state.wrongAttempts >= state.mission.hintAfterWrongAttempts &&
-    !state.snapshot.complete;
+  const showHint = !sandbox && !state.snapshot.complete;
 
   const fromLayout = dragFrom ? byKey.get(portKey(dragFrom)) : null;
   const ghostDrag =
@@ -373,6 +374,12 @@ export function RackView({
     state.snapshot.rack.devices.find((d) => d.id === focusDeviceId) ??
     state.snapshot.rack.devices[0]!;
 
+  const learning = sandbox ? undefined : state.mission.learning;
+  const showCampaignTimer =
+    learning === undefined ||
+    learning.mode === 'challenge' ||
+    learning.mode === 'boss';
+
   const pingTargets = state.snapshot.rack.devices
     .filter(
       (d) =>
@@ -390,11 +397,11 @@ export function RackView({
         </button>
         <h2>{sandbox ? 'Sandbox' : state.mission.title}</h2>
         <div className="rack-stats">
-          {!sandbox ? (
-            <ElapsedTimer startedAtMs={state.startedAtMs} />
-          ) : (
+          {sandbox ? (
             <span>Live rack</span>
-          )}
+          ) : showCampaignTimer ? (
+            <ElapsedTimer startedAtMs={state.startedAtMs} />
+          ) : null}
           {sandbox && onSandboxSave ? (
             <button type="button" className="btn btn-ghost" onClick={onSandboxSave}>
               Save rack
@@ -403,6 +410,15 @@ export function RackView({
           {sandbox && onSandboxLoad ? (
             <button type="button" className="btn btn-ghost" onClick={onSandboxLoad}>
               Load save
+            </button>
+          ) : null}
+          {state.snapshot.complete && !sandbox && onComplete ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={onComplete}
+            >
+              Review result
             </button>
           ) : null}
           <button type="button" className="btn btn-ghost" onClick={onReset}>
@@ -706,6 +722,9 @@ export function RackView({
           device={focusDevice}
           consoleReady={!!state.snapshot.consoleAttached[focusDevice.id]}
           powered={!!state.snapshot.poweredDevices[focusDevice.id]}
+          sandbox={sandbox}
+          enabledTools={learning?.enabledTools}
+          missionMode={learning?.mode}
           onSetIp={onSetIp}
           onFirewallPermitLan={onFirewallPermitLan}
           onFirewallPermitLanWan={onFirewallPermitLanWan}
@@ -720,6 +739,10 @@ export function RackView({
           onSetVlan={onSetVlan}
           onSetPortMode={onSetPortMode}
           onPing={onPing}
+          onPingIp={onPingIp}
+          publicPingTarget={state.mission.goals.find(
+            (goal) => goal.type === 'ping_public',
+          )?.publicIp}
           onTraceroute={onTraceroute}
           pingTargets={pingTargets}
         />
@@ -728,9 +751,18 @@ export function RackView({
       <TipBar
         tip={state.snapshot.lastTip}
         inventory={state.snapshot.inventory}
-        goalsMet={sandbox ? [] : state.snapshot.goalsMet}
-        goalLabels={sandbox ? [] : goalText(state.mission)}
+        goalsMet={
+          sandbox
+            ? []
+            : state.mission.learning.visibleObjectives.map(
+                () => state.snapshot.complete,
+              )
+        }
+        goalLabels={
+          sandbox ? [] : state.mission.learning.visibleObjectives
+        }
         showHint={showHint}
+        hintLevel={state.hintLevel}
         onHint={onHint}
         canUnplug={canUnplug}
         sandbox={sandbox}

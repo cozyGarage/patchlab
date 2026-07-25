@@ -45,12 +45,16 @@ function goalText(mission: Mission): string[] {
         return `Ping ${g.fromDeviceId} → ${g.toDeviceId}`;
       case 'ping_fail':
         return `Ping must fail ${g.fromDeviceId} → ${g.toDeviceId}`;
+      case 'ping_public':
+        return `Ping ${g.publicIp} from ${g.fromDeviceId}`;
       case 'firewall_rule':
         return `FW ${g.action} ${g.srcCidr} → ${g.dstCidr}`;
       case 'port_vlan':
         return `Set ${g.port.portId} access VLAN ${g.vlanId}`;
       case 'port_mode':
         return `Set ${g.port.portId} mode ${g.mode}`;
+      case 'trunk_vlans':
+        return `Allow VLANs ${g.vlanIds.join(', ')} on ${g.port.portId}`;
       case 'nat_static':
         return `Static NAT ${g.insideIp} ↔ ${g.outsideIp}`;
       case 'nat_pat':
@@ -70,6 +74,15 @@ function goalText(mission: Mission): string[] {
 export function MissionBrief({ mission, onBack, onStart }: MissionBriefProps) {
   const chapter = chapterForMission(mission);
   const total = missions.length;
+  const learning = mission.learning;
+  const mode = learning?.mode ?? 'guided';
+  const visibleObjectives = learning?.visibleObjectives?.length
+    ? learning.visibleObjectives
+    : goalText(mission);
+  const ticketDetails = learning
+    ? learning.ticketDetails
+    : mission.constraints;
+  const modeLabel = mode.charAt(0).toUpperCase() + mode.slice(1);
 
   return (
     <div className="screen-brief">
@@ -87,31 +100,67 @@ export function MissionBrief({ mission, onBack, onStart }: MissionBriefProps) {
             ? ` · Chapter ${chapter.index}: ${chapter.title}`
             : ''}
         </div>
+        <p
+          className="stage-badge"
+          aria-label={`${modeLabel} mode, difficulty ${learning?.difficulty ?? 'not rated'} out of 5`}
+        >
+          {modeLabel} mode · Difficulty {learning?.difficulty ?? '—'}/5
+        </p>
         <h1>{mission.title}</h1>
         <p>{mission.brief}</p>
-        {mission.lesson ? (
+        {learning?.conceptsIntroduced.length ? (
           <div className="lesson-callout">
-            <h3>Lesson</h3>
-            <p>{mission.lesson}</p>
-          </div>
-        ) : null}
-        <div>
-          <h3 style={{ marginBottom: 8 }}>Win checklist</h3>
-          <ul className="checklist">
-            {goalText(mission).map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
-        {mission.constraints.length > 0 ? (
-          <div>
-            <h3 style={{ marginBottom: 8 }}>Constraints</h3>
+            <h3>Learning focus</h3>
             <ul className="checklist">
-              {mission.constraints.map((c) => (
-                <li key={c}>{c}</li>
+              {learning.conceptsIntroduced.map((concept) => (
+                <li key={concept}>{concept}</li>
               ))}
             </ul>
           </div>
+        ) : mission.lesson ? (
+          <div className="lesson-callout">
+            <h3>Learning focus</h3>
+            <p>{mission.lesson}</p>
+          </div>
+        ) : null}
+        <section aria-labelledby="mission-objectives-heading">
+          <h3 id="mission-objectives-heading" style={{ marginBottom: 8 }}>
+            Objectives
+          </h3>
+          <ul className="checklist">
+            {visibleObjectives.map((item, index) => (
+              <li key={`${index}-${item}`}>{item}</li>
+            ))}
+          </ul>
+        </section>
+        {ticketDetails?.length ? (
+          <details open={mode === 'guided'}>
+            <summary>Ticket details</summary>
+            <ul className="checklist" style={{ marginTop: 8 }}>
+              {ticketDetails.map((detail, index) => (
+                <li key={`${index}-${detail}`}>{detail}</li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
+        {learning?.deviceUnlocks?.length ? (
+          <section aria-labelledby="new-equipment-heading">
+            <h3 id="new-equipment-heading" style={{ marginBottom: 8 }}>
+              New equipment
+            </h3>
+            <ul className="checklist">
+              {learning.deviceUnlocks.map((equipment) => (
+                <li key={equipment}>{equipment}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+        {mission.learning.mode === 'challenge' ||
+        mission.learning.mode === 'boss' ? (
+          <details>
+            <summary>Make a prediction before you start</summary>
+            <p style={{ marginTop: 8 }}>{mission.learning.debrief.question}</p>
+          </details>
         ) : null}
         <div className="actions">
           <button type="button" className="btn btn-primary" onClick={onStart}>

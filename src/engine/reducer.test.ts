@@ -23,6 +23,53 @@ describe('mission catalog', () => {
       }
     }
   });
+
+  it('keeps the learning curve and tool disclosure internally consistent', () => {
+    const toolForGoal = {
+      link_up: undefined,
+      path_up: undefined,
+      port_in_path: undefined,
+      no_cables_on: undefined,
+      cable_color_between: undefined,
+      cable_media_between: undefined,
+      device_powered: undefined,
+      console_attached: undefined,
+      console_link: undefined,
+      iface_ip: 'ip',
+      ping: 'ping',
+      ping_fail: 'ping',
+      ping_public: 'ping',
+      firewall_rule: 'acl',
+      port_vlan: 'switchport',
+      port_mode: 'switchport',
+      trunk_vlans: 'switchport',
+      nat_static: 'nat',
+      nat_pat: 'pat',
+      route_entry: 'route',
+      traceroute_ok: 'traceroute',
+    } as const;
+
+    for (const [index, mission] of missions.entries()) {
+      expect(mission.learning.conceptsIntroduced.length).toBeLessThanOrEqual(1);
+      expect(mission.learning.visibleObjectives.length).toBeGreaterThan(0);
+      for (const goal of mission.goals) {
+        const requiredTool = toolForGoal[goal.type];
+        if (!requiredTool) continue;
+        expect(
+          mission.learning.enabledTools,
+          `${mission.id} must enable ${requiredTool} for ${goal.type}`,
+        ).toContain(requiredTool);
+      }
+      if (index > 0) {
+        expect(
+          Math.abs(
+            mission.learning.difficulty -
+              missions[index - 1]!.learning.difficulty,
+          ),
+        ).toBeLessThanOrEqual(2);
+      }
+    }
+  });
 });
 
 describe('PatchLab engine — copper path', () => {
@@ -350,7 +397,7 @@ describe('PatchLab engine — logic / security / switching', () => {
     expect(state.snapshot.complete).toBe(true);
   });
 
-  it('M14: different VLANs stay isolated at L3', () => {
+  it('M14: same-subnet hosts stay isolated across access VLANs', () => {
     const mission = getMission('m14-vlan-isolation')!;
     let state = createEngineState(mission, baseRack);
     state = reduce(state, {
@@ -372,12 +419,27 @@ describe('PatchLab engine — logic / security / switching', () => {
     state = reduce(state, {
       type: 'SET_IP',
       port: { deviceId: 'server-07', portId: 'nic-1' },
-      address: '10.10.20.10',
+      address: '10.10.10.20',
       prefix: 24,
     });
     const ping = evaluatePing(state.snapshot.rack, 'server-01', 'server-07');
     expect(ping.ok).toBe(false);
+    expect(ping.detail).toMatch(/Layer-2|VLAN/i);
     expect(state.snapshot.complete).toBe(true);
+
+    state = reduce(state, {
+      type: 'SET_VLAN',
+      port: { deviceId: 'server-07', portId: 'nic-1' },
+      vlanId: 10,
+    });
+    state = reduce(state, {
+      type: 'SET_VLAN',
+      port: { deviceId: 'tor-1', portId: 'sw-7' },
+      vlanId: 10,
+    });
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'server-07').ok).toBe(
+      true,
+    );
   });
 
   it('M15: gateway + LAN→WAN permit reaches ISP peer', () => {
@@ -517,9 +579,9 @@ describe('PatchLab engine — logic / security / switching', () => {
     const mission = getMission('m17-static-nat')!;
     let state = createEngineState(mission, baseRack);
     state = reduce(state, {
-      type: 'PING',
+      type: 'PING_IP',
       fromDeviceId: 'wan-peer',
-      toDeviceId: 'server-01',
+      targetIp: '203.0.113.10',
     });
     expect(state.snapshot.lastTip?.code).toBe('PING_FAIL');
 
@@ -548,6 +610,14 @@ describe('PatchLab engine — logic / security / switching', () => {
     const okPing = evaluatePing(state.snapshot.rack, 'wan-peer', 'server-01');
     expect(okPing.ok).toBe(true);
     expect(okPing.detail).toMatch(/NAT/i);
+    expect(state.snapshot.complete).toBe(false);
+
+    state = reduce(state, {
+      type: 'PING_IP',
+      fromDeviceId: 'wan-peer',
+      targetIp: '203.0.113.10',
+    });
+    expect(state.snapshot.lastPing?.detail).toMatch(/203\.0\.113\.10 translated/i);
     expect(state.snapshot.complete).toBe(true);
   });
 
@@ -608,6 +678,13 @@ describe('engine helpers', () => {
     let state = createEngineState(mission, baseRack);
     state = reduce(state, { type: 'REQUEST_HINT' });
     expect(state.snapshot.lastTip?.code).toBe('HINT');
+    expect(state.hintLevel).toBe(1);
+    expect(state.snapshot.hintGhost).toBeNull();
+
+    state = reduce(state, { type: 'REQUEST_HINT' });
+    state = reduce(state, { type: 'REQUEST_HINT' });
+    state = reduce(state, { type: 'REQUEST_HINT' });
+    expect(state.hintLevel).toBe(4);
     expect(state.snapshot.hintGhost?.a.portId).toBe('panel-1');
   });
 
@@ -742,6 +819,17 @@ describe('NetPractice-inspired routing lessons', () => {
       prefix: 24,
       gateway: '10.10.10.1',
     });
+    state = reduce(state, {
+      type: 'SET_IP',
+      port: { deviceId: 'server-07', portId: 'nic-1' },
+      address: '10.10.20.10',
+      prefix: 24,
+      gateway: '10.10.10.1',
+    });
+    expect(evaluatePing(state.snapshot.rack, 'server-01', 'server-07').ok).toBe(
+      false,
+    );
+
     state = reduce(state, {
       type: 'SET_IP',
       port: { deviceId: 'server-07', portId: 'nic-1' },

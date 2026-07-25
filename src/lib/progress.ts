@@ -1,4 +1,9 @@
-import type { ProgressSave, Score } from '../types/schema';
+import type {
+  ConceptLevel,
+  ConceptProgress,
+  ProgressSave,
+  Score,
+} from '../types/schema';
 import { missions } from '../missions';
 import { GATE, missionGate, sandboxGate, starTotal } from './chapters';
 
@@ -9,6 +14,7 @@ const empty: ProgressSave = {
   clearedMissionIds: [],
   stars: {},
   sandboxUnlocked: false,
+  conceptProgress: {},
 };
 
 const knownMissionIds = new Set(missions.map((m) => m.id));
@@ -29,6 +35,21 @@ function isScore(value: unknown): value is Score {
 
 function isStarAxis(value: unknown): value is 0 | 1 | 2 | 3 {
   return value === 0 || value === 1 || value === 2 || value === 3;
+}
+
+function isConceptProgress(value: unknown): value is ConceptProgress {
+  if (!value || typeof value !== 'object') return false;
+  const item = value as Record<string, unknown>;
+  return (
+    (item.level === 'introduced' ||
+      item.level === 'practiced' ||
+      item.level === 'independent') &&
+    typeof item.successfulRuns === 'number' &&
+    Number.isInteger(item.successfulRuns) &&
+    item.successfulRuns >= 0 &&
+    typeof item.lowestHintLevel === 'number' &&
+    typeof item.lastPracticedAt === 'string'
+  );
 }
 
 function sanitizeProgress(parsed: unknown): ImportProgressResult {
@@ -66,6 +87,17 @@ function sanitizeProgress(parsed: unknown): ImportProgressResult {
     }
   }
 
+  const conceptProgress: Record<string, ConceptProgress> = {};
+  if (raw.conceptProgress && typeof raw.conceptProgress === 'object') {
+    for (const [concept, value] of Object.entries(
+      raw.conceptProgress as Record<string, unknown>,
+    )) {
+      if (concept.trim() && isConceptProgress(value)) {
+        conceptProgress[concept] = value;
+      }
+    }
+  }
+
   return {
     ok: true,
     progress: {
@@ -73,6 +105,7 @@ function sanitizeProgress(parsed: unknown): ImportProgressResult {
       clearedMissionIds,
       stars,
       sandboxUnlocked: !!raw.sandboxUnlocked,
+      conceptProgress,
     },
   };
 }
@@ -113,10 +146,17 @@ export function resetProgress(): ProgressSave {
   return next;
 }
 
+const CONCEPT_LEVEL: Record<ConceptLevel, number> = {
+  introduced: 1,
+  practiced: 2,
+  independent: 3,
+};
+
 export function recordMissionClear(
   missionId: string,
   score: Score,
   prev: ProgressSave = loadProgress(),
+  hintLevel = 0,
 ): ProgressSave {
   const cleared = new Set(prev.clearedMissionIds);
   cleared.add(missionId);
@@ -127,11 +167,42 @@ export function recordMissionClear(
     stars[missionId] = score;
   }
 
+  const conceptProgress = { ...(prev.conceptProgress ?? {}) };
+  const mission = missions.find((candidate) => candidate.id === missionId);
+  if (mission) {
+    const independent =
+      (mission.learning.mode === 'challenge' || mission.learning.mode === 'boss') &&
+      hintLevel <= 2;
+    const updates = [
+      ...mission.learning.conceptsIntroduced.map(
+        (concept) => [concept, 'introduced'] as const,
+      ),
+      ...mission.learning.conceptsPracticed.map(
+        (concept) =>
+          [concept, independent ? 'independent' : 'practiced'] as const,
+      ),
+    ];
+    for (const [concept, level] of updates) {
+      const previous = conceptProgress[concept];
+      const bestLevel =
+        previous && CONCEPT_LEVEL[previous.level] > CONCEPT_LEVEL[level]
+          ? previous.level
+          : level;
+      conceptProgress[concept] = {
+        level: bestLevel,
+        successfulRuns: (previous?.successfulRuns ?? 0) + 1,
+        lowestHintLevel: Math.min(previous?.lowestHintLevel ?? 4, hintLevel),
+        lastPracticedAt: new Date().toISOString(),
+      };
+    }
+  }
+
   const draft: ProgressSave = {
     version: 1,
     clearedMissionIds: [...cleared],
     stars,
     sandboxUnlocked: prev.sandboxUnlocked,
+    conceptProgress,
   };
 
   const sandbox = sandboxGate(missions, draft);

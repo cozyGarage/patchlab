@@ -246,15 +246,15 @@
 
 ## Campaign gating
 
-- **15 chapters** / 32 stages (pass-to-advance)
-- Unlock next stage only with **≥5★** on the previous stage (of 9)
-- Chapter borders also require **≥4★ on every stage** in the finished chapter
-- Sandbox unlocks after **Stage 5** with the stage star gate met
+- **10 operational arcs** / 32 stages using introduce → practice → challenge → boss cadence
+- Completing the technical outcome unlocks the next required stage
+- Stars are optional replay achievements and never block curriculum progress
+- Sandbox basics unlock after the first boss at **Stage 3**; advanced practice grows with the campaign
 
 ## Sandbox
 
 - Full rack: panel, fiber, ToR, SFP, firewall, servers, console, PDU, ISP peer, BRANCH
-- Config panel: IP/gateway, switchport VLAN/mode, ping/traceroute, firewall helpers, routes, static NAT, PAT
+- Campaign config panel progressively shows only mission-relevant tools; Sandbox exposes IP/gateway, VLAN/mode, ping/traceroute, ACLs, routes, static NAT, and PAT
 - Select copper switch port → **Cycle VLAN** / **Toggle admin**
 - Inventory includes copper, fiber, power, console
 

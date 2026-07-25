@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   exportProgress,
   importProgress,
+  isMissionUnlocked,
   loadProgress,
+  missionUnlockReason,
   recordMissionClear,
   resetProgress,
 } from './progress';
@@ -15,6 +17,47 @@ beforeEach(() => {
 
 afterEach(() => {
   localStorage.clear();
+});
+
+describe('completion-based progression', () => {
+  const zeroStars = {
+    correctness: 0 as const,
+    speed: 0 as const,
+    cleanliness: 0 as const,
+  };
+
+  it('unlocks the next mission after a clear regardless of stars', () => {
+    const progress = recordMissionClear('m1-first-lights', zeroStars);
+
+    expect(isMissionUnlocked(2, progress)).toBe(true);
+    expect(missionUnlockReason(2, progress)).toBeUndefined();
+    expect(progress.stars['m1-first-lights']).toEqual(zeroStars);
+  });
+
+  it('unlocks Sandbox when campaign slot 3 is cleared regardless of stars', () => {
+    let progress = recordMissionClear('m1-first-lights', zeroStars);
+    progress = recordMissionClear('m2-wrong-port', zeroStars, progress);
+    progress = recordMissionClear('m5-change-window', zeroStars, progress);
+
+    expect(progress.sandboxUnlocked).toBe(true);
+  });
+
+  it('tracks concept independence separately from completion and stars', () => {
+    const progress = recordMissionClear(
+      'm5-change-window',
+      zeroStars,
+      undefined,
+      0,
+    );
+
+    expect(
+      progress.conceptProgress?.['Physical endpoints and link-state evidence']
+        ?.level,
+    ).toBe('independent');
+    expect(
+      progress.conceptProgress?.['Safe cross-connect migration']?.level,
+    ).toBe('introduced');
+  });
 });
 
 describe('progress import/export', () => {
@@ -98,6 +141,7 @@ describe('progress import/export', () => {
       clearedMissionIds: [],
       stars: {},
       sandboxUnlocked: false,
+      conceptProgress: {},
     });
   });
 });

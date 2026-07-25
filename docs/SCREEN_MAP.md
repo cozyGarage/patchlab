@@ -26,8 +26,8 @@ flowchart TD
 **Content**
 - App name **PatchLab** as hero brand mark
 - Campaign progress strip (stages cleared, stars, chapter rail)
-- Mission cards for 32 stages / 15 chapters (hard gates: ≥5★ to advance stage, ≥4★ per stage to exit chapter)
-- Sandbox button (unlocked after Stage 5)
+- Mission cards for 32 stages / 10 operational arcs (technical completion unlocks the next stage)
+- Sandbox button (unlocked after the first boss at Stage 3)
 - Toolbar: glossary, sound, tips/onboarding, progress export/import/reset
 
 **Desktop:** vertical list + preview thumbnail of rack.  
@@ -134,10 +134,11 @@ Examples:
 **Purpose:** Close the loop; reinforce why.
 
 **Content**
-- 3 stars: Correctness / Speed / Cleanliness
-- 3 bullet “what you practiced”
-- Wrong moves list (max 3), each with the tip that fired
-- CTAs: **Next mission** / **Retry** / **Sandbox**
+- Mission-specific outcome and causal explanation
+- One retrieval question with a revealable answer
+- Concepts practiced and optional achievements: diagnostic efficiency, under SLA, clean rack, independent
+- Moments from the run (max 3)
+- CTAs: **Next mission** / **Replay** / **Campaign map**
 
 ---
 

@@ -80,6 +80,7 @@ export interface Port {
   vlanId?: number;
   accessVlan?: number;
   mode?: PortMode;
+  allowedVlans?: number[];
   ip?: IpConfig;
 }
 
@@ -112,6 +113,8 @@ export interface RouteEntry {
   destCidr: string;
   nextHop: string;
   enabled: boolean;
+  /** False when reachability tracking has withdrawn this configured route. */
+  trackedUp?: boolean;
   /** Lower wins (Cisco-style). Default 1. */
   adminDistance?: number;
   note?: string;
@@ -186,6 +189,12 @@ export type Goal =
   | { type: 'ping'; fromDeviceId: string; toDeviceId: string }
   | { type: 'ping_fail'; fromDeviceId: string; toDeviceId: string }
   | {
+      type: 'ping_public';
+      fromDeviceId: string;
+      publicIp: string;
+      insideDeviceId: string;
+    }
+  | {
       type: 'firewall_rule';
       action: 'permit' | 'deny';
       srcCidr: string;
@@ -193,6 +202,7 @@ export type Goal =
     }
   | { type: 'port_vlan'; port: PortRef; vlanId: number }
   | { type: 'port_mode'; port: PortRef; mode: PortMode }
+  | { type: 'trunk_vlans'; port: PortRef; vlanIds: number[] }
   | {
       type: 'nat_static';
       deviceId: string;
@@ -225,6 +235,44 @@ export interface Inventory {
   console_rj45: number;
 }
 
+export type MissionMode = 'guided' | 'practice' | 'challenge' | 'boss';
+export type Difficulty = 1 | 2 | 3 | 4 | 5;
+export type ToolId =
+  | 'patch'
+  | 'power'
+  | 'console'
+  | 'ip'
+  | 'switchport'
+  | 'acl'
+  | 'nat'
+  | 'pat'
+  | 'route'
+  | 'ping'
+  | 'traceroute';
+
+export interface LearningDesign {
+  mode: MissionMode;
+  difficulty: Difficulty;
+  conceptsIntroduced: string[];
+  conceptsPracticed: string[];
+  deviceUnlocks?: string[];
+  enabledTools: ToolId[];
+  visibleObjectives: string[];
+  ticketDetails?: string[];
+  debrief: {
+    outcome: string;
+    explanation: string;
+    question: string;
+    answer: string;
+  };
+  hints: {
+    prompt: string;
+    evidence: string;
+    action: string;
+    solution?: string;
+  };
+}
+
 export interface Mission {
   id: string;
   title: string;
@@ -249,6 +297,7 @@ export interface Mission {
   /** When false, do not merge rackBase facility cables (power harness). Default true. */
   useBaseCables?: boolean;
   lesson?: string;
+  learning: LearningDesign;
 }
 
 export interface Tip {
@@ -279,7 +328,13 @@ export interface SimSnapshot {
   inventory: Inventory;
   hintGhost?: HintGhost | null;
   glowingPortIds: string[];
-  lastPing?: { ok: boolean; detail: string };
+  lastPing?: {
+    ok: boolean;
+    detail: string;
+    fromDeviceId?: string;
+    toDeviceId?: string;
+    targetIp?: string;
+  };
   lastTrace?: TraceResult & { fromDeviceId: string; toDeviceId: string };
 }
 
@@ -310,6 +365,7 @@ export type Intent =
       rule: FirewallRule;
     }
   | { type: 'PING'; fromDeviceId: string; toDeviceId: string }
+  | { type: 'PING_IP'; fromDeviceId: string; targetIp: string }
   | {
       type: 'TRACEROUTE';
       fromDeviceId: string;
@@ -348,11 +404,21 @@ export interface Score {
   cleanliness: 0 | 1 | 2 | 3;
 }
 
+export type ConceptLevel = 'introduced' | 'practiced' | 'independent';
+
+export interface ConceptProgress {
+  level: ConceptLevel;
+  successfulRuns: number;
+  lowestHintLevel: number;
+  lastPracticedAt: string;
+}
+
 export interface ProgressSave {
   version: 1;
   clearedMissionIds: string[];
   stars: Record<string, Score>;
   sandboxUnlocked: boolean;
+  conceptProgress?: Record<string, ConceptProgress>;
 }
 
 export interface SettingsSave {
