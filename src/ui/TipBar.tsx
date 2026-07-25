@@ -45,8 +45,8 @@ export function TipBar({
         <div className="tip-msg">
           {tip?.message ??
             (armedLabel
-              ? `Armed: ${armedLabel} — tap or drag to a free port`
-              : 'Plug data, power, or console — then configure IP / firewall as needed.')}
+              ? `Armed: ${armedLabel} — tap/drag a free port · U unplug · fling away to yank`
+              : 'Tap-tap or drag to patch · drag a plugged end to move · fling away / U to unplug')}
           {armedLabel && tip?.message ? (
             <span className="armed-chip"> Armed: {armedLabel}</span>
           ) : null}

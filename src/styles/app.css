@@ -780,8 +780,26 @@ p {
   filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.55));
 }
 
+.port-shell.valid-target {
+  stroke: rgba(61, 220, 181, 0.55);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 5px rgba(61, 220, 181, 0.28));
+}
+
 .port-shell.flash {
   animation: port-flash 280ms ease-out;
+}
+
+.rack-svg.aiming {
+  cursor: crosshair;
+}
+
+.rack-svg.dragging {
+  cursor: grabbing;
+}
+
+.rack-svg.dragging .cable-hit {
+  pointer-events: none;
 }
 
 .port-led {
