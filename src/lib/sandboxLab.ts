@@ -1,4 +1,4 @@
-import type { Inventory, RackState } from '../types/schema';
+import type { Inventory, LearningDesign, RackState } from '../types/schema';
 import { baseRack } from '../missions';
 import { createEngineState } from '../engine/reducer';
 import type { Mission } from '../types/schema';
@@ -20,6 +20,38 @@ export interface SandboxPreset {
   build: () => { rack: RackState; inventory: Inventory };
 }
 
+export const SANDBOX_LEARNING: LearningDesign = {
+  mode: 'practice',
+  difficulty: 1,
+  conceptsIntroduced: [],
+  conceptsPracticed: ['Open-ended network experimentation'],
+  enabledTools: [
+    'patch',
+    'power',
+    'console',
+    'ip',
+    'switchport',
+    'acl',
+    'nat',
+    'pat',
+    'route',
+    'ping',
+    'traceroute',
+  ],
+  visibleObjectives: ['Build, break, inspect, and repair the rack freely.'],
+  debrief: {
+    outcome: 'Sandbox session complete.',
+    explanation: 'Sandbox has no required outcome or score.',
+    question: 'What evidence would you inspect first in a real incident?',
+    answer: 'Start with power and physical link state, then move upward through VLAN, addressing, routing, and policy.',
+  },
+  hints: {
+    prompt: 'Inspect the lowest network layer that could explain the symptom.',
+    evidence: 'Power, link LEDs, VLANs, IP settings, routes, and policy all provide evidence.',
+    action: 'Test one hypothesis at a time and observe the result.',
+  },
+};
+
 const freeInventory: Inventory = {
   copper_cat6: 12,
   fiber_om4: 8,
@@ -40,6 +72,7 @@ function emptySandboxMission(): Mission {
     initial: { devices: [], cables: [] },
     goals: [],
     track: 'mixed',
+    learning: SANDBOX_LEARNING,
   };
 }
 
@@ -48,7 +81,37 @@ export function freshSandboxState() {
   return createEngineState(emptySandboxMission(), baseRack);
 }
 
+function dailyIncident() {
+  const state = freshSandboxState();
+  const rack = structuredClone(state.snapshot.rack);
+  const dayKey = new Date().toISOString().slice(0, 10);
+  const seed = [...dayKey].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const variant = seed % 3;
+
+  if (variant === 0) {
+    rack.cables = rack.cables.filter((cable) => cable.id !== 'pwr-tor');
+  } else if (variant === 1) {
+    const port = rack.devices
+      .find((device) => device.id === 'tor-1')
+      ?.ports.find((candidate) => candidate.id === 'sw-7');
+    if (port) port.vlanId = 10;
+  } else {
+    const port = rack.devices
+      .find((device) => device.id === 'tor-sfp')
+      ?.ports.find((candidate) => candidate.id === 'sfp-3');
+    if (port) port.admin = 'down';
+  }
+
+  return { rack, inventory: state.snapshot.inventory };
+}
+
 export const SANDBOX_PRESETS: SandboxPreset[] = [
+  {
+    id: 'daily-incident',
+    title: 'Daily Incident',
+    blurb: 'A date-seeded power, VLAN, or interface fault. Diagnose it from evidence.',
+    build: dailyIncident,
+  },
   {
     id: 'dark-tor',
     title: 'Ticket: Dark ToR',

@@ -25,6 +25,11 @@
       "mode": "trunk"
     },
     {
+      "type": "trunk_vlans",
+      "port": { "deviceId": "tor-1", "portId": "sw-8" },
+      "vlanIds": [10, 20]
+    },
+    {
       "type": "link_up",
       "a": { "deviceId": "tor-1", "portId": "sw-8" },
       "b": { "deviceId": "fw-1", "portId": "fw-lan" }

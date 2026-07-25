@@ -52,7 +52,7 @@
 **Objective:** SERVER-07 should be on VLAN 20. It is patched to a VLAN 10 port. Fix without moving the panel cross-connect.  
 **Teaches:** VLAN mismatch vs physical open.  
 **Par time:** 120s  
-**Unlocks:** Sandbox  
+**Unlocks:** No feature gate (Sandbox unlocks after Stage 5)
 
 **Setup**
 - `panel-2` ↔ `sw-3` pre-cabled (unrelated cross-connect)
@@ -246,15 +246,15 @@
 
 ## Campaign gating
 
-- **15 chapters** / 32 stages (pass-to-advance)
-- Unlock next stage only with **≥5★** on the previous stage (of 9)
-- Chapter borders also require **≥4★ on every stage** in the finished chapter
-- Sandbox unlocks after **Stage 5** with the stage star gate met
+- **10 operational arcs** / 32 stages using introduce → practice → challenge → boss cadence
+- Completing the technical outcome unlocks the next required stage
+- Stars are optional replay achievements and never block curriculum progress
+- Sandbox basics unlock after the first boss at **Stage 3**; advanced practice grows with the campaign
 
 ## Sandbox
 
 - Full rack: panel, fiber, ToR, SFP, firewall, servers, console, PDU, ISP peer, BRANCH
-- Config panel: IP/gateway, switchport VLAN/mode, ping, firewall helpers, routes, static NAT
+- Campaign config panel progressively shows only mission-relevant tools; Sandbox exposes IP/gateway, VLAN/mode, ping/traceroute, ACLs, routes, static NAT, and PAT
 - Select copper switch port → **Cycle VLAN** / **Toggle admin**
 - Inventory includes copper, fiber, power, console
 

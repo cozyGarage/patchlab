@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { missions } from '../missions';
+import type { ProgressSave, Score } from '../types/schema';
 import {
   CHAPTERS,
   GATE,
@@ -7,53 +8,72 @@ import {
   chapterProgress,
   currentStage,
   isChapterUnlocked,
+  meetsStageGate,
   missionGate,
   sandboxGate,
   stageLabel,
 } from './chapters';
 
-function progressWith(clearedOrders: number[], starsPer: number = 5) {
+function progressWith(
+  clearedOrders: number[],
+  score?: Score,
+): ProgressSave {
   const clearedMissionIds = missions
     .filter((m) => clearedOrders.includes(m.order))
     .map((m) => m.id);
-  const stars = Object.fromEntries(
-    clearedMissionIds.map((id) => [
-      id,
-      {
-        correctness: Math.min(3, starsPer) as 0 | 1 | 2 | 3,
-        speed: Math.min(3, Math.max(0, starsPer - 3)) as 0 | 1 | 2 | 3,
-        cleanliness: Math.min(3, Math.max(0, starsPer - 6)) as 0 | 1 | 2 | 3,
-      },
-    ]),
-  );
-  // Normalize to exact star total when possible (5 → 2+2+1, 4 → 2+1+1, 9 → 3+3+3)
-  for (const id of clearedMissionIds) {
-    if (starsPer >= 9) {
-      stars[id] = { correctness: 3, speed: 3, cleanliness: 3 };
-    } else if (starsPer === 5) {
-      stars[id] = { correctness: 2, speed: 2, cleanliness: 1 };
-    } else if (starsPer === 4) {
-      stars[id] = { correctness: 2, speed: 1, cleanliness: 1 };
-    } else if (starsPer === 3) {
-      stars[id] = { correctness: 1, speed: 1, cleanliness: 1 };
-    }
-  }
+  const stars = score
+    ? Object.fromEntries(clearedMissionIds.map((id) => [id, score]))
+    : {};
   return {
-    version: 1 as const,
+    version: 1,
     clearedMissionIds,
     stars,
     sandboxUnlocked: false,
   };
 }
 
-describe('campaign chapters', () => {
-  it('covers every mission order exactly once across more chapters', () => {
-    expect(CHAPTERS.length).toBeGreaterThanOrEqual(10);
+const zeroStars: Score = {
+  correctness: 0,
+  speed: 0,
+  cleanliness: 0,
+};
+
+describe('campaign arcs', () => {
+  it('uses the ten designed arc ranges and titles', () => {
+    expect(
+      CHAPTERS.map(({ from, to, title }) => ({ from, to, title })),
+    ).toEqual([
+      { from: 1, to: 3, title: 'First Shift: Copper Fundamentals' },
+      { from: 4, to: 6, title: 'Different Paths: Fiber and Power' },
+      { from: 7, to: 9, title: 'Dark Ports: Administrative Recovery' },
+      {
+        from: 10,
+        to: 14,
+        title: 'Console Room: Addressing and Operations',
+      },
+      { from: 15, to: 16, title: 'The Policy Desk: ACL Foundations' },
+      { from: 17, to: 20, title: 'Tenant Floors: VLANs' },
+      {
+        from: 21,
+        to: 24,
+        title: 'Beyond the Rack: Gateways and Uplinks',
+      },
+      { from: 25, to: 26, title: 'Publishing Services: NAT' },
+      { from: 27, to: 29, title: 'Route Craft: Choosing Paths' },
+      {
+        from: 30,
+        to: 32,
+        title: 'Incident Commander: Security Capstone',
+      },
+    ]);
+  });
+
+  it('covers every mission order exactly once', () => {
     const covered = new Set<number>();
-    for (const ch of CHAPTERS) {
-      for (let o = ch.from; o <= ch.to; o++) {
-        expect(covered.has(o)).toBe(false);
-        covered.add(o);
+    for (const arc of CHAPTERS) {
+      for (let order = arc.from; order <= arc.to; order++) {
+        expect(covered.has(order)).toBe(false);
+        covered.add(order);
       }
     }
     expect([...covered].sort((a, b) => a - b)).toEqual(
@@ -72,37 +92,46 @@ describe('campaign chapters', () => {
     expect(isChapterUnlocked(CHAPTERS[1]!, missions, progress)).toBe(false);
   });
 
-  it('blocks advance when previous stage stars are below the gate', () => {
-    const weak = progressWith([1], 3);
-    const gate = missionGate(2, missions, weak);
-    expect(gate.unlocked).toBe(false);
-    if (!gate.unlocked) expect(gate.reason).toMatch(/5★/);
+  it('requires only the previous mission clear to advance', () => {
+    const blocked = missionGate(2, missions, progressWith([]));
+    expect(blocked).toEqual({
+      unlocked: false,
+      reason: 'Complete Stage 1 to unlock this mission',
+    });
+
+    const clearedWithoutScore = progressWith([1]);
+    expect(missionGate(2, missions, clearedWithoutScore).unlocked).toBe(true);
+
+    const clearedWithZeroStars = progressWith([1], zeroStars);
+    expect(meetsStageGate(zeroStars)).toBe(true);
+    expect(missionGate(2, missions, clearedWithZeroStars).unlocked).toBe(true);
   });
 
-  it('allows advance when previous stage meets the star gate', () => {
-    const ok = progressWith([1], 5);
-    expect(missionGate(2, missions, ok).unlocked).toBe(true);
-  });
+  it('opens the next arc and marks completion based on clears', () => {
+    const progress = progressWith([1, 2, 3], zeroStars);
+    const firstArc = chapterProgress(CHAPTERS[0]!, missions, progress);
 
-  it('requires chapter star floor before opening the next chapter', () => {
-    // Clear ch1 (1-2) with only 3★ each — stage gate from 2→3 fails first
-    const weakChapter = progressWith([1, 2], 3);
-    expect(missionGate(3, missions, weakChapter).unlocked).toBe(false);
-
-    // Clear with 5★ (meets stage gate) but chapter exit needs 4★ each — 5>=4 so opens
-    const okChapter = progressWith([1, 2], 5);
-    expect(chapterProgress(CHAPTERS[0]!, missions, okChapter).gatedComplete).toBe(
-      true,
+    expect(firstArc).toMatchObject({
+      cleared: 3,
+      total: 3,
+      complete: true,
+      gatedComplete: true,
+      stars: 0,
+    });
+    expect(missionGate(4, missions, progress).unlocked).toBe(true);
+    expect(chapterForOrder(4)?.title).toBe(
+      'Different Paths: Fiber and Power',
     );
-    expect(missionGate(3, missions, okChapter).unlocked).toBe(true);
-    expect(chapterForOrder(3)?.title).toBe('Fault Finding');
   });
 
-  it('sandbox stays locked until stage 5 clears the star gate', () => {
-    const early = progressWith([1, 2, 3], 9);
-    expect(sandboxGate(missions, early).unlocked).toBe(false);
-
-    const ready = progressWith([1, 2, 3, 4, 5], 9);
-    expect(sandboxGate(missions, ready).unlocked).toBe(true);
+  it('unlocks Sandbox after campaign slot 3 is cleared regardless of stars', () => {
+    expect(GATE.sandboxAfterOrder).toBe(3);
+    expect(sandboxGate(missions, progressWith([1, 2], zeroStars))).toEqual({
+      unlocked: false,
+      reason: 'Complete Stage 3 to unlock Sandbox',
+    });
+    expect(
+      sandboxGate(missions, progressWith([1, 2, 3], zeroStars)).unlocked,
+    ).toBe(true);
   });
 });

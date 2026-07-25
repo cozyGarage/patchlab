@@ -720,8 +720,12 @@ p {
   width: 100%;
   height: auto;
   display: block;
-  touch-action: none;
+  touch-action: pan-y pinch-zoom;
   user-select: none;
+}
+
+.port-hit {
+  touch-action: none;
 }
 
 .device-label {

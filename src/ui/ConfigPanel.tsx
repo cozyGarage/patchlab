@@ -1,10 +1,20 @@
 import { useEffect, useState } from 'react';
-import type { Device, Port, PortMode, PortRef } from '../types/schema';
+import type {
+  Device,
+  MissionMode,
+  Port,
+  PortMode,
+  PortRef,
+  ToolId,
+} from '../types/schema';
 
 interface ConfigPanelProps {
   device: Device;
   consoleReady: boolean;
   powered: boolean;
+  sandbox?: boolean;
+  enabledTools?: readonly ToolId[];
+  missionMode?: MissionMode;
   onSetIp: (port: PortRef, address: string, prefix: number, gateway?: string) => void;
   onFirewallPermitLan: () => void;
   onFirewallPermitLanWan: () => void;
@@ -27,6 +37,8 @@ interface ConfigPanelProps {
   onSetVlan: (port: PortRef, vlanId: number) => void;
   onSetPortMode: (port: PortRef, mode: PortMode) => void;
   onPing: (fromId: string, toId: string) => void;
+  onPingIp: (fromId: string, targetIp: string) => void;
+  publicPingTarget?: string;
   onTraceroute: (fromId: string, toId: string) => void;
   pingTargets: { id: string; name: string }[];
 }
@@ -57,6 +69,9 @@ export function ConfigPanel({
   device,
   consoleReady,
   powered,
+  sandbox = false,
+  enabledTools,
+  missionMode,
   onSetIp,
   onFirewallPermitLan,
   onFirewallPermitLanWan,
@@ -71,6 +86,8 @@ export function ConfigPanel({
   onSetVlan,
   onSetPortMode,
   onPing,
+  onPingIp,
+  publicPingTarget,
   onTraceroute,
   pingTargets,
 }: ConfigPanelProps) {
@@ -84,6 +101,7 @@ export function ConfigPanel({
   const [pingTo, setPingTo] = useState(
     defaultPingTarget(device.id, pingTargets),
   );
+  const [targetIp, setTargetIp] = useState(publicPingTarget ?? '');
   const [swPortId, setSwPortId] = useState(switchPorts[0]?.id ?? '');
   const swPort = switchPorts.find((p) => p.id === swPortId) ?? switchPorts[0];
   const [vlan, setVlan] = useState(String(swPort?.vlanId ?? 10));
@@ -97,6 +115,10 @@ export function ConfigPanel({
   const [aclAction, setAclAction] = useState<'permit' | 'deny'>('deny');
   const [aclSrc, setAclSrc] = useState('10.10.10.20/32');
   const [aclDst, setAclDst] = useState('198.51.100.0/24');
+  const toolEnabled = (tool: ToolId) =>
+    sandbox || enabledTools === undefined || enabledTools.includes(tool);
+  const showCannedAclActions =
+    sandbox || (missionMode !== 'challenge' && missionMode !== 'boss');
 
   // Resync form fields when the focused device changes so edits never
   // apply stale IP/gateway/ping values from the previous device.
@@ -165,7 +187,7 @@ export function ConfigPanel({
         </p>
       ) : null}
 
-      {ipPorts.length > 0 ? (
+      {toolEnabled('ip') && ipPorts.length > 0 ? (
         <div className="config-block">
           <h4>IPv4 / subnet</h4>
           <label>
@@ -225,7 +247,9 @@ export function ConfigPanel({
         </div>
       ) : null}
 
-      {device.role === 'switch' && switchPorts.length > 0 ? (
+      {toolEnabled('switchport') &&
+      device.role === 'switch' &&
+      switchPorts.length > 0 ? (
         <div className="config-block">
           <h4>Switchport</h4>
           <label>
@@ -296,7 +320,7 @@ export function ConfigPanel({
         </div>
       ) : null}
 
-      {device.role === 'firewall' ? (
+      {toolEnabled('acl') && device.role === 'firewall' ? (
         <div className="config-block">
           <h4>Firewall policy</h4>
           <ul className="rule-list">
@@ -311,48 +335,52 @@ export function ConfigPanel({
               ))
             )}
           </ul>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={onFirewallPermitLan}
-          >
-            Insert permit 10.10.10.0/24 → 10.10.10.0/24
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={onFirewallPermitLanWan}
-          >
-            Insert permit LAN → WAN
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={onFirewallPermitWanLan}
-          >
-            Insert permit WAN → LAN
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={onFirewallDenyHost}
-          >
-            Insert deny host 10.10.10.20 → WAN
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={onFirewallDenyHostBranch}
-          >
-            Insert deny host 10.10.10.20 → BRANCH
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={onFirewallPermitBranch}
-          >
-            Insert permit LAN → BRANCH
-          </button>
+          {showCannedAclActions ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={onFirewallPermitLan}
+              >
+                Insert permit 10.10.10.0/24 → 10.10.10.0/24
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={onFirewallPermitLanWan}
+              >
+                Insert permit LAN → WAN
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={onFirewallPermitWanLan}
+              >
+                Insert permit WAN → LAN
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={onFirewallDenyHost}
+              >
+                Insert deny host 10.10.10.20 → WAN
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={onFirewallDenyHostBranch}
+              >
+                Insert deny host 10.10.10.20 → BRANCH
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={onFirewallPermitBranch}
+              >
+                Insert permit LAN → BRANCH
+              </button>
+            </>
+          ) : null}
           <div className="acl-custom">
             <label>
               Action
@@ -393,7 +421,7 @@ export function ConfigPanel({
         </div>
       ) : null}
 
-      {device.role === 'firewall' ? (
+      {toolEnabled('route') && device.role === 'firewall' ? (
         <div className="config-block">
           <h4>Routes</h4>
           <ul className="rule-list">
@@ -449,9 +477,16 @@ export function ConfigPanel({
         </div>
       ) : null}
 
-      {device.role === 'firewall' ? (
+      {(toolEnabled('nat') || toolEnabled('pat')) &&
+      device.role === 'firewall' ? (
         <div className="config-block">
-          <h4>NAT / PAT</h4>
+          <h4>
+            {toolEnabled('nat') && toolEnabled('pat')
+              ? 'NAT / PAT'
+              : toolEnabled('nat')
+                ? 'NAT'
+                : 'PAT'}
+          </h4>
           <ul className="rule-list">
             {(device.natRules ?? []).length === 0 ? (
               <li className="muted">No NAT mappings</li>
@@ -468,86 +503,126 @@ export function ConfigPanel({
               ))
             )}
           </ul>
-          <label>
-            Inside IP (static)
-            <input
-              value={natInside}
-              onChange={(e) => setNatInside(e.target.value)}
-              placeholder="10.10.10.10"
-            />
-          </label>
-          <label>
-            Outside IP (static)
-            <input
-              value={natOutside}
-              onChange={(e) => setNatOutside(e.target.value)}
-              placeholder="203.0.113.10"
-            />
-          </label>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => onSetNat(natInside.trim(), natOutside.trim())}
-          >
-            Apply static NAT
-          </button>
-          <label>
-            Inside CIDR (PAT)
-            <input
-              value={patInside}
-              onChange={(e) => setPatInside(e.target.value)}
-              placeholder="10.10.10.0/24"
-            />
-          </label>
-          <label>
-            Outside IP (PAT)
-            <input
-              value={patOutside}
-              onChange={(e) => setPatOutside(e.target.value)}
-              placeholder="203.0.113.1"
-            />
-          </label>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => onSetPat(patInside.trim(), patOutside.trim())}
-          >
-            Apply PAT overload
-          </button>
+          {toolEnabled('nat') ? (
+            <>
+              <label>
+                Inside IP (static)
+                <input
+                  value={natInside}
+                  onChange={(e) => setNatInside(e.target.value)}
+                  placeholder="10.10.10.10"
+                />
+              </label>
+              <label>
+                Outside IP (static)
+                <input
+                  value={natOutside}
+                  onChange={(e) => setNatOutside(e.target.value)}
+                  placeholder="203.0.113.10"
+                />
+              </label>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => onSetNat(natInside.trim(), natOutside.trim())}
+              >
+                Apply static NAT
+              </button>
+            </>
+          ) : null}
+          {toolEnabled('pat') ? (
+            <>
+              <label>
+                Inside CIDR (PAT)
+                <input
+                  value={patInside}
+                  onChange={(e) => setPatInside(e.target.value)}
+                  placeholder="10.10.10.0/24"
+                />
+              </label>
+              <label>
+                Outside IP (PAT)
+                <input
+                  value={patOutside}
+                  onChange={(e) => setPatOutside(e.target.value)}
+                  placeholder="203.0.113.1"
+                />
+              </label>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => onSetPat(patInside.trim(), patOutside.trim())}
+              >
+                Apply PAT overload
+              </button>
+            </>
+          ) : null}
         </div>
       ) : null}
 
-      <div className="config-block">
-        <h4>Ping / Traceroute</h4>
-        <label>
-          Target
-          <select value={pingTo} onChange={(e) => setPingTo(e.target.value)}>
-            {pingTargets
-              .filter((t) => t.id !== device.id)
-              .map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          disabled={!pingTo}
-          onClick={() => onPing(device.id, pingTo)}
-        >
-          Ping from {device.name}
-        </button>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          disabled={!pingTo}
-          onClick={() => onTraceroute(device.id, pingTo)}
-        >
-          Traceroute from {device.name}
-        </button>
-      </div>
+      {toolEnabled('ping') || toolEnabled('traceroute') ? (
+        <div className="config-block">
+          <h4>
+            {toolEnabled('ping') && toolEnabled('traceroute')
+              ? 'Ping / Traceroute'
+              : toolEnabled('ping')
+                ? 'Ping'
+                : 'Traceroute'}
+          </h4>
+          <label>
+            Target
+            <select value={pingTo} onChange={(e) => setPingTo(e.target.value)}>
+              {pingTargets
+                .filter((t) => t.id !== device.id)
+                .map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+          {toolEnabled('ping') && publicPingTarget ? (
+            <>
+              <label>
+                Public IP target
+                <input
+                  value={targetIp}
+                  onChange={(event) => setTargetIp(event.target.value)}
+                  placeholder={publicPingTarget}
+                />
+              </label>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={!targetIp.trim()}
+                onClick={() => onPingIp(device.id, targetIp.trim())}
+              >
+                Ping public IP from {device.name}
+              </button>
+            </>
+          ) : null}
+          {toolEnabled('ping') ? (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={!pingTo}
+              onClick={() => onPing(device.id, pingTo)}
+            >
+              Ping from {device.name}
+            </button>
+          ) : null}
+          {toolEnabled('traceroute') ? (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={!pingTo}
+              onClick={() => onTraceroute(device.id, pingTo)}
+            >
+              Traceroute from {device.name}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </aside>
   );
 }

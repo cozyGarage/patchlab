@@ -1,4 +1,9 @@
 import type { Mission, RackState } from '../types/schema';
+import {
+  CAMPAIGN_MISSION_IDS,
+  isCampaignMissionId,
+  LEARNING_DESIGN_BY_ID,
+} from './learningDesign';
 import rackBase from './rackBase.json';
 import m1 from './m1-first-lights.json';
 import m2 from './m2-wrong-port.json';
@@ -35,10 +40,83 @@ import m32 from './m32-traceroute.json';
 
 export const baseRack = rackBase as unknown as RackState;
 
-function asMission(data: unknown): Mission {
+const missionData: unknown[] = [
+  m1,
+  m2,
+  m3,
+  m4,
+  m5,
+  m6,
+  m7,
+  m8,
+  m9,
+  m10,
+  m11,
+  m12,
+  m13,
+  m14,
+  m15,
+  m16,
+  m17,
+  m18,
+  m19,
+  m20,
+  m21,
+  m22,
+  m23,
+  m24,
+  m25,
+  m26,
+  m27,
+  m28,
+  m29,
+  m30,
+  m31,
+  m32,
+];
+
+function missionId(data: unknown): string {
+  const id = (data as { id?: unknown }).id;
+  if (typeof id !== 'string') throw new Error('Mission data is missing a string id');
+  return id;
+}
+
+function validateMissionCatalog(data: unknown[]): void {
+  const sourceIds = data.map(missionId);
+  const sourceIdSet = new Set(sourceIds);
+  const campaignIdSet = new Set<string>(CAMPAIGN_MISSION_IDS);
+  const learningIds = Object.keys(LEARNING_DESIGN_BY_ID);
+
+  if (sourceIdSet.size !== sourceIds.length) {
+    throw new Error('Mission catalog contains duplicate mission ids');
+  }
+  if (campaignIdSet.size !== CAMPAIGN_MISSION_IDS.length) {
+    throw new Error('Campaign order contains duplicate mission ids');
+  }
+  if (
+    sourceIdSet.size !== campaignIdSet.size ||
+    sourceIds.some((id) => !campaignIdSet.has(id)) ||
+    CAMPAIGN_MISSION_IDS.some((id) => !sourceIdSet.has(id))
+  ) {
+    throw new Error('Campaign order must contain every mission id exactly once');
+  }
+  if (
+    learningIds.length !== campaignIdSet.size ||
+    learningIds.some((id) => !campaignIdSet.has(id))
+  ) {
+    throw new Error('Learning design must contain exactly one entry per mission id');
+  }
+}
+
+function asMission(data: unknown, order: number): Mission {
   const m = data as Mission;
+  if (!isCampaignMissionId(m.id)) {
+    throw new Error(`Missing learning design for mission ${m.id}`);
+  }
   return {
     ...m,
+    order,
+    learning: LEARNING_DESIGN_BY_ID[m.id],
     inventory: {
       copper_cat6: m.inventory?.copper_cat6 ?? 0,
       fiber_om4: m.inventory?.fiber_om4 ?? 0,
@@ -48,40 +126,14 @@ function asMission(data: unknown): Mission {
   };
 }
 
-export const missions: Mission[] = [
-  asMission(m1),
-  asMission(m2),
-  asMission(m3),
-  asMission(m4),
-  asMission(m5),
-  asMission(m6),
-  asMission(m7),
-  asMission(m8),
-  asMission(m9),
-  asMission(m10),
-  asMission(m11),
-  asMission(m12),
-  asMission(m13),
-  asMission(m14),
-  asMission(m15),
-  asMission(m16),
-  asMission(m17),
-  asMission(m18),
-  asMission(m19),
-  asMission(m20),
-  asMission(m21),
-  asMission(m22),
-  asMission(m23),
-  asMission(m24),
-  asMission(m25),
-  asMission(m26),
-  asMission(m27),
-  asMission(m28),
-  asMission(m29),
-  asMission(m30),
-  asMission(m31),
-  asMission(m32),
-].sort((a, b) => a.order - b.order);
+validateMissionCatalog(missionData);
+const missionDataById = new Map(missionData.map((data) => [missionId(data), data]));
+
+export const missions: Mission[] = CAMPAIGN_MISSION_IDS.map((id, index) => {
+  const data = missionDataById.get(id);
+  if (!data) throw new Error(`Missing mission data for ${id}`);
+  return asMission(data, index + 1);
+});
 
 export function getMission(id: string): Mission | undefined {
   return missions.find((m) => m.id === id);

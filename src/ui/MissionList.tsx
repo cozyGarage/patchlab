@@ -1,6 +1,5 @@
 import type { Mission, ProgressSave, SettingsSave } from '../types/schema';
 import {
-  GATE,
   isMissionUnlocked,
   missionUnlockReason,
   starGlyph,
@@ -13,7 +12,6 @@ import {
   isChapterUnlocked,
   sandboxGate,
   stageLabel,
-  starTotal,
 } from '../lib/chapters';
 
 interface MissionListProps {
@@ -49,6 +47,24 @@ export function MissionList({
   const stage = stageLabel(missions, progress);
   const pct = Math.round((cleared / Math.max(1, missions.length)) * 100);
   const sandbox = sandboxGate(missions, progress);
+  const conceptEntries = Object.values(progress.conceptProgress ?? {});
+  const independentConcepts = conceptEntries.filter(
+    (concept) => concept.level === 'independent',
+  ).length;
+  const reviewConcept = Object.entries(progress.conceptProgress ?? {})
+    .filter(([, concept]) => concept.level !== 'independent')
+    .sort(
+      ([, a], [, b]) =>
+        Date.parse(a.lastPracticedAt) - Date.parse(b.lastPracticedAt),
+    )[0]?.[0];
+  const reviewMission = reviewConcept
+    ? missions.find(
+        (mission) =>
+          progress.clearedMissionIds.includes(mission.id) &&
+          (mission.learning.conceptsIntroduced.includes(reviewConcept) ||
+            mission.learning.conceptsPracticed.includes(reviewConcept)),
+      )
+    : undefined;
 
   return (
     <div className="screen-home">
@@ -59,17 +75,15 @@ export function MissionList({
         </div>
         <h1 className="brand">Rack. Power. VLAN. Route. Firewall.</h1>
         <p>
-          {CHAPTERS.length} chapters · {missions.length} stages. Clear a stage
-          with at least {GATE.minStarsToAdvance}★ to advance — chapter borders
-          need {GATE.minStarsPerMissionForChapter}★ on every stage in that
-          chapter.
+          {CHAPTERS.length} arcs · {missions.length} stages. Complete each
+          mission to unlock the next. Stars are optional achievements.
         </p>
       </header>
 
       <div className="stage-panel panel">
         <div className="stage-panel-top">
           <div>
-            <div className="stage-kicker">Campaign progress · hard gates</div>
+            <div className="stage-kicker">Campaign progress</div>
             <div className="stage-title">
               {cleared >= missions.length
                 ? 'All stages cleared'
@@ -79,7 +93,7 @@ export function MissionList({
               {cleared >= missions.length
                 ? 'Sandbox is open — experiment freely.'
                 : stage.chapter
-                  ? `Chapter ${stage.chapter.index}: ${stage.chapter.title} · ${stage.title}`
+                  ? `Arc ${stage.chapter.index}: ${stage.chapter.title} · ${stage.title}`
                   : stage.title}
             </p>
           </div>
@@ -88,10 +102,12 @@ export function MissionList({
               Cleared <strong>{cleared}</strong>/{missions.length}
             </span>
             <span>
-              Stars <strong className="stars">{totalStars(progress)}</strong>
+              Optional stars{' '}
+              <strong className="stars">{totalStars(progress)}</strong>
             </span>
-            <span className="gate-hint">
-              Gate {GATE.minStarsToAdvance}★ / stage
+            <span>
+              Independent skills <strong>{independentConcepts}</strong>/
+              {conceptEntries.length}
             </span>
           </div>
         </div>
@@ -116,19 +132,14 @@ export function MissionList({
                 key={ch.id}
                 className={[
                   'chapter-chip',
-                  prog.gatedComplete ? 'complete' : '',
-                  prog.complete && !prog.gatedComplete ? 'soft-clear' : '',
+                  prog.complete ? 'complete' : '',
                   active ? 'active' : '',
                   !unlocked ? 'locked' : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
                 title={
-                  prog.gatedComplete
-                    ? `${ch.blurb} · Chapter gate passed`
-                    : prog.complete
-                      ? `${ch.blurb} · Need ≥${GATE.minStarsPerMissionForChapter}★ on each stage`
-                      : ch.blurb
+                  prog.complete ? `${ch.blurb} · Arc complete` : ch.blurb
                 }
               >
                 <span className="chapter-chip-num">{ch.index}</span>
@@ -143,6 +154,16 @@ export function MissionList({
       </div>
 
       <div className="home-toolbar">
+        {reviewMission && reviewConcept ? (
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => onSelect(reviewMission)}
+            title={`Review: ${reviewConcept}`}
+          >
+            Practice weak skill
+          </button>
+        ) : null}
         <button type="button" className="btn btn-ghost" onClick={onOpenGlossary}>
           Glossary
         </button>
@@ -218,21 +239,18 @@ export function MissionList({
               <header className="chapter-head">
                 <div>
                   <div className="chapter-kicker">
-                    Chapter {chapter.index}
-                    {prog.gatedComplete
-                      ? ' · Gate passed'
-                      : prog.complete
-                        ? ' · Cleared — boost stars to open next chapter'
-                        : unlocked
-                          ? ''
-                          : ' · Locked'}
+                    Arc {chapter.index}
+                    {prog.complete
+                      ? ' · Complete'
+                      : unlocked
+                        ? ''
+                        : ' · Complete the previous mission to unlock'}
                   </div>
                   <h2>{chapter.title}</h2>
                   <p>
                     {chapter.blurb}{' '}
                     <span className="gate-hint">
-                      ({prog.stars}/{prog.maxStars}★ · need ≥
-                      {GATE.minStarsPerMissionForChapter}★ each to exit)
+                      ({prog.stars}/{prog.maxStars} optional ★)
                     </span>
                   </p>
                 </div>
@@ -258,17 +276,12 @@ export function MissionList({
                 );
                 const track = mission.track ?? 'copper';
                 const ch = chapterForMission(mission);
-                const earned = starTotal(progress.stars[mission.id]);
                 return (
                   <button
                     key={mission.id}
                     type="button"
                     className={`mission-card ${clearedMission ? 'cleared' : ''} ${
                       !missionUnlocked ? 'locked' : ''
-                    } ${
-                      clearedMission && earned < GATE.minStarsToAdvance
-                        ? 'needs-stars'
-                        : ''
                     }`}
                     disabled={!missionUnlocked}
                     onClick={() => onSelect(mission)}
@@ -279,17 +292,16 @@ export function MissionList({
                         {mission.title}{' '}
                         <span className={`track-pill track-${track}`}>
                           {track}
+                        </span>{' '}
+                        <span className="track-pill">
+                          {mission.learning.mode} · {'◆'.repeat(mission.learning.difficulty)}
                         </span>
                       </h3>
                       <p>
                         {missionUnlocked
-                          ? clearedMission && earned < GATE.minStarsToAdvance
-                            ? `Cleared with ${earned}★ — earn ${GATE.minStarsToAdvance}★ to unlock Stage ${
-                                mission.order + 1
-                              }. Retry for a cleaner run.`
-                            : mission.brief
+                          ? mission.brief
                           : lockReason ??
-                            `Locked · ${ch ? `Chapter ${ch.index}` : 'Campaign'}`}
+                            `Complete the previous ${ch ? `Arc ${ch.index}` : 'campaign'} mission to unlock`}
                       </p>
                     </div>
                     <div className="stars" aria-label="stars">
@@ -315,8 +327,7 @@ export function MissionList({
       >
         {sandbox.unlocked
           ? 'Open Sandbox'
-          : sandbox.reason ??
-            `Sandbox unlocks after Stage ${GATE.sandboxAfterOrder}`}
+          : sandbox.reason ?? 'Complete Stage 3 to unlock Sandbox'}
       </button>
     </div>
   );

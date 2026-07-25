@@ -19,6 +19,7 @@ import {
   buildLinkTable,
   evaluateGoals,
   evaluatePing,
+  evaluatePingToPublicIp,
   evaluateTraceroute,
   findPath,
   getPort,
@@ -74,10 +75,17 @@ function snapshotOf(
   lastTip?: Tip,
   hintGhost: SimSnapshot['hintGhost'] = null,
   lastPing?: SimSnapshot['lastPing'],
+  lastTrace?: SimSnapshot['lastTrace'],
 ): SimSnapshot {
   const { linkTable, tips, powered } = buildLinkTable(rack);
   const consoleAttached = buildConsoleMap(rack);
-  const goalsMet = evaluateGoals(rack, mission.goals, linkTable);
+  const goalsMet = evaluateGoals(
+    rack,
+    mission.goals,
+    linkTable,
+    lastPing,
+    lastTrace,
+  );
   const paths = mission.goals
     .filter((g): g is Extract<typeof g, { type: 'path_up' }> => g.type === 'path_up')
     .map((g) => findPath(rack, g.from, g.to))
@@ -107,6 +115,7 @@ function snapshotOf(
     hintGhost,
     glowingPortIds: glowingPortsFromGoals(rack, mission.goals, goalsMet),
     lastPing,
+    lastTrace,
   };
 }
 
@@ -116,8 +125,10 @@ export interface EngineState {
   snapshot: SimSnapshot;
   wrongAttempts: number;
   hintsUsed: number;
+  hintLevel: 0 | 1 | 2 | 3 | 4;
   connectCount: number;
   startedAtMs: number;
+  loadRevision: number;
 }
 
 export function createEngineState(
@@ -137,8 +148,10 @@ export function createEngineState(
     snapshot: snapshotOf(rack, mission, inventory),
     wrongAttempts: 0,
     hintsUsed: 0,
+    hintLevel: 0,
     connectCount: 0,
     startedAtMs: Date.now(),
+    loadRevision: 0,
   };
 }
 
@@ -400,18 +413,31 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
     }
 
     case 'REQUEST_HINT': {
+      const nextLevel = Math.min(4, state.hintLevel + 1) as 1 | 2 | 3 | 4;
+      const authored = mission.learning.hints;
+      const messages = [
+        authored.prompt,
+        authored.evidence,
+        authored.action,
+        authored.solution,
+      ];
       const unmet = mission.goals.findIndex(
         (_, i) => !state.snapshot.goalsMet[i],
       );
-      const goal = mission.goals[unmet];
-      const hint = hintForGoal(goal);
+      const fallback = hintForGoal(mission.goals[unmet]);
+      const showSolution = nextLevel === 4;
       return {
         ...state,
         hintsUsed: state.hintsUsed + 1,
+        hintLevel: nextLevel,
         snapshot: {
           ...state.snapshot,
-          hintGhost: hint.ghost ?? null,
-          lastTip: { level: 'info', code: 'HINT', message: hint.message },
+          hintGhost: showSolution ? (fallback.ghost ?? null) : null,
+          lastTip: {
+            level: 'info',
+            code: 'HINT',
+            message: messages[nextLevel - 1] ?? fallback.message,
+          },
         },
       };
     }
@@ -562,7 +588,39 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
             message: result.detail,
           },
           null,
-          result,
+          {
+            ...result,
+            fromDeviceId: intent.fromDeviceId,
+            toDeviceId: intent.toDeviceId,
+          },
+        ),
+      };
+    }
+
+    case 'PING_IP': {
+      const result = evaluatePingToPublicIp(
+        state.snapshot.rack,
+        intent.fromDeviceId,
+        intent.targetIp,
+      );
+      return {
+        ...state,
+        wrongAttempts: result.ok ? state.wrongAttempts : state.wrongAttempts + 1,
+        snapshot: snapshotOf(
+          state.snapshot.rack,
+          mission,
+          state.snapshot.inventory,
+          {
+            level: result.ok ? 'success' : 'warn',
+            code: result.ok ? 'PING_OK' : 'PING_FAIL',
+            message: result.detail,
+          },
+          null,
+          {
+            ...result,
+            fromDeviceId: intent.fromDeviceId,
+            targetIp: intent.targetIp,
+          },
         ),
       };
     }
@@ -570,7 +628,24 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
     case 'SET_VLAN': {
       const rack = cloneRack(state.snapshot.rack);
       const port = getPort(rack, intent.port);
-      if (!port) return state;
+      const validVlan =
+        Number.isInteger(intent.vlanId) &&
+        intent.vlanId >= 1 &&
+        intent.vlanId <= 4094;
+      if (!port || !validVlan || (port.role !== 'nic' && port.role !== 'network')) {
+        return {
+          ...state,
+          wrongAttempts: state.wrongAttempts + 1,
+          snapshot: {
+            ...state.snapshot,
+            lastTip: {
+              level: 'error',
+              code: 'PORT_UPDATED',
+              message: 'Invalid access VLAN — use an integer from 1 to 4094 on a data port',
+            },
+          },
+        };
+      }
       if (port.role === 'nic') port.accessVlan = intent.vlanId;
       else port.vlanId = intent.vlanId;
       return {
@@ -594,6 +669,8 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
       const port = getPort(rack, intent.port);
       if (!port || port.role !== 'network') return state;
       port.mode = intent.mode;
+      port.allowedVlans =
+        intent.mode === 'trunk' ? (port.allowedVlans ?? [10, 20, 30]) : undefined;
       return {
         ...state,
         snapshot: snapshotOf(
@@ -614,6 +691,20 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
       const rack = cloneRack(state.snapshot.rack);
       const fw = rack.devices.find((d) => d.id === intent.deviceId);
       if (!fw || fw.role !== 'firewall') return state;
+      if (!parseIpv4(intent.insideIp) || !parseIpv4(intent.outsideIp)) {
+        return {
+          ...state,
+          wrongAttempts: state.wrongAttempts + 1,
+          snapshot: {
+            ...state.snapshot,
+            lastTip: {
+              level: 'error',
+              code: 'NAT_UPDATED',
+              message: 'Invalid static NAT — use valid inside and outside IPv4 addresses',
+            },
+          },
+        };
+      }
       const rule = {
         id: `nat-${intent.insideIp}-${intent.outsideIp}`,
         mode: 'static' as const,
@@ -692,7 +783,14 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
       if (!dev || (dev.role !== 'firewall' && dev.role !== 'switch')) {
         return state;
       }
-      if (!parseCidr(intent.destCidr) || !parseIpv4(intent.nextHop)) {
+      const ad = intent.adminDistance ?? 1;
+      if (
+        !parseCidr(intent.destCidr) ||
+        !parseIpv4(intent.nextHop) ||
+        !Number.isInteger(ad) ||
+        ad < 1 ||
+        ad > 255
+      ) {
         return {
           ...state,
           wrongAttempts: state.wrongAttempts + 1,
@@ -701,12 +799,11 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
             lastTip: {
               level: 'error',
               code: 'ROUTE_UPDATED',
-              message: 'Invalid route — use CIDR (e.g. 198.51.100.0/24) and next-hop IP',
+              message: 'Invalid route — use a CIDR, next-hop IP, and integer AD from 1 to 255',
             },
           },
         };
       }
-      const ad = intent.adminDistance ?? 1;
       const rule = {
         id: `rt-${intent.destCidr}-${intent.nextHop}-ad${ad}`,
         destCidr: intent.destCidr,
@@ -760,8 +857,13 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
               message: result.detail,
             },
             null,
+            undefined,
+            {
+              ...result,
+              fromDeviceId: intent.fromDeviceId,
+              toDeviceId: intent.toDeviceId,
+            },
           ),
-          lastTrace: result,
         },
       };
     }
@@ -771,6 +873,7 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
         intent.inventory ?? state.snapshot.inventory;
       return {
         ...state,
+        loadRevision: state.loadRevision + 1,
         snapshot: snapshotOf(
           cloneRack(intent.rack),
           mission,

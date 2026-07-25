@@ -16,7 +16,7 @@ import type {
 import { portKey, samePort } from '../types/schema';
 import type { EngineState } from '../engine/reducer';
 import { TipBar } from './TipBar';
-import { goalText } from './MissionBrief';
+
 import { ConfigPanel } from './ConfigPanel';
 import {
   DRAG_THRESHOLD,
@@ -67,12 +67,13 @@ interface RackViewProps {
   onSetVlan: (port: PortRef, vlanId: number) => void;
   onSetPortMode: (port: PortRef, mode: PortMode) => void;
   onPing: (fromId: string, toId: string) => void;
+  onPingIp: (fromId: string, targetIp: string) => void;
   onTraceroute: (fromId: string, toId: string) => void;
+  onComplete?: () => void;
   onSandboxSave?: () => void;
   onSandboxLoad?: () => void;
   onSandboxPreset?: (presetId: string) => void;
   sandboxPresets?: { id: string; title: string }[];
-  elapsedSec: number;
   soundEnabled?: boolean;
 }
 
@@ -149,6 +150,22 @@ function curvePath(x1: number, y1: number, x2: number, y2: number): string {
   return `M ${x1} ${y1} C ${x1} ${c1y}, ${x2} ${c2y}, ${x2} ${y2}`;
 }
 
+function ElapsedTimer({ startedAtMs }: { startedAtMs: number }) {
+  const [elapsedSec, setElapsedSec] = useState(() =>
+    Math.floor((Date.now() - startedAtMs) / 1000),
+  );
+
+  useEffect(() => {
+    const update = () =>
+      setElapsedSec(Math.floor((Date.now() - startedAtMs) / 1000));
+    update();
+    const id = window.setInterval(update, 1000);
+    return () => window.clearInterval(id);
+  }, [startedAtMs]);
+
+  return <span>{elapsedSec}s</span>;
+}
+
 function ledClass(
   status: LinkStatus | undefined,
   admin: Port['admin'],
@@ -188,12 +205,13 @@ export function RackView({
   onSetVlan,
   onSetPortMode,
   onPing,
+  onPingIp,
   onTraceroute,
+  onComplete,
   onSandboxSave,
   onSandboxLoad,
   onSandboxPreset,
   sandboxPresets,
-  elapsedSec,
   soundEnabled = true,
 }: RackViewProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -366,6 +384,15 @@ export function RackView({
     return true;
   }
 
+  function cancelDrag() {
+    dragRef.current = null;
+    setDragFrom(null);
+    setDragMoved(false);
+    setSnapTarget(null);
+    lastSnapKey.current = null;
+    setPointer(null);
+  }
+
   function onPortPointerDown(e: ReactPointerEvent, ref: PortRef) {
     e.preventDefault();
     e.stopPropagation();
@@ -452,12 +479,7 @@ export function RackView({
       }
     }
 
-    dragRef.current = null;
-    setDragFrom(null);
-    setDragMoved(false);
-    setSnapTarget(null);
-    lastSnapKey.current = null;
-    setPointer(null);
+    cancelDrag();
   }
 
   function onSvgPointerLeave() {
@@ -490,10 +512,7 @@ export function RackView({
       selectedPort.kind === 'lan' ||
       selectedPort.kind === 'wan');
 
-  const showHint =
-    !sandbox &&
-    state.wrongAttempts >= state.mission.hintAfterWrongAttempts &&
-    !state.snapshot.complete;
+  const showHint = !sandbox && !state.snapshot.complete;
 
   const aimFrom = dragFrom ?? selected;
   const fromLayout = aimFrom ? byKey.get(portKey(aimFrom)) : null;
@@ -522,6 +541,12 @@ export function RackView({
     state.snapshot.rack.devices.find((d) => d.id === focusDeviceId) ??
     state.snapshot.rack.devices[0]!;
 
+  const learning = sandbox ? undefined : state.mission.learning;
+  const showCampaignTimer =
+    learning === undefined ||
+    learning.mode === 'challenge' ||
+    learning.mode === 'boss';
+
   const pingTargets = state.snapshot.rack.devices
     .filter(
       (d) =>
@@ -539,7 +564,11 @@ export function RackView({
         </button>
         <h2>{sandbox ? 'Sandbox' : state.mission.title}</h2>
         <div className="rack-stats">
-          {!sandbox ? <span>{elapsedSec}s</span> : <span>Live rack</span>}
+          {sandbox ? (
+            <span>Live rack</span>
+          ) : showCampaignTimer ? (
+            <ElapsedTimer startedAtMs={state.startedAtMs} />
+          ) : null}
           {sandbox && onSandboxSave ? (
             <button type="button" className="btn btn-ghost" onClick={onSandboxSave}>
               Save rack
@@ -548,6 +577,15 @@ export function RackView({
           {sandbox && onSandboxLoad ? (
             <button type="button" className="btn btn-ghost" onClick={onSandboxLoad}>
               Load save
+            </button>
+          ) : null}
+          {state.snapshot.complete && !sandbox && onComplete ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={onComplete}
+            >
+              Review result
             </button>
           ) : null}
           <button type="button" className="btn btn-ghost" onClick={onReset}>
@@ -578,10 +616,12 @@ export function RackView({
               ref={svgRef}
               className={`rack-svg${aimFrom ? ' aiming' : ''}${dragMoved ? ' dragging' : ''}`}
               viewBox={`0 0 ${width} ${height}`}
-              role="img"
-              aria-label="Datacenter rack patching canvas"
+              role="group"
+              aria-label="Interactive datacenter rack patching canvas"
               onPointerMove={onSvgPointerMove}
               onPointerUp={onSvgPointerUp}
+              onPointerCancel={cancelDrag}
+              onLostPointerCapture={cancelDrag}
               onPointerLeave={onSvgPointerLeave}
             >
               <defs>
@@ -633,7 +673,17 @@ export function RackView({
                   <g
                     key={device.id}
                     className="device-chassis"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Configure ${device.name}, ${powered ? 'powered' : 'not powered'}`}
+                    aria-pressed={focused}
                     onClick={() => setFocusDeviceId(device.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setFocusDeviceId(device.id);
+                      }
+                    }}
                     style={{ cursor: 'pointer' }}
                   >
                     <rect
@@ -739,6 +789,8 @@ export function RackView({
                   isFiber ? 'fiber' : null,
                   isPower ? 'power' : null,
                   isConsole ? 'console' : null,
+                  `link ${status ?? 'down'}`,
+                  `admin ${p.port.admin}`,
                   busy ? 'patched' : 'open',
                 ]
                   .filter(Boolean)
@@ -854,9 +906,13 @@ export function RackView({
         </div>
 
         <ConfigPanel
+          key={`${state.startedAtMs}:${state.loadRevision}:${focusDevice.id}`}
           device={focusDevice}
           consoleReady={!!state.snapshot.consoleAttached[focusDevice.id]}
           powered={!!state.snapshot.poweredDevices[focusDevice.id]}
+          sandbox={sandbox}
+          enabledTools={learning?.enabledTools}
+          missionMode={learning?.mode}
           onSetIp={onSetIp}
           onFirewallPermitLan={onFirewallPermitLan}
           onFirewallPermitLanWan={onFirewallPermitLanWan}
@@ -871,6 +927,10 @@ export function RackView({
           onSetVlan={onSetVlan}
           onSetPortMode={onSetPortMode}
           onPing={onPing}
+          onPingIp={onPingIp}
+          publicPingTarget={state.mission.goals.find(
+            (goal) => goal.type === 'ping_public',
+          )?.publicIp}
           onTraceroute={onTraceroute}
           pingTargets={pingTargets}
         />
@@ -879,9 +939,18 @@ export function RackView({
       <TipBar
         tip={state.snapshot.lastTip}
         inventory={state.snapshot.inventory}
-        goalsMet={sandbox ? [] : state.snapshot.goalsMet}
-        goalLabels={sandbox ? [] : goalText(state.mission)}
+        goalsMet={
+          sandbox
+            ? []
+            : state.mission.learning.visibleObjectives.map(
+                () => state.snapshot.complete,
+              )
+        }
+        goalLabels={
+          sandbox ? [] : state.mission.learning.visibleObjectives
+        }
         showHint={showHint}
+        hintLevel={state.hintLevel}
         onHint={onHint}
         canUnplug={canUnplug}
         sandbox={sandbox}

@@ -22,12 +22,17 @@
     "cables": []
   },
   "goals": [
-    { "type": "console_attached", "deviceId": "tor-1" },
+    {
+      "type": "console_link",
+      "a": { "deviceId": "con-srv", "portId": "tty1" },
+      "b": { "deviceId": "tor-1", "portId": "sw-con" }
+    },
     {
       "type": "iface_ip",
       "port": { "deviceId": "tor-1", "portId": "sw-1" },
       "address": "10.10.10.2",
-      "prefix": 24
+      "prefix": 24,
+      "gateway": "10.10.10.1"
     }
   ]
 }

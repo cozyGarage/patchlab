@@ -10,135 +10,98 @@ export interface Chapter {
   to: number;
 }
 
-/** Harder campaign gates — clear alone is not enough. */
+/**
+ * Compatibility constants for callers that display historical star targets.
+ * Stars are optional achievement data and are not used to unlock content.
+ */
 export const GATE = {
-  /** Sum of correctness+speed+cleanliness (max 9) required on the previous stage. */
+  /** @deprecated Stars no longer control campaign progression. */
   minStarsToAdvance: 5,
-  /** Per-mission star floor required across a chapter before the next chapter opens. */
+  /** @deprecated Stars no longer control arc completion. */
   minStarsPerMissionForChapter: 4,
-  /** Sandbox opens only after this stage is cleared AND star-gated. */
-  sandboxAfterOrder: 5,
+  /** Sandbox opens when campaign slot 3 is cleared. */
+  sandboxAfterOrder: 3,
 } as const;
 
-/** More, tighter chapters — pass each to climb. */
+/** The ten operational arcs defined by the campaign design. */
 export const CHAPTERS: Chapter[] = [
   {
-    id: 'first-lights',
+    id: 'first-shift',
     index: 1,
-    title: 'First Lights',
-    blurb: 'Bring copper online and fix a wrong panel port.',
+    title: 'First Shift: Copper Fundamentals',
+    blurb: 'Bring copper online, correct a cross-connect, and plan a safe migration.',
     from: 1,
-    to: 2,
+    to: 3,
   },
   {
-    id: 'faults',
+    id: 'different-paths',
     index: 2,
-    title: 'Fault Finding',
-    blurb: 'VLAN traps, admin-down ports, and clean change windows.',
-    from: 3,
-    to: 5,
+    title: 'Different Paths: Fiber and Power',
+    blurb: 'Build compatible fiber, power, and data paths.',
+    from: 4,
+    to: 6,
   },
   {
-    id: 'fiber',
+    id: 'dark-ports',
     index: 3,
-    title: 'Fiber Lab',
-    blurb: 'OM4 first light and ripping out wrong media.',
-    from: 6,
-    to: 7,
-  },
-  {
-    id: 'rack-ops',
-    index: 4,
-    title: 'Rack Ops',
-    blurb: 'Dual servers and PDU power before the data path.',
-    from: 8,
+    title: 'Dark Ports: Administrative Recovery',
+    blurb: 'Diagnose and recover administratively disabled interfaces.',
+    from: 7,
     to: 9,
   },
   {
-    id: 'oob',
-    index: 5,
-    title: 'Out-of-Band',
-    blurb: 'Console in and set a management address.',
+    id: 'console-room',
+    index: 4,
+    title: 'Console Room: Addressing and Operations',
+    blurb: 'Use console access, IPv4 addressing, power recovery, and ping evidence.',
     from: 10,
-    to: 10,
-  },
-  {
-    id: 'l3-basics',
-    index: 6,
-    title: 'L3 Basics',
-    blurb: 'Same-subnet ping, then your first firewall permit.',
-    from: 11,
-    to: 12,
-  },
-  {
-    id: 'access-vlans',
-    index: 7,
-    title: 'Access VLANs',
-    blurb: 'Assign access VLANs and prove isolation.',
-    from: 13,
     to: 14,
   },
   {
-    id: 'uplinks',
-    index: 8,
-    title: 'Uplink Path',
-    blurb: 'Default gateway off-subnet, then trunk the uplink.',
+    id: 'policy-desk',
+    index: 5,
+    title: 'The Policy Desk: ACL Foundations',
+    blurb: 'Restore approved traffic and apply precise first-match policy.',
     from: 15,
     to: 16,
   },
   {
-    id: 'edge',
-    index: 9,
-    title: 'Edge Security',
-    blurb: 'Static NAT publish, then deny one host.',
+    id: 'tenant-floors',
+    index: 6,
+    title: 'Tenant Floors: VLANs',
+    blurb: 'Assign access VLANs, prove isolation, and deploy multiple tenants.',
     from: 17,
-    to: 18,
-  },
-  {
-    id: 'address-drills',
-    index: 10,
-    title: 'Address Drills',
-    blurb: 'Broken host IPs and mask traps — no lazy prefixes.',
-    from: 19,
     to: 20,
   },
   {
-    id: 'route-craft',
-    index: 11,
-    title: 'Route Craft',
-    blurb: 'Inter-VLAN routing and a static route to BRANCH.',
+    id: 'beyond-the-rack',
+    index: 7,
+    title: 'Beyond the Rack: Gateways and Uplinks',
+    blurb: 'Forward off-subnet traffic and carry VLANs across routed uplinks.',
     from: 21,
-    to: 22,
-  },
-  {
-    id: 'ops-recovery',
-    index: 12,
-    title: 'Ops Recovery',
-    blurb: 'No-shutdown a dark port, then fix a wrong gateway.',
-    from: 23,
     to: 24,
   },
   {
-    id: 'precision-path',
-    index: 13,
-    title: 'Precision Path',
-    blurb: 'Host-route longest match, then deny one host to BRANCH.',
+    id: 'publishing-services',
+    index: 8,
+    title: 'Publishing Services: NAT',
+    blurb: 'Publish inbound services and restore outbound translation.',
     from: 25,
     to: 26,
   },
   {
-    id: 'hardening-recovery',
-    index: 14,
-    title: 'Hardening & Recovery',
-    blurb: 'Host ACL exception, fiber no-shut, and spare PDU outlets.',
+    id: 'route-craft',
+    index: 9,
+    title: 'Route Craft: Choosing Paths',
+    blurb: 'Choose remote, longest-prefix, and backup paths.',
     from: 27,
     to: 29,
   },
   {
-    id: 'path-mastery',
-    index: 15,
-    title: 'Path Mastery',
-    blurb: 'Floating statics, PAT overload, and traceroute proof.',
+    id: 'incident-commander',
+    index: 10,
+    title: 'Incident Commander: Security Capstone',
+    blurb: 'Diagnose and recover a layered branch security incident.',
     from: 30,
     to: 32,
   },
@@ -149,8 +112,9 @@ export function starTotal(score?: Score): number {
   return score.correctness + score.speed + score.cleanliness;
 }
 
-export function meetsStageGate(score?: Score): boolean {
-  return starTotal(score) >= GATE.minStarsToAdvance;
+/** @deprecated A mission clear now always meets the progression requirement. */
+export function meetsStageGate(_score?: Score): boolean {
+  return true;
 }
 
 export function chapterForOrder(order: number): Chapter | undefined {
@@ -184,17 +148,13 @@ export function chapterProgress(
     0,
   );
   const maxStars = inChapter.length * 9;
-  const gatedComplete =
-    inChapter.length > 0 &&
-    inChapter.every(
-      (m) =>
-        progress.clearedMissionIds.includes(m.id) &&
-        starTotal(progress.stars[m.id]) >= GATE.minStarsPerMissionForChapter,
-    );
+  const complete = cleared >= inChapter.length && inChapter.length > 0;
+  // Compatibility alias: the former star-gated status now follows completion.
+  const gatedComplete = complete;
   return {
     cleared,
     total: inChapter.length,
-    complete: cleared >= inChapter.length && inChapter.length > 0,
+    complete,
     stars,
     maxStars,
     gatedComplete,
@@ -205,7 +165,7 @@ export type GateResult =
   | { unlocked: true; reason?: undefined }
   | { unlocked: false; reason: string };
 
-/** Hard gate: previous stage cleared + enough stars; chapter borders need chapter gate. */
+/** A campaign mission unlocks as soon as the previous mission is cleared. */
 export function missionGate(
   order: number,
   missions: Mission[],
@@ -219,28 +179,8 @@ export function missionGate(
   if (!progress.clearedMissionIds.includes(prev.id)) {
     return {
       unlocked: false,
-      reason: `Clear Stage ${prev.order} first`,
+      reason: `Complete Stage ${prev.order} to unlock this mission`,
     };
-  }
-
-  const prevStars = starTotal(progress.stars[prev.id]);
-  if (prevStars < GATE.minStarsToAdvance) {
-    return {
-      unlocked: false,
-      reason: `Earn ${GATE.minStarsToAdvance}★ on Stage ${prev.order} (you have ${prevStars}★) — retry for a cleaner run`,
-    };
-  }
-
-  const chapter = chapterForOrder(order);
-  const prevChapter = chapterForOrder(prev.order);
-  if (chapter && prevChapter && chapter.id !== prevChapter.id) {
-    const prog = chapterProgress(prevChapter, missions, progress);
-    if (!prog.gatedComplete) {
-      return {
-        unlocked: false,
-        reason: `Chapter ${prevChapter.index} gate: score ≥${GATE.minStarsPerMissionForChapter}★ on every stage in “${prevChapter.title}”`,
-      };
-    }
   }
 
   return { unlocked: true };
@@ -263,7 +203,7 @@ export function currentStage(
   for (const m of sorted) {
     if (progress.clearedMissionIds.includes(m.id)) continue;
     if (missionGate(m.order, missions, progress).unlocked) return m;
-    // Soft stuck: show the blocked stage as current focus
+    // Show the next sequential mission as the current focus.
     return m;
   }
   return null;
@@ -300,13 +240,7 @@ export function sandboxGate(
   if (!progress.clearedMissionIds.includes(req.id)) {
     return {
       unlocked: false,
-      reason: `Sandbox unlocks after Stage ${GATE.sandboxAfterOrder} with a solid score`,
-    };
-  }
-  if (!meetsStageGate(progress.stars[req.id])) {
-    return {
-      unlocked: false,
-      reason: `Sandbox needs ${GATE.minStarsToAdvance}★ on Stage ${GATE.sandboxAfterOrder}`,
+      reason: `Complete Stage ${GATE.sandboxAfterOrder} to unlock Sandbox`,
     };
   }
   return { unlocked: true };

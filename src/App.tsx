@@ -24,6 +24,7 @@ import {
 import { loadSettings, saveSettings } from './lib/settings';
 import { playTipSound } from './lib/sound';
 import {
+  SANDBOX_LEARNING,
   SANDBOX_PRESETS,
   loadSandboxSnapshot,
   saveSandboxSnapshot,
@@ -55,6 +56,7 @@ const sandboxMission: Mission = {
   initial: { devices: [], cables: [] },
   goals: [],
   track: 'mixed',
+  learning: SANDBOX_LEARNING,
 };
 
 export default function App() {
@@ -65,7 +67,6 @@ export default function App() {
   const [engine, setEngine] = useState<EngineState | null>(null);
   const [score, setScore] = useState<Score | null>(null);
   const [tipHistory, setTipHistory] = useState<string[]>([]);
-  const [elapsedSec, setElapsedSec] = useState(0);
   const [sandbox, setSandbox] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [coachStep, setCoachStep] = useState(0);
@@ -79,13 +80,7 @@ export default function App() {
   const lastTipCode = useRef<string | undefined>(undefined);
   const completedRunKey = useRef<string | null>(null);
 
-  useEffect(() => {
-    if (screen !== 'rack' || !engine || sandbox) return;
-    const id = window.setInterval(() => {
-      setElapsedSec(Math.floor((Date.now() - engine.startedAtMs) / 1000));
-    }, 500);
-    return () => window.clearInterval(id);
-  }, [screen, engine, sandbox]);
+
 
   useEffect(() => {
     if (!engine || sandbox || screen !== 'rack') return;
@@ -98,13 +93,12 @@ export default function App() {
     const result = scoreRun(engine);
     setScore(result);
     if (mission && mission.id !== 'sandbox') {
-      setProgress(recordMissionClear(mission.id, result));
+      setProgress(
+        recordMissionClear(mission.id, result, progress, engine.hintLevel),
+      );
     }
     playTipSound(settings.sound, 'success');
-    window.setTimeout(() => {
-      setScreen((current) => (current === 'rack' ? 'debrief' : current));
-    }, 450);
-  }, [engine, sandbox, screen, mission, settings.sound]);
+  }, [engine, sandbox, screen, mission, progress, settings.sound]);
 
   function trackTip(next: EngineState) {
     const tip = next.snapshot.lastTip;
@@ -145,7 +139,6 @@ export default function App() {
     setMission(m);
     setScore(null);
     setTipHistory([]);
-    setElapsedSec(0);
     setScreen('brief');
   }
 
@@ -156,7 +149,6 @@ export default function App() {
     setSandbox(isSandbox);
     setScore(null);
     setTipHistory([]);
-    setElapsedSec(0);
     setScreen('rack');
     lastTipCode.current = undefined;
     completedRunKey.current = null;
@@ -398,6 +390,17 @@ export default function App() {
     );
   }
 
+  function dispatchPingIp(fromId: string, targetIp: string) {
+    if (!engine) return;
+    apply(
+      reduce(engine, {
+        type: 'PING_IP',
+        fromDeviceId: fromId,
+        targetIp,
+      }),
+    );
+  }
+
   function dispatchTraceroute(fromId: string, toId: string) {
     if (!engine) return;
     apply(
@@ -579,7 +582,6 @@ export default function App() {
         <RackView
           state={engine}
           sandbox={sandbox}
-          elapsedSec={elapsedSec}
           onConnect={dispatchConnect}
           onDisconnectPort={dispatchDisconnect}
           onHint={dispatchHint}
@@ -600,7 +602,11 @@ export default function App() {
           onSetVlan={dispatchSetVlan}
           onSetPortMode={dispatchSetPortMode}
           onPing={dispatchPing}
+          onPingIp={dispatchPingIp}
           onTraceroute={dispatchTraceroute}
+          onComplete={
+            !sandbox && score ? () => setScreen('debrief') : undefined
+          }
           onSandboxSave={sandbox ? handleSandboxSave : undefined}
           onSandboxLoad={sandbox ? handleSandboxLoad : undefined}
           onSandboxPreset={sandbox ? handleSandboxPreset : undefined}
@@ -620,6 +626,7 @@ export default function App() {
           score={score}
           progress={progress}
           tipHistory={tipHistory}
+          hintLevel={engine?.hintLevel ?? 0}
           onHome={() => setScreen('home')}
           onRetry={() => startMission(mission, false)}
           onNext={
