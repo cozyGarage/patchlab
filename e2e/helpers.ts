@@ -117,15 +117,16 @@ export async function connectPorts(
   b: string | RegExp,
 ) {
   await tapPort(page, a);
-  await page.waitForTimeout(80);
+  await page.waitForTimeout(30);
   await tapPort(page, b);
-  await page.waitForTimeout(80);
+  await page.waitForTimeout(30);
 }
 
 export async function unplugPort(page: Page, name: string | RegExp) {
   await tapPort(page, name);
   await page.getByRole('button', { name: 'Unplug' }).click();
-  await page.waitForTimeout(80);
+  // Peer end stays armed — next tap onto a free port reseats the cord.
+  await page.waitForTimeout(30);
 }
 
 export async function startMission(page: Page, title: string | RegExp) {

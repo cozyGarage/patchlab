@@ -155,12 +155,84 @@ export function createEngineState(
   };
 }
 
+function portBusy(rack: RackState, ref: PortRef): boolean {
+  return rack.cables.some(
+    (c) => samePort(c.ends[0], ref) || samePort(c.ends[1], ref),
+  );
+}
+
 function portsFree(rack: RackState, a: PortRef, b: PortRef): boolean {
-  const busy = (ref: PortRef) =>
-    rack.cables.some(
-      (c) => samePort(c.ends[0], ref) || samePort(c.ends[1], ref),
-    );
-  return !busy(a) && !busy(b);
+  return !portBusy(rack, a) && !portBusy(rack, b);
+}
+
+/** Move one end of an existing cable onto a free port (inventory unchanged). */
+function moveCableEnd(
+  state: EngineState,
+  fromBusy: PortRef,
+  toFree: PortRef,
+): EngineState | null {
+  const { mission } = state;
+  if (portBusy(state.snapshot.rack, toFree)) return null;
+
+  const cable = state.snapshot.rack.cables.find(
+    (c) =>
+      samePort(c.ends[0], fromBusy) || samePort(c.ends[1], fromBusy),
+  );
+  if (!cable) return null;
+
+  const otherEnd = samePort(cable.ends[0], fromBusy)
+    ? cable.ends[1]
+    : cable.ends[0];
+  if (samePort(otherEnd, toFree)) return null;
+
+  const otherPort = getPort(state.snapshot.rack, otherEnd);
+  const freePort = getPort(state.snapshot.rack, toFree);
+  if (!otherPort || !freePort) return null;
+
+  const rack = cloneRack(state.snapshot.rack);
+  const live = rack.cables.find((c) => c.id === cable.id);
+  if (!live) return null;
+  live.ends = samePort(live.ends[0], fromBusy)
+    ? [toFree, live.ends[1]]
+    : [live.ends[0], toFree];
+  // Preserve cord media; mismatches surface via resolvePair tip.
+
+  const powered = state.snapshot.poweredDevices;
+  const pair = resolvePair(
+    otherPort,
+    freePort,
+    live.media,
+    powered[otherPort.deviceId] ?? true,
+    powered[freePort.deviceId] ?? true,
+  );
+  const tip = pair.tip
+    ? {
+        ...pair.tip,
+        message: pair.tip.message.startsWith('Moved')
+          ? pair.tip.message
+          : `Moved — ${pair.tip.message}`,
+      }
+    : {
+        level: 'success' as const,
+        code: 'CONNECTED' as const,
+        message: `Moved cord → ${freePort.label}`,
+      };
+
+  let wrongAttempts = state.wrongAttempts;
+  if (pair.status !== 'up' && live.media !== 'power_c13') wrongAttempts += 1;
+
+  return {
+    ...state,
+    wrongAttempts,
+    connectCount: state.connectCount + 1,
+    snapshot: snapshotOf(
+      rack,
+      mission,
+      state.snapshot.inventory,
+      tip,
+      null,
+    ),
+  };
 }
 
 function pickMedia(
@@ -261,6 +333,15 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
       }
 
       if (!portsFree(state.snapshot.rack, a, b)) {
+        const busyA = portBusy(state.snapshot.rack, a);
+        const busyB = portBusy(state.snapshot.rack, b);
+        // Game-feel: drag/tap from a plugged port onto a free port moves that end.
+        if (busyA !== busyB) {
+          const moved = busyA
+            ? moveCableEnd(state, a, b)
+            : moveCableEnd(state, b, a);
+          if (moved) return moved;
+        }
         return {
           ...state,
           wrongAttempts: state.wrongAttempts + 1,
@@ -270,7 +351,7 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
             lastTip: {
               level: 'error',
               code: 'PORT_BUSY',
-              message: 'Port busy — unplug first',
+              message: 'Port busy — drag the plugged end to a free port, or unplug',
             },
           },
         };

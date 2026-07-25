@@ -745,6 +745,11 @@ p {
   cursor: pointer;
 }
 
+.port-hit-pad {
+  fill: transparent;
+  pointer-events: all;
+}
+
 .port-hit:focus {
   outline: none;
 }
@@ -759,12 +764,46 @@ p {
   fill: #151b22;
   stroke: rgba(232, 238, 244, 0.25);
   stroke-width: 1.5;
+  transition:
+    stroke 90ms ease,
+    stroke-width 90ms ease,
+    filter 90ms ease,
+    fill 90ms ease;
 }
 
 .port-shell.selected {
   stroke: var(--cyan);
-  stroke-width: 2.5;
-  filter: drop-shadow(0 0 6px rgba(61, 220, 181, 0.45));
+  stroke-width: 2.8;
+  filter: drop-shadow(0 0 8px rgba(61, 220, 181, 0.55));
+  animation: port-arm 0.7s ease-in-out infinite;
+}
+
+.port-shell.snap-target {
+  stroke: #fbbf24;
+  stroke-width: 2.8;
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.55));
+}
+
+.port-shell.valid-target {
+  stroke: rgba(61, 220, 181, 0.55);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 5px rgba(61, 220, 181, 0.28));
+}
+
+.port-shell.flash {
+  animation: port-flash 280ms ease-out;
+}
+
+.rack-svg.aiming {
+  cursor: crosshair;
+}
+
+.rack-svg.dragging {
+  cursor: grabbing;
+}
+
+.rack-svg.dragging .cable-hit {
+  pointer-events: none;
 }
 
 .port-led {
@@ -787,26 +826,35 @@ p {
   fill: var(--amber);
 }
 
+.cable-hit {
+  cursor: pointer;
+}
+
+.cable-path-hit {
+  pointer-events: stroke;
+}
+
 .cable-path {
   fill: none;
   stroke-linecap: round;
   stroke-width: 4;
-  pointer-events: stroke;
-  cursor: pointer;
-  transition: opacity 120ms ease;
+  pointer-events: none;
+  transition: opacity 100ms ease, stroke-width 100ms ease;
 }
 
-.cable-path:hover {
-  opacity: 0.85;
+.cable-hit:hover .cable-path {
+  opacity: 0.9;
+  stroke-width: 5;
 }
 
 .cable-ghost {
   fill: none;
-  stroke: rgba(59, 130, 246, 0.55);
-  stroke-width: 3;
-  stroke-dasharray: 6 6;
+  stroke: rgba(59, 130, 246, 0.7);
+  stroke-width: 3.5;
+  stroke-dasharray: 5 5;
   stroke-linecap: round;
   pointer-events: none;
+  animation: dash 0.55s linear infinite;
 }
 
 .cable-hint {
@@ -826,6 +874,29 @@ p {
 @keyframes dash {
   to {
     stroke-dashoffset: -30;
+  }
+}
+
+@keyframes port-arm {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px rgba(61, 220, 181, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(61, 220, 181, 0.75));
+  }
+}
+
+@keyframes port-flash {
+  0% {
+    stroke: #f8fafc;
+    stroke-width: 3.2;
+    filter: drop-shadow(0 0 14px rgba(248, 250, 252, 0.8));
+  }
+  100% {
+    stroke: var(--cyan);
+    stroke-width: 2.5;
+    filter: drop-shadow(0 0 4px rgba(61, 220, 181, 0.35));
   }
 }
 
@@ -940,6 +1011,23 @@ p {
   border-radius: 14px;
   border: 1px solid var(--line);
   background: rgba(27, 33, 40, 0.95);
+}
+
+.tip-bar.armed {
+  border-color: rgba(61, 220, 181, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(61, 220, 181, 0.12);
+}
+
+.armed-chip {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(61, 220, 181, 0.45);
+  color: var(--cyan);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .tip-bar .row {
