@@ -61,7 +61,6 @@ interface RackViewProps {
   onSandboxLoad?: () => void;
   onSandboxPreset?: (presetId: string) => void;
   sandboxPresets?: { id: string; title: string }[];
-  elapsedSec: number;
 }
 
 interface LaidOutPort {
@@ -137,6 +136,22 @@ function curvePath(x1: number, y1: number, x2: number, y2: number): string {
   return `M ${x1} ${y1} C ${x1} ${c1y}, ${x2} ${c2y}, ${x2} ${y2}`;
 }
 
+function ElapsedTimer({ startedAtMs }: { startedAtMs: number }) {
+  const [elapsedSec, setElapsedSec] = useState(() =>
+    Math.floor((Date.now() - startedAtMs) / 1000),
+  );
+
+  useEffect(() => {
+    const update = () =>
+      setElapsedSec(Math.floor((Date.now() - startedAtMs) / 1000));
+    update();
+    const id = window.setInterval(update, 1000);
+    return () => window.clearInterval(id);
+  }, [startedAtMs]);
+
+  return <span>{elapsedSec}s</span>;
+}
+
 function ledClass(
   status: LinkStatus | undefined,
   admin: Port['admin'],
@@ -181,7 +196,6 @@ export function RackView({
   onSandboxLoad,
   onSandboxPreset,
   sandboxPresets,
-  elapsedSec,
 }: RackViewProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [selected, setSelected] = useState<PortRef | null>(null);
@@ -252,6 +266,13 @@ export function RackView({
     return ports.find((p) => Math.hypot(p.x - x, p.y - (y - 8)) < 24);
   }
 
+  function cancelDrag() {
+    dragRef.current = null;
+    setDragFrom(null);
+    setDragMoved(false);
+    setPointer(null);
+  }
+
   function onPortPointerDown(e: ReactPointerEvent, ref: PortRef) {
     e.preventDefault();
     e.stopPropagation();
@@ -302,10 +323,7 @@ export function RackView({
       }
     }
 
-    dragRef.current = null;
-    setDragFrom(null);
-    setDragMoved(false);
-    setPointer(null);
+    cancelDrag();
   }
 
   const canUnplug =
@@ -372,7 +390,11 @@ export function RackView({
         </button>
         <h2>{sandbox ? 'Sandbox' : state.mission.title}</h2>
         <div className="rack-stats">
-          {!sandbox ? <span>{elapsedSec}s</span> : <span>Live rack</span>}
+          {!sandbox ? (
+            <ElapsedTimer startedAtMs={state.startedAtMs} />
+          ) : (
+            <span>Live rack</span>
+          )}
           {sandbox && onSandboxSave ? (
             <button type="button" className="btn btn-ghost" onClick={onSandboxSave}>
               Save rack
@@ -411,10 +433,12 @@ export function RackView({
               ref={svgRef}
               className="rack-svg"
               viewBox={`0 0 ${width} ${height}`}
-              role="img"
-              aria-label="Datacenter rack patching canvas"
+              role="group"
+              aria-label="Interactive datacenter rack patching canvas"
               onPointerMove={onSvgPointerMove}
               onPointerUp={onSvgPointerUp}
+              onPointerCancel={cancelDrag}
+              onLostPointerCapture={cancelDrag}
             >
               <defs>
                 <linearGradient id="chassis" x1="0" y1="0" x2="0" y2="1">
@@ -465,7 +489,17 @@ export function RackView({
                   <g
                     key={device.id}
                     className="device-chassis"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Configure ${device.name}, ${powered ? 'powered' : 'not powered'}`}
+                    aria-pressed={focused}
                     onClick={() => setFocusDeviceId(device.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setFocusDeviceId(device.id);
+                      }
+                    }}
                     style={{ cursor: 'pointer' }}
                   >
                     <rect
@@ -554,6 +588,13 @@ export function RackView({
                   isFiber ? 'fiber' : null,
                   isPower ? 'power' : null,
                   isConsole ? 'console' : null,
+                  `link ${status ?? 'down'}`,
+                  `admin ${p.port.admin}`,
+                  state.snapshot.rack.cables.some(
+                    (c) => samePort(c.ends[0], p.ref) || samePort(c.ends[1], p.ref),
+                  )
+                    ? 'occupied'
+                    : 'free',
                 ]
                   .filter(Boolean)
                   .join(' ');
@@ -661,6 +702,7 @@ export function RackView({
         </div>
 
         <ConfigPanel
+          key={`${state.startedAtMs}:${state.loadRevision}:${focusDevice.id}`}
           device={focusDevice}
           consoleReady={!!state.snapshot.consoleAttached[focusDevice.id]}
           powered={!!state.snapshot.poweredDevices[focusDevice.id]}

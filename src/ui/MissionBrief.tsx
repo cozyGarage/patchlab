@@ -35,8 +35,12 @@ function goalText(mission: Mission): string[] {
         return `Power ${g.deviceId}`;
       case 'console_attached':
         return `Console into ${g.deviceId}`;
+      case 'console_link':
+        return `Console ${g.a.portId} ↔ ${g.b.portId}`;
       case 'iface_ip':
-        return `Set ${g.port.portId} = ${g.address}/${g.prefix}`;
+        return `Set ${g.port.portId} = ${g.address}/${g.prefix}${
+          g.gateway ? ` via ${g.gateway}` : ''
+        }`;
       case 'ping':
         return `Ping ${g.fromDeviceId} → ${g.toDeviceId}`;
       case 'ping_fail':

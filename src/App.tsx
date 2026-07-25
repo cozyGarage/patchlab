@@ -65,7 +65,6 @@ export default function App() {
   const [engine, setEngine] = useState<EngineState | null>(null);
   const [score, setScore] = useState<Score | null>(null);
   const [tipHistory, setTipHistory] = useState<string[]>([]);
-  const [elapsedSec, setElapsedSec] = useState(0);
   const [sandbox, setSandbox] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [coachStep, setCoachStep] = useState(0);
@@ -79,13 +78,7 @@ export default function App() {
   const lastTipCode = useRef<string | undefined>(undefined);
   const completedRunKey = useRef<string | null>(null);
 
-  useEffect(() => {
-    if (screen !== 'rack' || !engine || sandbox) return;
-    const id = window.setInterval(() => {
-      setElapsedSec(Math.floor((Date.now() - engine.startedAtMs) / 1000));
-    }, 500);
-    return () => window.clearInterval(id);
-  }, [screen, engine, sandbox]);
+
 
   useEffect(() => {
     if (!engine || sandbox || screen !== 'rack') return;
@@ -101,9 +94,11 @@ export default function App() {
       setProgress(recordMissionClear(mission.id, result));
     }
     playTipSound(settings.sound, 'success');
-    window.setTimeout(() => {
+    const timeoutId = window.setTimeout(() => {
+      if (completedRunKey.current !== runKey) return;
       setScreen((current) => (current === 'rack' ? 'debrief' : current));
     }, 450);
+    return () => window.clearTimeout(timeoutId);
   }, [engine, sandbox, screen, mission, settings.sound]);
 
   function trackTip(next: EngineState) {
@@ -145,7 +140,6 @@ export default function App() {
     setMission(m);
     setScore(null);
     setTipHistory([]);
-    setElapsedSec(0);
     setScreen('brief');
   }
 
@@ -156,7 +150,6 @@ export default function App() {
     setSandbox(isSandbox);
     setScore(null);
     setTipHistory([]);
-    setElapsedSec(0);
     setScreen('rack');
     lastTipCode.current = undefined;
     completedRunKey.current = null;
@@ -579,7 +572,6 @@ export default function App() {
         <RackView
           state={engine}
           sandbox={sandbox}
-          elapsedSec={elapsedSec}
           onConnect={dispatchConnect}
           onDisconnectPort={dispatchDisconnect}
           onHint={dispatchHint}

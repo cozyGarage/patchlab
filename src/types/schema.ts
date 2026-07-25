@@ -175,11 +175,13 @@ export type Goal =
   | { type: 'cable_media_between'; a: PortRef; b: PortRef; media: MediaType }
   | { type: 'device_powered'; deviceId: string }
   | { type: 'console_attached'; deviceId: string }
+  | { type: 'console_link'; a: PortRef; b: PortRef }
   | {
       type: 'iface_ip';
       port: PortRef;
       address: string;
       prefix: number;
+      gateway?: string;
     }
   | { type: 'ping'; fromDeviceId: string; toDeviceId: string }
   | { type: 'ping_fail'; fromDeviceId: string; toDeviceId: string }
@@ -278,7 +280,7 @@ export interface SimSnapshot {
   hintGhost?: HintGhost | null;
   glowingPortIds: string[];
   lastPing?: { ok: boolean; detail: string };
-  lastTrace?: TraceResult;
+  lastTrace?: TraceResult & { fromDeviceId: string; toDeviceId: string };
 }
 
 export type Intent =

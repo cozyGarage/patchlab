@@ -33,9 +33,9 @@ export function TipBar({
 }: TipBarProps) {
   const level = tip?.level ?? 'info';
   return (
-    <div className={`tip-bar ${level}`} role="status" aria-live="polite">
+    <div className={`tip-bar ${level}`}>
       <div className="row">
-        <div className="tip-msg">
+        <div className="tip-msg" role="status" aria-live="polite">
           {tip?.message ??
             'Plug data, power, or console — then configure IP / firewall as needed.'}
         </div>

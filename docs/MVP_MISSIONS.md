@@ -52,7 +52,7 @@
 **Objective:** SERVER-07 should be on VLAN 20. It is patched to a VLAN 10 port. Fix without moving the panel cross-connect.  
 **Teaches:** VLAN mismatch vs physical open.  
 **Par time:** 120s  
-**Unlocks:** Sandbox  
+**Unlocks:** No feature gate (Sandbox unlocks after Stage 5)
 
 **Setup**
 - `panel-2` ↔ `sw-3` pre-cabled (unrelated cross-connect)
@@ -254,7 +254,7 @@
 ## Sandbox
 
 - Full rack: panel, fiber, ToR, SFP, firewall, servers, console, PDU, ISP peer, BRANCH
-- Config panel: IP/gateway, switchport VLAN/mode, ping, firewall helpers, routes, static NAT
+- Config panel: IP/gateway, switchport VLAN/mode, ping/traceroute, firewall helpers, routes, static NAT, PAT
 - Select copper switch port → **Cycle VLAN** / **Toggle admin**
 - Inventory includes copper, fiber, power, console
 

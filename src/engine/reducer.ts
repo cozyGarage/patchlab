@@ -74,10 +74,11 @@ function snapshotOf(
   lastTip?: Tip,
   hintGhost: SimSnapshot['hintGhost'] = null,
   lastPing?: SimSnapshot['lastPing'],
+  lastTrace?: SimSnapshot['lastTrace'],
 ): SimSnapshot {
   const { linkTable, tips, powered } = buildLinkTable(rack);
   const consoleAttached = buildConsoleMap(rack);
-  const goalsMet = evaluateGoals(rack, mission.goals, linkTable);
+  const goalsMet = evaluateGoals(rack, mission.goals, linkTable, lastTrace);
   const paths = mission.goals
     .filter((g): g is Extract<typeof g, { type: 'path_up' }> => g.type === 'path_up')
     .map((g) => findPath(rack, g.from, g.to))
@@ -107,6 +108,7 @@ function snapshotOf(
     hintGhost,
     glowingPortIds: glowingPortsFromGoals(rack, mission.goals, goalsMet),
     lastPing,
+    lastTrace,
   };
 }
 
@@ -118,6 +120,7 @@ export interface EngineState {
   hintsUsed: number;
   connectCount: number;
   startedAtMs: number;
+  loadRevision: number;
 }
 
 export function createEngineState(
@@ -139,6 +142,7 @@ export function createEngineState(
     hintsUsed: 0,
     connectCount: 0,
     startedAtMs: Date.now(),
+    loadRevision: 0,
   };
 }
 
@@ -489,7 +493,24 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
     case 'SET_VLAN': {
       const rack = cloneRack(state.snapshot.rack);
       const port = getPort(rack, intent.port);
-      if (!port) return state;
+      const validVlan =
+        Number.isInteger(intent.vlanId) &&
+        intent.vlanId >= 1 &&
+        intent.vlanId <= 4094;
+      if (!port || !validVlan || (port.role !== 'nic' && port.role !== 'network')) {
+        return {
+          ...state,
+          wrongAttempts: state.wrongAttempts + 1,
+          snapshot: {
+            ...state.snapshot,
+            lastTip: {
+              level: 'error',
+              code: 'PORT_UPDATED',
+              message: 'Invalid access VLAN — use an integer from 1 to 4094 on a data port',
+            },
+          },
+        };
+      }
       if (port.role === 'nic') port.accessVlan = intent.vlanId;
       else port.vlanId = intent.vlanId;
       return {
@@ -533,6 +554,20 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
       const rack = cloneRack(state.snapshot.rack);
       const fw = rack.devices.find((d) => d.id === intent.deviceId);
       if (!fw || fw.role !== 'firewall') return state;
+      if (!parseIpv4(intent.insideIp) || !parseIpv4(intent.outsideIp)) {
+        return {
+          ...state,
+          wrongAttempts: state.wrongAttempts + 1,
+          snapshot: {
+            ...state.snapshot,
+            lastTip: {
+              level: 'error',
+              code: 'NAT_UPDATED',
+              message: 'Invalid static NAT — use valid inside and outside IPv4 addresses',
+            },
+          },
+        };
+      }
       const rule = {
         id: `nat-${intent.insideIp}-${intent.outsideIp}`,
         mode: 'static' as const,
@@ -611,7 +646,14 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
       if (!dev || (dev.role !== 'firewall' && dev.role !== 'switch')) {
         return state;
       }
-      if (!parseCidr(intent.destCidr) || !parseIpv4(intent.nextHop)) {
+      const ad = intent.adminDistance ?? 1;
+      if (
+        !parseCidr(intent.destCidr) ||
+        !parseIpv4(intent.nextHop) ||
+        !Number.isInteger(ad) ||
+        ad < 1 ||
+        ad > 255
+      ) {
         return {
           ...state,
           wrongAttempts: state.wrongAttempts + 1,
@@ -620,12 +662,11 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
             lastTip: {
               level: 'error',
               code: 'ROUTE_UPDATED',
-              message: 'Invalid route — use CIDR (e.g. 198.51.100.0/24) and next-hop IP',
+              message: 'Invalid route — use a CIDR, next-hop IP, and integer AD from 1 to 255',
             },
           },
         };
       }
-      const ad = intent.adminDistance ?? 1;
       const rule = {
         id: `rt-${intent.destCidr}-${intent.nextHop}-ad${ad}`,
         destCidr: intent.destCidr,
@@ -679,8 +720,13 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
               message: result.detail,
             },
             null,
+            undefined,
+            {
+              ...result,
+              fromDeviceId: intent.fromDeviceId,
+              toDeviceId: intent.toDeviceId,
+            },
           ),
-          lastTrace: result,
         },
       };
     }
@@ -690,6 +736,7 @@ export function reduce(state: EngineState, intent: Intent): EngineState {
         intent.inventory ?? state.snapshot.inventory;
       return {
         ...state,
+        loadRevision: state.loadRevision + 1,
         snapshot: snapshotOf(
           cloneRack(intent.rack),
           mission,

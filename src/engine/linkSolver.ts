@@ -819,6 +819,7 @@ export function evaluateGoals(
   rack: RackState,
   goals: Goal[],
   linkTable: Record<string, LinkStatus>,
+  lastTrace?: TraceResult & { fromDeviceId: string; toDeviceId: string },
 ): boolean[] {
   return goals.map((g) => {
     switch (g.type) {
@@ -861,10 +862,20 @@ export function evaluateGoals(
         return isDevicePowered(rack, g.deviceId);
       case 'console_attached':
         return isConsoleAttached(rack, g.deviceId);
+      case 'console_link': {
+        const cable = rack.cables.find(
+          (c) =>
+            (samePort(c.ends[0], g.a) && samePort(c.ends[1], g.b)) ||
+            (samePort(c.ends[0], g.b) && samePort(c.ends[1], g.a)),
+        );
+        return !!cable && cable.media === 'console_rj45';
+      }
       case 'iface_ip': {
         const port = getPort(rack, g.port);
         return (
-          port?.ip?.address === g.address && port.ip.prefix === g.prefix
+          port?.ip?.address === g.address &&
+          port.ip.prefix === g.prefix &&
+          (g.gateway == null || port.ip.gateway === g.gateway)
         );
       }
       case 'ping':
@@ -922,7 +933,11 @@ export function evaluateGoals(
         );
       }
       case 'traceroute_ok':
-        return evaluateTraceroute(rack, g.fromDeviceId, g.toDeviceId).ok;
+        return (
+          lastTrace?.ok === true &&
+          lastTrace.fromDeviceId === g.fromDeviceId &&
+          lastTrace.toDeviceId === g.toDeviceId
+        );
       default:
         return false;
     }
@@ -962,6 +977,11 @@ export function hintForGoal(goal: Goal | undefined): {
     case 'cable_color_between':
       return {
         message: `Hint: patch ${goal.a.portId} ↔ ${goal.b.portId}`,
+        ghost: { a: goal.a, b: goal.b },
+      };
+    case 'console_link':
+      return {
+        message: `Hint: attach console ${goal.a.portId} ↔ ${goal.b.portId}`,
         ghost: { a: goal.a, b: goal.b },
       };
     case 'path_up':

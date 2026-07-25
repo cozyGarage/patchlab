@@ -14,6 +14,13 @@ describe('mission catalog', () => {
     for (const m of missions) {
       expect(m.goals.length).toBeGreaterThan(0);
       expect(getMission(m.id)?.title).toBe(m.title);
+      for (const media of Object.keys(m.inventory) as (keyof typeof m.inventory)[]) {
+        const initialCount = m.initial.cables.filter((c) => c.media === media).length;
+        expect(
+          initialCount,
+          `${m.id} has more initial ${media} cables than its inventory`,
+        ).toBeLessThanOrEqual(m.inventory[media]);
+      }
     }
   });
 });
@@ -211,15 +218,34 @@ describe('PatchLab engine — fiber / power / console', () => {
     expect(state.snapshot.complete).toBe(true);
   });
 
-  it('M10: console + management IP', () => {
+  it('M10: requires the exact console endpoint and management gateway', () => {
     const mission = getMission('m10-console-ip')!;
     let state = createEngineState(mission, baseRack);
+    state = reduce(state, {
+      type: 'CONNECT',
+      a: { deviceId: 'con-srv', portId: 'tty2' },
+      b: { deviceId: 'tor-1', portId: 'sw-con' },
+    });
+    state = reduce(state, {
+      type: 'SET_IP',
+      port: { deviceId: 'tor-1', portId: 'sw-1' },
+      address: '10.10.10.2',
+      prefix: 24,
+    });
+    expect(state.snapshot.complete).toBe(false);
+
+    state = reduce(state, {
+      type: 'DISCONNECT_PORT',
+      port: { deviceId: 'tor-1', portId: 'sw-con' },
+    });
     state = reduce(state, {
       type: 'CONNECT',
       a: { deviceId: 'con-srv', portId: 'tty1' },
       b: { deviceId: 'tor-1', portId: 'sw-con' },
     });
     expect(state.snapshot.consoleAttached['tor-1']).toBe(true);
+    expect(state.snapshot.complete).toBe(false);
+
     state = reduce(state, {
       type: 'SET_IP',
       port: { deviceId: 'tor-1', portId: 'sw-1' },
@@ -1016,6 +1042,7 @@ describe('NetPractice-inspired routing lessons', () => {
         enabled: true,
       },
     });
+    expect(state.snapshot.complete).toBe(false);
     state = reduce(state, {
       type: 'TRACEROUTE',
       fromDeviceId: 'server-01',
@@ -1023,6 +1050,42 @@ describe('NetPractice-inspired routing lessons', () => {
     });
     expect(state.snapshot.lastTrace?.ok).toBe(true);
     expect(state.snapshot.complete).toBe(true);
+  });
+
+  it('rejects invalid VLAN, static NAT, and route distance intents', () => {
+    const mission = getMission('m17-static-nat')!;
+    let state = createEngineState(mission, baseRack);
+    const rackBefore = state.snapshot.rack;
+
+    state = reduce(state, {
+      type: 'SET_VLAN',
+      port: { deviceId: 'pdu-a', portId: 'out-1' },
+      vlanId: 4095,
+    });
+    expect(state.snapshot.rack).toBe(rackBefore);
+    expect(state.snapshot.lastTip?.level).toBe('error');
+
+    state = reduce(state, {
+      type: 'SET_NAT',
+      deviceId: 'fw-1',
+      insideIp: 'not-an-ip',
+      outsideIp: '203.0.113.10',
+    });
+    expect(
+      state.snapshot.rack.devices.find((d) => d.id === 'fw-1')?.natRules,
+    ).toEqual(
+      rackBefore.devices.find((d) => d.id === 'fw-1')?.natRules,
+    );
+    expect(state.snapshot.lastTip?.level).toBe('error');
+
+    state = reduce(state, {
+      type: 'SET_ROUTE',
+      deviceId: 'fw-1',
+      destCidr: '198.51.100.0/24',
+      nextHop: '203.0.113.2',
+      adminDistance: 0,
+    });
+    expect(state.snapshot.lastTip?.level).toBe('error');
   });
 
   it('traceroute agrees with ping on ACL-blocked connected path', () => {
