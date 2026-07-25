@@ -56,3 +56,39 @@ export function playTipSound(
       tone(440, 0.05, 'sine', 0.02);
   }
 }
+
+/** Short UI sounds for patching feel (arm / snap / plug / yank). */
+export function playPatchSound(
+  enabled: boolean,
+  kind: 'arm' | 'snap' | 'plug' | 'unplug' | 'reject',
+) {
+  if (!enabled) return;
+  void getCtx()?.resume();
+  switch (kind) {
+    case 'arm':
+      tone(520, 0.04, 'sine', 0.018);
+      break;
+    case 'snap':
+      tone(740, 0.035, 'triangle', 0.016);
+      break;
+    case 'plug':
+      tone(600, 0.05, 'sine', 0.022);
+      setTimeout(() => tone(920, 0.07, 'sine', 0.02), 45);
+      break;
+    case 'unplug':
+      tone(280, 0.07, 'triangle', 0.02);
+      setTimeout(() => tone(180, 0.08, 'sine', 0.015), 40);
+      break;
+    case 'reject':
+      tone(160, 0.09, 'square', 0.015);
+      break;
+  }
+}
+
+export function haptic(ms = 12) {
+  try {
+    navigator.vibrate?.(ms);
+  } catch {
+    /* ignore */
+  }
+}

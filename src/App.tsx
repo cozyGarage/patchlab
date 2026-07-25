@@ -610,6 +610,7 @@ export default function App() {
               : undefined
           }
           onBack={() => setScreen(sandbox ? 'home' : 'brief')}
+          soundEnabled={settings.sound}
         />
       ) : null}
 
