@@ -48,14 +48,15 @@ describe('nearestPort', () => {
   });
 
   it('skips busy ports when requireFree is set', () => {
-    const cables = [
-      {
-        ends: [
-          { deviceId: 'a', portId: '1' },
-          { deviceId: 'z', portId: '1' },
-        ],
-      },
-    ];
+    const cables: { ends: [{ deviceId: string; portId: string }, { deviceId: string; portId: string }] }[] =
+      [
+        {
+          ends: [
+            { deviceId: 'a', portId: '1' },
+            { deviceId: 'z', portId: '1' },
+          ],
+        },
+      ];
     const hit = nearestPort(ports, 210, 48, 40, {
       requireFree: true,
       cables,
@@ -74,12 +75,17 @@ describe('nearestPort', () => {
 });
 
 describe('isValidPatchTarget', () => {
-  const cables = [
+  const cables: {
+    ends: [
+      { deviceId: string; portId: string },
+      { deviceId: string; portId: string },
+    ];
+  }[] = [
     {
       ends: [
         { deviceId: 'a', portId: '1' },
         { deviceId: 'b', portId: '1' },
-      ] as [{ deviceId: string; portId: string }, { deviceId: string; portId: string }],
+      ],
     },
   ];
 
