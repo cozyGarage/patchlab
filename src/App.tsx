@@ -22,6 +22,12 @@ import {
   resetProgress,
 } from './lib/progress';
 import { loadSettings, saveSettings } from './lib/settings';
+import {
+  coachTipForMission,
+  normalizePace,
+  shouldHideCampaignTimer,
+  type CampaignPace,
+} from './lib/campaignPace';
 import { playTipSound } from './lib/sound';
 import {
   SANDBOX_LEARNING,
@@ -143,7 +149,24 @@ export default function App() {
   }
 
   function startMission(m: Mission, isSandbox = false) {
-    const state = createEngineState(m, baseRack);
+    let state = createEngineState(m, baseRack);
+    const pace = normalizePace(settings.campaignPace);
+    if (!isSandbox && pace === 'easy') {
+      const tip = coachTipForMission(m);
+      if (tip) {
+        state = {
+          ...state,
+          snapshot: {
+            ...state.snapshot,
+            lastTip: {
+              level: 'info',
+              code: 'HINT',
+              message: tip,
+            },
+          },
+        };
+      }
+    }
     setMission(m);
     setEngine(state);
     setSandbox(isSandbox);
@@ -417,8 +440,12 @@ export default function App() {
     startMission(mission, sandbox);
   }
 
-  function finishOnboarding() {
-    const next = { ...settings, onboardingDone: true };
+  function finishOnboarding(pace?: CampaignPace) {
+    const next = {
+      ...settings,
+      onboardingDone: true,
+      campaignPace: pace ?? normalizePace(settings.campaignPace),
+    };
     setSettings(next);
     saveSettings(next);
     setCoachOpen(false);
@@ -428,6 +455,21 @@ export default function App() {
     const next = { ...settings, sound: !settings.sound };
     setSettings(next);
     saveSettings(next);
+  }
+
+  function togglePace() {
+    const current = normalizePace(settings.campaignPace);
+    const nextPace: CampaignPace = current === 'easy' ? 'standard' : 'easy';
+    const next = { ...settings, campaignPace: nextPace };
+    setSettings(next);
+    saveSettings(next);
+    setProgressNotice({
+      level: 'ok',
+      message:
+        nextPace === 'easy'
+          ? 'Easy pace on — tickets and coach tips stay open'
+          : 'Standard pace on — support fades on challenge and boss stages',
+    });
   }
 
   function handleExportProgress() {
@@ -547,7 +589,8 @@ export default function App() {
           if (coachStep >= 2) finishOnboarding();
           else setCoachStep((s) => s + 1);
         }}
-        onSkip={finishOnboarding}
+        onSkip={() => finishOnboarding()}
+        onChoosePace={(pace) => finishOnboarding(pace)}
       />
 
       {screen === 'home' ? (
@@ -559,6 +602,7 @@ export default function App() {
           onSelect={openBrief}
           onSandbox={() => startMission(sandboxMission, true)}
           onToggleSound={toggleSound}
+          onTogglePace={togglePace}
           onOpenGlossary={() => setGlossaryOpen(true)}
           onExportProgress={handleExportProgress}
           onImportProgress={handleImportProgress}
@@ -573,6 +617,7 @@ export default function App() {
       {screen === 'brief' && mission ? (
         <MissionBrief
           mission={mission}
+          campaignPace={normalizePace(settings.campaignPace)}
           onBack={() => setScreen('home')}
           onStart={() => startMission(mission, false)}
         />
@@ -582,6 +627,7 @@ export default function App() {
         <RackView
           state={engine}
           sandbox={sandbox}
+          campaignPace={normalizePace(settings.campaignPace)}
           onConnect={dispatchConnect}
           onDisconnectPort={dispatchDisconnect}
           onHint={dispatchHint}
@@ -627,6 +673,7 @@ export default function App() {
           progress={progress}
           tipHistory={tipHistory}
           hintLevel={engine?.hintLevel ?? 0}
+          campaignPace={normalizePace(settings.campaignPace)}
           onHome={() => setScreen('home')}
           onRetry={() => startMission(mission, false)}
           onNext={

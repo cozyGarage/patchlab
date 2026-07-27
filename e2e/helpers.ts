@@ -62,6 +62,7 @@ export async function clearApp(page: Page) {
         sound: true,
         reducedHints: false,
         onboardingDone: true,
+        campaignPace: 'easy',
       }),
     );
   });

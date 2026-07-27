@@ -89,6 +89,13 @@ Support decreases as expertise grows:
 
 The engine’s exact goals remain hidden truth; they do not all need to be displayed as answers.
 
+Players can also choose a **campaign pace**:
+
+| Pace | Behavior |
+|---|---|
+| Easy (default) | Ticket details stay open, a coach tip appears on the brief and rack, timers stay off, and debrief answers are revealed for reflection. Challenge/boss stages keep practice-level support. |
+| Standard | Support follows each stage’s authored mode (guided → practice → challenge → boss). |
+
 ---
 
 ## 3. Motivation model

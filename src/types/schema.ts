@@ -427,6 +427,11 @@ export interface SettingsSave {
   reducedHints: boolean;
   /** First-run coach marks dismissed. */
   onboardingDone?: boolean;
+  /**
+   * Campaign support level.
+   * Easy keeps tickets/coaching open; Standard fades support by stage mode.
+   */
+  campaignPace?: 'easy' | 'standard';
 }
 
 export function portKey(ref: PortRef): string {

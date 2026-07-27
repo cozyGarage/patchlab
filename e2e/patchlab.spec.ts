@@ -47,6 +47,23 @@ test.describe('home & shell', () => {
     await glossary.getByRole('button', { name: 'Close' }).click();
     await page.getByRole('button', { name: /Sound:/i }).click();
     await expect(page.getByRole('button', { name: /Sound: Off/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Pace: Easy/i })).toBeVisible();
+    await page.getByRole('button', { name: /Pace: Easy/i }).click();
+    await expect(page.getByRole('button', { name: /Pace: Standard/i })).toBeVisible();
+    await expect(page.locator('.progress-notice.ok')).toContainText(/Standard pace/i);
+  });
+
+  test('easy pace opens ticket details and coach tip', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 2);
+    await page.getByRole('button', { name: /Wrong Port/i }).click();
+    await expect(page.getByRole('heading', { name: /Wrong Port/i })).toBeVisible();
+    await expect(page.getByText(/Easy coaching/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Coach tip/i })).toBeVisible();
+    await expect(page.locator('details').filter({ hasText: /Ticket details/i })).toHaveAttribute(
+      'open',
+      '',
+    );
   });
 
   test('later missions stay locked until prior clears', async ({ page }) => {

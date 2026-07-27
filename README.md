@@ -31,12 +31,13 @@ See [docs/ci/README.md](docs/ci/README.md). Manual fallback: `npm run deploy:pag
 
 ## What you can do
 
+- Choose **Easy** or **Standard** pace (Easy keeps tickets/coach tips open for learning)
 - Realistic rack chassis: panel, fiber tray, ToR switch, SFP, firewall, servers, console station, PDU, ISP peer
 - Plug data / fiber / power / console cords (tap-tap or drag)
 - Side config panel: IPv4/gateway, switchport VLAN/mode, ping, firewall ACLs, static NAT
 - 32 missions through floating statics, PAT overload, and traceroute
 - Sandbox save/load + ticket presets; progress export/import; first-run tips
-- Custom ACL, PAT, route AD, traceroute; glossary, sound, hard campaign gates
+- Custom ACL, PAT, route AD, traceroute; glossary, sound, Easy/Standard learning pace
 
 ## Docs
 
