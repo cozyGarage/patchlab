@@ -17,6 +17,9 @@ interface TipBarProps {
   canToggleAdmin?: boolean;
   /** Port currently armed for tap-tap / drag patching. */
   armedLabel?: string;
+  onUndo?: () => void;
+  canUndo?: boolean;
+  cableLog?: string[];
 }
 
 export function TipBar({
@@ -35,6 +38,9 @@ export function TipBar({
   canCycleVlan,
   canToggleAdmin,
   armedLabel,
+  onUndo,
+  canUndo,
+  cableLog,
 }: TipBarProps) {
   const level = tip?.level ?? 'info';
   const defaultMsg = armedLabel
@@ -82,7 +88,19 @@ export function TipBar({
           ))}
         </div>
       ) : null}
+      {cableLog && cableLog.length > 0 ? (
+        <div className="cable-log" aria-label="Recent cable actions">
+          {cableLog.slice(-4).map((entry, i) => (
+            <span key={`${i}-${entry}`} className="cable-log-chip">{entry}</span>
+          ))}
+        </div>
+      ) : null}
       <div className="actions">
+        {canUndo && onUndo ? (
+          <button type="button" className="btn btn-ghost" onClick={onUndo}>
+            Undo
+          </button>
+        ) : null}
         {showHint && onHint ? (
           <button type="button" className="btn btn-ghost" onClick={onHint}>
             {hintLevel === 0

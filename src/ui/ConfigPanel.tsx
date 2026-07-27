@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import type {
   Device,
+  Intent,
   MissionMode,
   Port,
   PortMode,
   PortRef,
   ToolId,
 } from '../types/schema';
+import { parseCliCommand } from '../lib/cliLite';
 
 interface ConfigPanelProps {
   device: Device;
@@ -41,6 +43,7 @@ interface ConfigPanelProps {
   publicPingTarget?: string;
   onTraceroute: (fromId: string, toId: string) => void;
   pingTargets: { id: string; name: string }[];
+  onDispatchIntent?: (intent: Intent) => void;
 }
 
 function ipCapablePorts(device: Device): Port[] {
@@ -90,6 +93,7 @@ export function ConfigPanel({
   publicPingTarget,
   onTraceroute,
   pingTargets,
+  onDispatchIntent,
 }: ConfigPanelProps) {
   const ipPorts = ipCapablePorts(device);
   const switchPorts = switchCapablePorts(device);
@@ -115,6 +119,8 @@ export function ConfigPanel({
   const [aclAction, setAclAction] = useState<'permit' | 'deny'>('deny');
   const [aclSrc, setAclSrc] = useState('10.10.10.20/32');
   const [aclDst, setAclDst] = useState('198.51.100.0/24');
+  const [cliLine, setCliLine] = useState('');
+  const [cliResult, setCliResult] = useState<{ ok: boolean; text: string } | null>(null);
   const toolEnabled = (tool: ToolId) =>
     sandbox || enabledTools === undefined || enabledTools.includes(tool);
   const showCannedAclActions =
@@ -620,6 +626,60 @@ export function ConfigPanel({
             >
               Traceroute from {device.name}
             </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {onDispatchIntent &&
+      (sandbox ||
+        ['ip', 'switchport', 'ping', 'route', 'traceroute'].some((t) =>
+          toolEnabled(t as ToolId),
+        )) ? (
+        <div className="config-block cli-lite">
+          <h4>CLI</h4>
+          <div className="cli-lite-row">
+            <input
+              type="text"
+              className="cli-input"
+              placeholder="no shut sw-1 / ip address 10.10.10.10 24 / ping server-01"
+              value={cliLine}
+              onChange={(e) => setCliLine(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && cliLine.trim()) {
+                  const result = parseCliCommand(cliLine.trim(), device.id);
+                  if (result.ok) {
+                    onDispatchIntent(result.intent);
+                    setCliResult({ ok: true, text: result.summary });
+                  } else {
+                    setCliResult({ ok: false, text: result.error });
+                  }
+                  setCliLine('');
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={!cliLine.trim()}
+              onClick={() => {
+                if (!cliLine.trim()) return;
+                const result = parseCliCommand(cliLine.trim(), device.id);
+                if (result.ok) {
+                  onDispatchIntent(result.intent);
+                  setCliResult({ ok: true, text: result.summary });
+                } else {
+                  setCliResult({ ok: false, text: result.error });
+                }
+                setCliLine('');
+              }}
+            >
+              Run
+            </button>
+          </div>
+          {cliResult ? (
+            <p className={cliResult.ok ? 'ok cli-feedback' : 'bad cli-feedback'}>
+              {cliResult.text}
+            </p>
           ) : null}
         </div>
       ) : null}

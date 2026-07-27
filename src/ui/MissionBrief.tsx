@@ -122,7 +122,17 @@ export function MissionBrief({
           {easy ? ' · Easy coaching' : ''}
         </p>
         <h1>{mission.title}</h1>
-        <p>{mission.brief}</p>
+        {(mode === 'challenge' || mode === 'boss') ? (
+          <div className="incident-report">
+            <div className="incident-kicker">Incident report</div>
+            <p><strong>Symptom:</strong> {mission.brief}</p>
+            {ticketDetails?.[0] ? (
+              <p><strong>Impact:</strong> {ticketDetails[0]}</p>
+            ) : null}
+          </div>
+        ) : (
+          <p>{mission.brief}</p>
+        )}
         {easy && coachTip ? (
           <div className="lesson-callout coach-tip">
             <h3>Coach tip</h3>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Mission, ProgressSave, SettingsSave } from '../types/schema';
 import {
   isMissionUnlocked,
@@ -14,6 +15,7 @@ import {
   stageLabel,
 } from '../lib/chapters';
 import { PACE_LABEL, paceBlurb, type CampaignPace } from '../lib/campaignPace';
+import { transfersForParent } from '../lib/transferVariants';
 
 interface MissionListProps {
   missions: Mission[];
@@ -29,6 +31,8 @@ interface MissionListProps {
   onResetProgress?: () => void;
   onReplayOnboarding?: () => void;
   progressNotice?: { level: 'ok' | 'bad'; message: string } | null;
+  onClassroomCode?: (code: string) => void;
+  onDownloadHandout?: () => void;
 }
 
 export function MissionList({
@@ -45,7 +49,10 @@ export function MissionList({
   onResetProgress,
   onReplayOnboarding,
   progressNotice,
+  onClassroomCode,
+  onDownloadHandout,
 }: MissionListProps) {
+  const [classroomCode, setClassroomCode] = useState('');
   const cleared = progress.clearedMissionIds.length;
   const stage = stageLabel(missions, progress);
   const pct = Math.round((cleared / Math.max(1, missions.length)) * 100);
@@ -156,6 +163,20 @@ export function MissionList({
             );
           })}
         </div>
+      </div>
+
+      {/* Concept mastery map */}
+      <div className="concept-map panel">
+        {conceptEntries.length === 0 ? (
+          <p className="muted" style={{ margin: 0 }}>Skills appear as you clear stages.</p>
+        ) : (
+          Object.entries(progress.conceptProgress ?? {}).map(([name, cp]) => (
+            <div key={name} className="concept-row">
+              <span className="concept-name">{name}</span>
+              <span className={`concept-level level-${cp.level}`}>{cp.level}</span>
+            </div>
+          ))
+        )}
       </div>
 
       <div className="home-toolbar">
@@ -291,57 +312,116 @@ export function MissionList({
                 );
                 const track = mission.track ?? 'copper';
                 const ch = chapterForMission(mission);
+                const transfers = clearedMission
+                  ? transfersForParent(mission.id, missions)
+                  : [];
                 return (
-                  <button
-                    key={mission.id}
-                    type="button"
-                    className={`mission-card ${clearedMission ? 'cleared' : ''} ${
-                      !missionUnlocked ? 'locked' : ''
-                    }`}
-                    disabled={!missionUnlocked}
-                    onClick={() => onSelect(mission)}
-                  >
-                    <div className="mission-num">{mission.order}</div>
-                    <div className="mission-meta">
-                      <h3>
-                        {mission.title}{' '}
-                        <span className={`track-pill track-${track}`}>
-                          {track}
-                        </span>{' '}
-                        <span className="track-pill">
-                          {mission.learning.mode} · {'◆'.repeat(mission.learning.difficulty)}
-                        </span>
-                      </h3>
-                      <p>
-                        {missionUnlocked
-                          ? mission.brief
-                          : lockReason ??
-                            `Complete the previous ${ch ? `Arc ${ch.index}` : 'campaign'} mission to unlock`}
-                      </p>
-                    </div>
-                    <div
-                      className="stars"
-                      aria-label={
-                        clearedMission
-                          ? 'Stage cleared'
-                          : missionUnlocked
-                            ? 'Ready to play'
-                            : 'Locked'
-                      }
+                  <div key={mission.id}>
+                    <button
+                      type="button"
+                      className={`mission-card ${clearedMission ? 'cleared' : ''} ${
+                        !missionUnlocked ? 'locked' : ''
+                      }`}
+                      disabled={!missionUnlocked}
+                      onClick={() => onSelect(mission)}
                     >
-                      {clearedMission
-                        ? starGlyph(progress.stars[mission.id])
-                        : missionUnlocked
-                          ? 'Go'
-                          : 'Locked'}
-                    </div>
-                  </button>
+                      <div className="mission-num">{mission.order}</div>
+                      <div className="mission-meta">
+                        <h3>
+                          {mission.title}{' '}
+                          <span className={`track-pill track-${track}`}>
+                            {track}
+                          </span>{' '}
+                          <span className="track-pill">
+                            {mission.learning.mode} · {'◆'.repeat(mission.learning.difficulty)}
+                          </span>
+                        </h3>
+                        <p>
+                          {missionUnlocked
+                            ? mission.brief
+                            : lockReason ??
+                              `Complete the previous ${ch ? `Arc ${ch.index}` : 'campaign'} mission to unlock`}
+                        </p>
+                      </div>
+                      <div
+                        className="stars"
+                        aria-label={
+                          clearedMission
+                            ? 'Stage cleared'
+                            : missionUnlocked
+                              ? 'Ready to play'
+                              : 'Locked'
+                        }
+                      >
+                        {clearedMission
+                          ? starGlyph(progress.stars[mission.id])
+                          : missionUnlocked
+                            ? 'Go'
+                            : 'Locked'}
+                      </div>
+                    </button>
+                    {transfers.map((tm) => (
+                      <button
+                        key={tm.id}
+                        type="button"
+                        className="transfer-card"
+                        onClick={() => onSelect(tm)}
+                      >
+                        Transfer · {tm.title}
+                      </button>
+                    ))}
+                  </div>
                 );
               })}
             </section>
           );
         })}
       </div>
+
+      {(onClassroomCode || onDownloadHandout) ? (
+        <div className="classroom-panel panel">
+          <div className="classroom-panel-title">Classroom</div>
+          {onClassroomCode ? (
+            <div className="classroom-panel-row">
+              <input
+                type="text"
+                className="classroom-code-input"
+                placeholder="Enter classroom code"
+                value={classroomCode}
+                onChange={(e) => setClassroomCode(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && classroomCode.trim()) {
+                    onClassroomCode(classroomCode.trim());
+                    setClassroomCode('');
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={!classroomCode.trim()}
+                onClick={() => {
+                  if (classroomCode.trim()) {
+                    onClassroomCode(classroomCode.trim());
+                    setClassroomCode('');
+                  }
+                }}
+              >
+                Apply
+              </button>
+            </div>
+          ) : null}
+          {onDownloadHandout ? (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={onDownloadHandout}
+            >
+              Download handout
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <button
         type="button"
