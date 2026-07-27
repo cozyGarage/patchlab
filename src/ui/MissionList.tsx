@@ -13,6 +13,7 @@ import {
   sandboxGate,
   stageLabel,
 } from '../lib/chapters';
+import { PACE_LABEL, paceBlurb, type CampaignPace } from '../lib/campaignPace';
 
 interface MissionListProps {
   missions: Mission[];
@@ -21,6 +22,7 @@ interface MissionListProps {
   onSelect: (mission: Mission) => void;
   onSandbox: () => void;
   onToggleSound: () => void;
+  onTogglePace?: () => void;
   onOpenGlossary: () => void;
   onExportProgress?: () => void;
   onImportProgress?: (raw: string) => void;
@@ -36,6 +38,7 @@ export function MissionList({
   onSelect,
   onSandbox,
   onToggleSound,
+  onTogglePace,
   onOpenGlossary,
   onExportProgress,
   onImportProgress,
@@ -47,6 +50,7 @@ export function MissionList({
   const stage = stageLabel(missions, progress);
   const pct = Math.round((cleared / Math.max(1, missions.length)) * 100);
   const sandbox = sandboxGate(missions, progress);
+  const pace = (settings.campaignPace ?? 'easy') as CampaignPace;
   const conceptEntries = Object.values(progress.conceptProgress ?? {});
   const independentConcepts = conceptEntries.filter(
     (concept) => concept.level === 'independent',
@@ -75,15 +79,16 @@ export function MissionList({
         </div>
         <h1 className="brand">Rack. Power. VLAN. Route. Firewall.</h1>
         <p>
-          {CHAPTERS.length} arcs · {missions.length} stages. Complete each
-          mission to unlock the next. Stars are optional achievements.
+          {CHAPTERS.length} arcs · {missions.length} stages. {paceBlurb(pace)}
         </p>
       </header>
 
       <div className="stage-panel panel">
         <div className="stage-panel-top">
           <div>
-            <div className="stage-kicker">Campaign progress</div>
+            <div className="stage-kicker">
+              Campaign progress · {PACE_LABEL[pace]} pace
+            </div>
             <div className="stage-title">
               {cleared >= missions.length
                 ? 'All stages cleared'
@@ -170,6 +175,16 @@ export function MissionList({
         <button type="button" className="btn btn-ghost" onClick={onToggleSound}>
           Sound: {settings.sound ? 'On' : 'Off'}
         </button>
+        {onTogglePace ? (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={onTogglePace}
+            title={paceBlurb(pace)}
+          >
+            Pace: {PACE_LABEL[pace]}
+          </button>
+        ) : null}
         {onReplayOnboarding ? (
           <button
             type="button"

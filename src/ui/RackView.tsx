@@ -29,6 +29,7 @@ import {
   portIsBusy,
 } from './patching';
 import { haptic, playPatchSound } from '../lib/sound';
+import { shouldHideCampaignTimer } from '../lib/campaignPace';
 
 interface RackViewProps {
   state: EngineState;
@@ -75,6 +76,7 @@ interface RackViewProps {
   onSandboxPreset?: (presetId: string) => void;
   sandboxPresets?: { id: string; title: string }[];
   soundEnabled?: boolean;
+  campaignPace?: 'easy' | 'standard';
 }
 
 interface LaidOutPort {
@@ -213,6 +215,7 @@ export function RackView({
   onSandboxPreset,
   sandboxPresets,
   soundEnabled = true,
+  campaignPace = 'easy',
 }: RackViewProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [selected, setSelected] = useState<PortRef | null>(null);
@@ -542,10 +545,11 @@ export function RackView({
     state.snapshot.rack.devices[0]!;
 
   const learning = sandbox ? undefined : state.mission.learning;
-  const showCampaignTimer =
-    learning === undefined ||
-    learning.mode === 'challenge' ||
-    learning.mode === 'boss';
+  const showCampaignTimer = !shouldHideCampaignTimer(
+    sandbox ? null : state.mission,
+    campaignPace,
+    !!sandbox,
+  );
 
   const pingTargets = state.snapshot.rack.devices
     .filter(

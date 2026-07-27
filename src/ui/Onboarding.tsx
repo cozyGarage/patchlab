@@ -3,24 +3,31 @@ interface OnboardingProps {
   step: number;
   onNext: () => void;
   onSkip: () => void;
+  onChoosePace?: (pace: 'easy' | 'standard') => void;
 }
 
 const STEPS = [
   {
     title: 'Welcome to PatchLab',
-    body: 'You patch a live rack, then fix IP, VLAN, routes, and firewall faults. Stars gate the next stage — accuracy and clean work matter.',
+    body: 'You patch a live rack, then fix IP, VLAN, routes, and firewall faults. Completing a stage unlocks the next lesson — stars are optional recognition.',
   },
   {
     title: 'Tap two ports to patch',
-    body: 'Select one port, then another, to land a cable. Use Unplug on a selected port to pull it. Copper, fiber, power, and console each use matching media.',
+    body: 'Select one port, then another, to land a cable. Drag a plugged end to move it, or fling / press U to unplug. Copper, fiber, power, and console each need matching media.',
   },
   {
-    title: 'Config panel + hard gates',
-    body: 'Click a chassis to open IP, VLAN, ACL, NAT, routes, ping, and traceroute. Clear a stage with ≥5★ to advance. Chapter borders need ≥4★ on every stage in that chapter.',
+    title: 'Choose your learning pace',
+    body: 'Easy keeps ticket details open, shows coach tips, and turns timers off. Standard fades support as stages move from guided practice into challenge and boss tickets.',
   },
 ] as const;
 
-export function Onboarding({ open, step, onNext, onSkip }: OnboardingProps) {
+export function Onboarding({
+  open,
+  step,
+  onNext,
+  onSkip,
+  onChoosePace,
+}: OnboardingProps) {
   if (!open) return null;
   const current = STEPS[Math.min(step, STEPS.length - 1)]!;
   const last = step >= STEPS.length - 1;
@@ -33,9 +40,28 @@ export function Onboarding({ open, step, onNext, onSkip }: OnboardingProps) {
         <h2>{current.title}</h2>
         <p>{current.body}</p>
         <div className="actions">
-          <button type="button" className="btn btn-primary" onClick={onNext}>
-            {last ? 'Start campaign' : 'Next'}
-          </button>
+          {last && onChoosePace ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => onChoosePace('easy')}
+              >
+                Easy pace
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => onChoosePace('standard')}
+              >
+                Standard pace
+              </button>
+            </>
+          ) : (
+            <button type="button" className="btn btn-primary" onClick={onNext}>
+              {last ? 'Start campaign' : 'Next'}
+            </button>
+          )}
           <button type="button" className="btn btn-ghost" onClick={onSkip}>
             Skip
           </button>

@@ -1,5 +1,9 @@
 import type { Mission, ProgressSave, Score } from '../types/schema';
 import { chapterForMission, starTotal } from '../lib/chapters';
+import {
+  shouldRevealDebriefAnswer,
+  type CampaignPace,
+} from '../lib/campaignPace';
 import { missions } from '../missions';
 
 interface DebriefProps {
@@ -12,6 +16,7 @@ interface DebriefProps {
   onHome: () => void;
   nextLabel?: string;
   hintLevel?: number;
+  campaignPace?: CampaignPace;
 }
 
 export function Debrief({
@@ -23,6 +28,7 @@ export function Debrief({
   onHome,
   nextLabel,
   hintLevel = 0,
+  campaignPace = 'easy',
 }: DebriefProps) {
   const chapter = chapterForMission(mission);
   const next = missions.find((m) => m.order === mission.order + 1);
@@ -86,7 +92,7 @@ export function Debrief({
               Check your understanding
             </h3>
             <p>{debrief.question}</p>
-            <details>
+            <details open={shouldRevealDebriefAnswer(campaignPace)}>
               <summary>Reveal answer</summary>
               <p style={{ marginTop: 8 }}>{debrief.answer}</p>
             </details>

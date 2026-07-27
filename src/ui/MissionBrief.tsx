@@ -1,9 +1,15 @@
 import type { Mission } from '../types/schema';
 import { chapterForMission } from '../lib/chapters';
+import {
+  coachTipForMission,
+  shouldOpenTicketDetails,
+  type CampaignPace,
+} from '../lib/campaignPace';
 import { missions } from '../missions';
 
 interface MissionBriefProps {
   mission: Mission;
+  campaignPace?: CampaignPace;
   onBack: () => void;
   onStart: () => void;
 }
@@ -71,7 +77,12 @@ function goalText(mission: Mission): string[] {
   });
 }
 
-export function MissionBrief({ mission, onBack, onStart }: MissionBriefProps) {
+export function MissionBrief({
+  mission,
+  campaignPace = 'easy',
+  onBack,
+  onStart,
+}: MissionBriefProps) {
   const chapter = chapterForMission(mission);
   const total = missions.length;
   const learning = mission.learning;
@@ -83,6 +94,9 @@ export function MissionBrief({ mission, onBack, onStart }: MissionBriefProps) {
     ? learning.ticketDetails
     : mission.constraints;
   const modeLabel = mode.charAt(0).toUpperCase() + mode.slice(1);
+  const openDetails = shouldOpenTicketDetails(mission, campaignPace);
+  const coachTip = coachTipForMission(mission);
+  const easy = campaignPace === 'easy';
 
   return (
     <div className="screen-brief">
@@ -105,9 +119,16 @@ export function MissionBrief({ mission, onBack, onStart }: MissionBriefProps) {
           aria-label={`${modeLabel} mode, difficulty ${learning?.difficulty ?? 'not rated'} out of 5`}
         >
           {modeLabel} mode · Difficulty {learning?.difficulty ?? '—'}/5
+          {easy ? ' · Easy coaching' : ''}
         </p>
         <h1>{mission.title}</h1>
         <p>{mission.brief}</p>
+        {easy && coachTip ? (
+          <div className="lesson-callout coach-tip">
+            <h3>Coach tip</h3>
+            <p>{coachTip.replace(/^Coach:\s*/, '')}</p>
+          </div>
+        ) : null}
         {learning?.conceptsIntroduced.length ? (
           <div className="lesson-callout">
             <h3>Learning focus</h3>
@@ -134,7 +155,7 @@ export function MissionBrief({ mission, onBack, onStart }: MissionBriefProps) {
           </ul>
         </section>
         {ticketDetails?.length ? (
-          <details open={mode === 'guided'}>
+          <details open={openDetails}>
             <summary>Ticket details</summary>
             <ul className="checklist" style={{ marginTop: 8 }}>
               {ticketDetails.map((detail, index) => (
@@ -157,7 +178,7 @@ export function MissionBrief({ mission, onBack, onStart }: MissionBriefProps) {
         ) : null}
         {mission.learning.mode === 'challenge' ||
         mission.learning.mode === 'boss' ? (
-          <details>
+          <details open={easy}>
             <summary>Make a prediction before you start</summary>
             <p style={{ marginTop: 8 }}>{mission.learning.debrief.question}</p>
           </details>

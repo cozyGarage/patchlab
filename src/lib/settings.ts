@@ -1,4 +1,5 @@
 import type { SettingsSave } from '../types/schema';
+import { normalizePace } from './campaignPace';
 
 const KEY = 'patchlab.settings.v1';
 
@@ -7,6 +8,7 @@ const defaults: SettingsSave = {
   sound: true,
   reducedHints: false,
   onboardingDone: false,
+  campaignPace: 'easy',
 };
 
 export function loadSettings(): SettingsSave {
@@ -15,12 +17,22 @@ export function loadSettings(): SettingsSave {
     if (!raw) return { ...defaults };
     const parsed = JSON.parse(raw) as SettingsSave;
     if (parsed.version !== 1) return { ...defaults };
-    return { ...defaults, ...parsed };
+    return {
+      ...defaults,
+      ...parsed,
+      campaignPace: normalizePace(parsed.campaignPace ?? defaults.campaignPace),
+    };
   } catch {
     return { ...defaults };
   }
 }
 
 export function saveSettings(next: SettingsSave): void {
-  localStorage.setItem(KEY, JSON.stringify(next));
+  localStorage.setItem(
+    KEY,
+    JSON.stringify({
+      ...next,
+      campaignPace: normalizePace(next.campaignPace),
+    }),
+  );
 }
