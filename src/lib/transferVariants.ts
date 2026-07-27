@@ -87,24 +87,32 @@ export const TRANSFER_DEFS: TransferVariantDef[] = [
     id: 'm13-access-vlan-t1',
     parentId: 'm13-access-vlan',
     titleSuffix: 'Transfer',
-    brief: 'Move the access port to VLAN 30 and land the matching server NIC.',
+    brief: 'Move Gi1/0/3 to VLAN 20 and land SERVER-07 there instead.',
     apply: (mission) => ({
       ...mission,
       id: 'm13-access-vlan-t1',
       title: `${mission.title} · Transfer`,
-      brief: 'Move the access port to VLAN 30 and land the matching server NIC.',
-      goals: mission.goals.map((goal) => {
-        if (goal.type === 'port_vlan') return { ...goal, vlanId: 30 };
-        return goal;
-      }),
+      brief: 'Move Gi1/0/3 to VLAN 20 and land SERVER-07 there instead.',
+      goals: [
+        {
+          type: 'port_vlan',
+          port: { deviceId: 'tor-1', portId: 'sw-3' },
+          vlanId: 20,
+        },
+        {
+          type: 'link_up',
+          a: { deviceId: 'tor-1', portId: 'sw-3' },
+          b: { deviceId: 'server-07', portId: 'nic-1' },
+        },
+      ],
       learning: {
         ...mission.learning,
         mode: 'challenge',
         visibleObjectives: [
-          'Set the access port to VLAN 30.',
-          'Complete the matching server attachment.',
+          'Set Gi1/0/3 access VLAN to 20.',
+          'Patch SERVER-07 onto Gi1/0/3.',
         ],
-        ticketDetails: ['Target access VLAN is 30 for this transfer ticket.'],
+        ticketDetails: ['Use Gi1/0/3 (not Gi1/0/6) for this transfer ticket.'],
       },
     }),
   },
