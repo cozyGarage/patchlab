@@ -153,7 +153,12 @@ export default function App() {
     const pace = normalizePace(settings.campaignPace);
     if (!isSandbox && pace === 'easy') {
       const tip = coachTipForMission(m);
-      if (tip) {
+      const existing = state.snapshot.lastTip;
+      // Keep authored start-of-stage fault evidence (VLAN/media/admin/power).
+      const keepFaultTip =
+        existing &&
+        (existing.level === 'warn' || existing.level === 'error');
+      if (tip && !keepFaultTip) {
         state = {
           ...state,
           snapshot: {
