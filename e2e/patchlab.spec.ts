@@ -68,6 +68,37 @@ test.describe('visual & interaction polish', () => {
   });
 });
 
+test.describe('feature wave', () => {
+  test('concept map, classroom unlock, and undo', async ({ page }) => {
+    await clearApp(page);
+    await expect(page.locator('.concept-map')).toBeVisible();
+    await expect(page.locator('.classroom-panel')).toBeVisible();
+
+    await page.locator('.classroom-code-input').fill('PATCHLAB-SANDBOX');
+    await page.getByRole('button', { name: /^Apply$/i }).click();
+    await expect(page.locator('.progress-notice.ok')).toContainText(/Sandbox unlocked/i);
+
+    await startMission(page, /First Lights On/i);
+    const before = await page.locator('.cable-path').count();
+    await connectPorts(page, /Panel-A A-01/, /ToR-SW-A Gi1\/0\/1 VLAN 10/);
+    await expect(page.locator('.cable-path')).toHaveCount(before + 1);
+    await expect(page.getByRole('button', { name: /^Undo$/i })).toBeEnabled();
+    await page.getByRole('button', { name: /^Undo$/i }).click();
+    await expect(page.locator('.cable-path')).toHaveCount(before);
+  });
+
+  test('transfer variant appears after clearing parent', async ({ page }) => {
+    await clearApp(page);
+    await unlockThrough(page, 2); // clears m1 in campaign order
+    await expect(
+      page.getByRole('button', { name: /^1 First Lights On/i }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /^Transfer · First Lights On/i }),
+    ).toBeVisible();
+  });
+});
+
 test.describe('home & shell', () => {
   test('home, glossary, and sound toggle', async ({ page }) => {
     await clearApp(page);

@@ -6,6 +6,14 @@ import {
 } from '../lib/campaignPace';
 import { missions } from '../missions';
 
+interface PathCompareProps {
+  summary: string;
+  intended: string[];
+  actual: string[];
+  missing: string[];
+  extra: string[];
+}
+
 interface DebriefProps {
   mission: Mission;
   score: Score;
@@ -16,6 +24,7 @@ interface DebriefProps {
   nextLabel?: string;
   hintLevel?: number;
   campaignPace?: CampaignPace;
+  pathCompare?: PathCompareProps;
 }
 
 export function Debrief({
@@ -28,6 +37,7 @@ export function Debrief({
   nextLabel,
   hintLevel = 0,
   campaignPace = 'easy',
+  pathCompare,
 }: DebriefProps) {
   const chapter = chapterForMission(mission);
   const next = missions.find((m) => m.order === mission.order + 1);
@@ -169,6 +179,35 @@ export function Debrief({
               ))}
             </ul>
           </div>
+        ) : null}
+
+        {pathCompare ? (
+          <section className="path-compare" aria-labelledby="path-compare-heading">
+            <h3 id="path-compare-heading" className="section-title">
+              Compare your path
+            </h3>
+            <p>{pathCompare.summary}</p>
+            {pathCompare.missing.length > 0 ? (
+              <div>
+                <strong>Missing endpoints:</strong>
+                <ul className="checklist">
+                  {pathCompare.missing.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {pathCompare.extra.length > 0 ? (
+              <div>
+                <strong>Extra cable ends:</strong>
+                <ul className="checklist">
+                  {pathCompare.extra.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </section>
         ) : null}
 
         <div className="actions">

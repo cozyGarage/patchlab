@@ -4,10 +4,12 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
+  type WheelEvent as ReactWheelEvent,
 } from 'react';
 import type {
   Cable,
   Device,
+  Intent,
   LinkStatus,
   Port,
   PortMode,
@@ -77,6 +79,11 @@ interface RackViewProps {
   sandboxPresets?: { id: string; title: string }[];
   soundEnabled?: boolean;
   campaignPace?: 'easy' | 'standard';
+  onUndo?: () => void;
+  canUndo?: boolean;
+  cableLog?: string[];
+  onShareLab?: () => void;
+  onDispatchIntent?: (intent: Intent) => void;
 }
 
 interface LaidOutPort {
@@ -183,6 +190,9 @@ function ledClass(
   return 'down';
 }
 
+const MIN_SCALE = 0.6;
+const MAX_SCALE = 2;
+
 export function RackView({
   state,
   sandbox,
@@ -216,10 +226,19 @@ export function RackView({
   sandboxPresets,
   soundEnabled = true,
   campaignPace = 'easy',
+  onUndo,
+  canUndo,
+  cableLog,
+  onShareLab,
+  onDispatchIntent,
 }: RackViewProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [selected, setSelected] = useState<PortRef | null>(null);
   const [focusDeviceId, setFocusDeviceId] = useState<string | null>('tor-1');
+  const [scale, setScale] = useState(1);
+  const [tx, setTx] = useState(0);
+  const [ty, setTy] = useState(0);
+  const panRef = useRef<{ startX: number; startY: number; startTx: number; startTy: number } | null>(null);
   const dragRef = useRef<{
     from: PortRef;
     startX: number;
@@ -307,6 +326,43 @@ export function RackView({
     if (!ctm) return { x: 0, y: 0 };
     const local = pt.matrixTransform(ctm.inverse());
     return { x: local.x, y: local.y };
+  }
+
+  function handleSvgWheel(e: ReactWheelEvent<SVGSVGElement>) {
+    e.preventDefault();
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    const nextScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));
+    const ratio = nextScale / scale;
+    setTx((prev) => mouseX - ratio * (mouseX - prev));
+    setTy((prev) => mouseY - ratio * (mouseY - prev));
+    setScale(nextScale);
+  }
+
+  function onBgPointerDown(e: ReactPointerEvent<SVGSVGElement>) {
+    if (dragRef.current) return;
+    if ((e.target as Element).closest('.port-hit, .cable-hit, .device-chassis')) return;
+    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    panRef.current = { startX: e.clientX, startY: e.clientY, startTx: tx, startTy: ty };
+  }
+
+  function onBgPointerMove(e: ReactPointerEvent<SVGSVGElement>) {
+    if (panRef.current && !dragRef.current) {
+      const dx = e.clientX - panRef.current.startX;
+      const dy = e.clientY - panRef.current.startY;
+      setTx(panRef.current.startTx + dx);
+      setTy(panRef.current.startTy + dy);
+    }
+    onSvgPointerMove(e);
+  }
+
+  function onBgPointerUp(e: ReactPointerEvent<SVGSVGElement>) {
+    panRef.current = null;
+    onSvgPointerUp(e);
   }
 
   function preferMediaFor(ref: PortRef): Port['media'] | undefined {
@@ -583,6 +639,11 @@ export function RackView({
               Load save
             </button>
           ) : null}
+          {sandbox && onShareLab ? (
+            <button type="button" className="btn btn-ghost" onClick={onShareLab}>
+              Share lab
+            </button>
+          ) : null}
           {state.snapshot.complete && !sandbox && onComplete ? (
             <button
               type="button"
@@ -595,6 +656,32 @@ export function RackView({
           <button type="button" className="btn btn-ghost" onClick={onReset}>
             Reset
           </button>
+          <div className="rack-zoom-controls">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setScale((s) => Math.max(MIN_SCALE, s / 1.2))}
+              aria-label="Zoom out"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setScale((s) => Math.min(MAX_SCALE, s * 1.2))}
+              aria-label="Zoom in"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => { setScale(1); setTx(0); setTy(0); }}
+              aria-label="Reset view"
+            >
+              ↺
+            </button>
+          </div>
         </div>
       </div>
 
@@ -622,10 +709,12 @@ export function RackView({
               viewBox={`0 0 ${width} ${height}`}
               role="group"
               aria-label="Interactive datacenter rack patching canvas"
-              onPointerMove={onSvgPointerMove}
-              onPointerUp={onSvgPointerUp}
-              onPointerCancel={cancelDrag}
-              onLostPointerCapture={cancelDrag}
+              onWheel={handleSvgWheel}
+              onPointerDown={onBgPointerDown}
+              onPointerMove={onBgPointerMove}
+              onPointerUp={onBgPointerUp}
+              onPointerCancel={() => { panRef.current = null; cancelDrag(); }}
+              onLostPointerCapture={() => { panRef.current = null; cancelDrag(); }}
               onPointerLeave={onSvgPointerLeave}
             >
               <defs>
@@ -658,6 +747,7 @@ export function RackView({
                 </filter>
               </defs>
 
+              <g transform={`translate(${tx} ${ty}) scale(${scale})`}>
               {/* Rack rails */}
               <rect x="8" y="8" width="14" height={height - 16} fill="url(#rail)" rx="2" />
               <rect
@@ -957,6 +1047,7 @@ export function RackView({
                 />
               ) : null}
               {ghostDrag ? <path className="cable-ghost" d={ghostDrag} /> : null}
+              </g>
             </svg>
           </div>
         </div>
@@ -989,6 +1080,7 @@ export function RackView({
           )?.publicIp}
           onTraceroute={onTraceroute}
           pingTargets={pingTargets}
+          onDispatchIntent={onDispatchIntent}
         />
       </div>
 
@@ -1030,6 +1122,9 @@ export function RackView({
               }
             : undefined
         }
+        onUndo={onUndo}
+        canUndo={canUndo}
+        cableLog={cableLog}
       />
     </div>
   );

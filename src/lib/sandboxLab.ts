@@ -246,3 +246,48 @@ export function loadSandboxSnapshot(): SandboxSnapshot | null {
 export function clearSandboxSnapshot(): void {
   localStorage.removeItem(SNAP_KEY);
 }
+
+/** Encode a sandbox snapshot for URL sharing (hash fragment). */
+export function encodeSandboxShare(snap: SandboxSnapshot): string {
+  const json = JSON.stringify({
+    version: 1 as const,
+    label: snap.label,
+    rack: snap.rack,
+    inventory: snap.inventory,
+  });
+  return btoa(unescape(encodeURIComponent(json)));
+}
+
+export function decodeSandboxShare(encoded: string): SandboxSnapshot | null {
+  try {
+    const json = decodeURIComponent(escape(atob(encoded)));
+    const parsed = JSON.parse(json) as Partial<SandboxSnapshot>;
+    if (!parsed || parsed.version !== 1 || !parsed.rack || !parsed.inventory) {
+      return null;
+    }
+    return {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      label: parsed.label ?? 'Shared lab',
+      rack: parsed.rack,
+      inventory: parsed.inventory,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function writeShareHash(snap: SandboxSnapshot): string {
+  const token = encodeSandboxShare(snap);
+  const url = new URL(window.location.href);
+  url.hash = `lab=${token}`;
+  return url.toString();
+}
+
+export function readShareHash(
+  hash = typeof window !== 'undefined' ? window.location.hash : '',
+): SandboxSnapshot | null {
+  const raw = hash.startsWith('#') ? hash.slice(1) : hash;
+  if (!raw.startsWith('lab=')) return null;
+  return decodeSandboxShare(decodeURIComponent(raw.slice(4)));
+}

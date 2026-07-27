@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
+  Intent,
   Mission,
   PortRef,
   ProgressSave,
@@ -7,7 +8,7 @@ import type {
   SettingsSave,
 } from './types/schema';
 import { missions, baseRack, getMission } from './missions';
-import { isMissionUnlocked } from './lib/progress';
+import { isMissionUnlocked, saveProgress } from './lib/progress';
 import {
   createEngineState,
   reduce,
@@ -25,7 +26,6 @@ import { loadSettings, saveSettings } from './lib/settings';
 import {
   coachTipForMission,
   normalizePace,
-  shouldHideCampaignTimer,
   type CampaignPace,
 } from './lib/campaignPace';
 import { playTipSound } from './lib/sound';
@@ -34,7 +34,17 @@ import {
   SANDBOX_PRESETS,
   loadSandboxSnapshot,
   saveSandboxSnapshot,
+  readShareHash,
+  writeShareHash,
 } from './lib/sandboxLab';
+import { track } from './lib/analytics';
+import { compareMissionPath } from './lib/pathCompare';
+import type { PathCompare } from './lib/pathCompare';
+import { getTransferMission } from './lib/transferVariants';
+import {
+  applyClassroomCode,
+  classroomHandout,
+} from './lib/classroom';
 import { MissionList } from './ui/MissionList';
 import { MissionBrief } from './ui/MissionBrief';
 import { RackView } from './ui/RackView';
@@ -83,10 +93,38 @@ export default function App() {
     level: 'ok' | 'bad';
     message: string;
   } | null>(null);
+  const [undoStack, setUndoStack] = useState<EngineState[]>([]);
+  const [cableLog, setCableLog] = useState<string[]>([]);
+  const [pathCompare, setPathCompare] = useState<PathCompare | null>(null);
   const lastTipCode = useRef<string | undefined>(undefined);
   const completedRunKey = useRef<string | null>(null);
 
-
+  // App open tracking + share hash import
+  useEffect(() => {
+    track('app_open');
+    const shared = readShareHash();
+    if (shared) {
+      const m = sandboxMission;
+      const state = createEngineState(m, baseRack);
+      const loaded = reduce(state, {
+        type: 'LOAD_RACK',
+        rack: shared.rack,
+        inventory: shared.inventory,
+      });
+      setMission(m);
+      setEngine(loaded);
+      setSandbox(true);
+      setScore(null);
+      setTipHistory([]);
+      setScreen('rack');
+      lastTipCode.current = undefined;
+      completedRunKey.current = null;
+      track('sandbox_import');
+      // Clear hash after import
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!engine || sandbox || screen !== 'rack') return;
@@ -98,10 +136,12 @@ export default function App() {
 
     const result = scoreRun(engine);
     setScore(result);
+    setPathCompare(compareMissionPath(engine));
     if (mission && mission.id !== 'sandbox') {
       setProgress(
         recordMissionClear(mission.id, result, progress, engine.hintLevel),
       );
+      track('mission_complete', { missionId: mission.id });
     }
     playTipSound(settings.sound, 'success');
   }, [engine, sandbox, screen, mission, progress, settings.sound]);
@@ -137,6 +177,15 @@ export default function App() {
       ) {
         playTipSound(settings.sound, tip.level);
       }
+      // Append cable events to cableLog
+      if (
+        ['CONNECTED', 'DISCONNECTED', 'LINK_UP'].includes(tip.code) ||
+        /connect|unplug/i.test(msg ?? '')
+      ) {
+        if (msg) {
+          setCableLog((prev) => [...prev, msg].slice(-8));
+        }
+      }
     }
   }
 
@@ -146,13 +195,21 @@ export default function App() {
     setScore(null);
     setTipHistory([]);
     setScreen('brief');
+    if (m.id.includes('-t')) {
+      track('transfer_start', { missionId: m.id });
+    }
   }
 
   function startMission(m: Mission, isSandbox = false) {
-    let state = createEngineState(m, baseRack);
+    // Resolve transfer missions by id if needed
+    const resolved =
+      getMission(m.id) ??
+      getTransferMission(m.id, missions) ??
+      m;
+    let state = createEngineState(resolved, baseRack);
     const pace = normalizePace(settings.campaignPace);
     if (!isSandbox && pace === 'easy') {
-      const tip = coachTipForMission(m);
+      const tip = coachTipForMission(resolved);
       const existing = state.snapshot.lastTip;
       // Keep authored start-of-stage fault evidence (VLAN/media/admin/power).
       const keepFaultTip =
@@ -172,20 +229,36 @@ export default function App() {
         };
       }
     }
-    setMission(m);
+    setMission(resolved);
     setEngine(state);
     setSandbox(isSandbox);
     setScore(null);
     setTipHistory([]);
+    setUndoStack([]);
+    setCableLog([]);
+    setPathCompare(null);
     setScreen('rack');
     lastTipCode.current = undefined;
     completedRunKey.current = null;
     trackTip(state);
+    track('mission_start', { missionId: resolved.id });
   }
 
-  function apply(next: EngineState) {
+  function apply(next: EngineState, skipUndo = false) {
+    if (!skipUndo && engine) {
+      setUndoStack((stack) => [...stack, engine].slice(-25));
+    }
     setEngine(next);
     trackTip(next);
+  }
+
+  function dispatchUndo() {
+    if (undoStack.length === 0) return;
+    const prev = undoStack[undoStack.length - 1]!;
+    setUndoStack((stack) => stack.slice(0, -1));
+    setEngine(prev);
+    trackTip(prev);
+    track('undo');
   }
 
   function dispatchConnect(a: PortRef, b: PortRef) {
@@ -468,6 +541,7 @@ export default function App() {
     const next = { ...settings, campaignPace: nextPace };
     setSettings(next);
     saveSettings(next);
+    track('pace_change', { pace: nextPace });
     setProgressNotice({
       level: 'ok',
       message:
@@ -537,7 +611,16 @@ export default function App() {
           message: 'Sandbox rack saved in this browser',
         },
       },
-    });
+    }, true);
+  }
+
+  function handleShareLab() {
+    if (!engine) return;
+    const snap = saveSandboxSnapshot(engine.snapshot.rack, engine.snapshot.inventory);
+    const url = writeShareHash(snap);
+    navigator.clipboard.writeText(url).catch(() => {/* ignore */});
+    track('sandbox_share');
+    setProgressNotice({ level: 'ok', message: 'Share URL copied to clipboard' });
   }
 
   function handleSandboxLoad() {
@@ -580,6 +663,37 @@ export default function App() {
     );
   }
 
+  function handleClassroomCode(code: string) {
+    const result = applyClassroomCode(code, progress);
+    if (result.ok) {
+      if (result.progress) {
+        saveProgress(result.progress);
+        setProgress(result.progress);
+      }
+      track('classroom_unlock', { code });
+      setProgressNotice({ level: 'ok', message: result.message });
+    } else {
+      setProgressNotice({ level: 'bad', message: result.message });
+    }
+  }
+
+  function handleDownloadHandout() {
+    const content = classroomHandout();
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'patchlab-handout.md';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function dispatchIntent(intent: Intent) {
+    if (!engine) return;
+    apply(reduce(engine, intent));
+    track('cli_command', { type: intent.type });
+  }
+
   const nextMission = useMemo(() => {
     if (!mission || mission.id === 'sandbox') return undefined;
     return missions.find((m) => m.order === mission.order + 1);
@@ -616,6 +730,8 @@ export default function App() {
             setCoachStep(0);
             setCoachOpen(true);
           }}
+          onClassroomCode={handleClassroomCode}
+          onDownloadHandout={handleDownloadHandout}
         />
       ) : null}
 
@@ -668,6 +784,11 @@ export default function App() {
           }
           onBack={() => setScreen(sandbox ? 'home' : 'brief')}
           soundEnabled={settings.sound}
+          onUndo={dispatchUndo}
+          canUndo={undoStack.length > 0}
+          cableLog={cableLog}
+          onShareLab={sandbox ? handleShareLab : undefined}
+          onDispatchIntent={dispatchIntent}
         />
       ) : null}
 
@@ -693,6 +814,7 @@ export default function App() {
               ? `Next: Stage ${nextMission.order} — ${nextMission.title}`
               : undefined
           }
+          pathCompare={pathCompare ?? undefined}
         />
       ) : null}
 

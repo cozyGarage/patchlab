@@ -33,11 +33,11 @@ See [docs/ci/README.md](docs/ci/README.md). Manual fallback: `npm run deploy:pag
 
 - Choose **Easy** or **Standard** pace (Easy keeps tickets/coach tips open for learning)
 - Realistic rack chassis: panel, fiber tray, ToR switch, SFP, firewall, servers, console station, PDU, ISP peer
-- Plug data / fiber / power / console cords (tap-tap or drag)
-- Side config panel: IPv4/gateway, switchport VLAN/mode, ping, firewall ACLs, static NAT
-- 32 missions through floating statics, PAT overload, and traceroute
-- Sandbox save/load + ticket presets; progress export/import; first-run tips
-- Custom ACL, PAT, route AD, traceroute; glossary, sound, Easy/Standard learning pace
+- Plug data / fiber / power / console cords (tap-tap or drag); **Undo**, zoom/pan, cable history
+- Side config panel + **CLI-lite** (`no shut`, `switchport`, `ip address`, `ping`, …)
+- 32 missions + optional **transfer variants**; concept mastery map; incident-style challenge briefs
+- Debrief path compare; sandbox **share URLs**; classroom codes (`PATCHLAB-LAB` / `PATCHLAB-SANDBOX`)
+- PWA installable build; local analytics queue; progress export/import; glossary & sound
 
 ## Docs
 

@@ -6,6 +6,7 @@ import type {
 } from '../types/schema';
 import { missions } from '../missions';
 import { GATE, missionGate, sandboxGate, starTotal } from './chapters';
+import { TRANSFER_DEFS } from './transferVariants';
 
 const KEY = 'patchlab.progress.v1';
 
@@ -17,7 +18,10 @@ const empty: ProgressSave = {
   conceptProgress: {},
 };
 
-const knownMissionIds = new Set(missions.map((m) => m.id));
+const knownMissionIds = new Set([
+  ...missions.map((mission) => mission.id),
+  ...TRANSFER_DEFS.map((def) => def.id),
+]);
 
 export type ImportProgressResult =
   | { ok: true; progress: ProgressSave }
@@ -168,10 +172,17 @@ export function recordMissionClear(
   }
 
   const conceptProgress = { ...(prev.conceptProgress ?? {}) };
-  const mission = missions.find((candidate) => candidate.id === missionId);
+  const transfer = TRANSFER_DEFS.find((item) => item.id === missionId);
+  const mission =
+    missions.find((candidate) => candidate.id === missionId) ??
+    (transfer
+      ? missions.find((item) => item.id === transfer.parentId)
+      : undefined);
   if (mission) {
     const independent =
-      (mission.learning.mode === 'challenge' || mission.learning.mode === 'boss') &&
+      (mission.learning.mode === 'challenge' ||
+        mission.learning.mode === 'boss' ||
+        !!transfer) &&
       hintLevel <= 2;
     const updates = [
       ...mission.learning.conceptsIntroduced.map(

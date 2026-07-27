@@ -1,3 +1,5 @@
+import '@testing-library/jest-dom/vitest';
+
 const store = new Map<string, string>();
 
 const memoryStorage: Storage = {
