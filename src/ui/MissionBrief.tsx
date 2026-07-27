@@ -115,7 +115,7 @@ export function MissionBrief({
             : ''}
         </div>
         <p
-          className="stage-badge"
+          className="mode-badge"
           aria-label={`${modeLabel} mode, difficulty ${learning?.difficulty ?? 'not rated'} out of 5`}
         >
           {modeLabel} mode · Difficulty {learning?.difficulty ?? '—'}/5
@@ -145,7 +145,7 @@ export function MissionBrief({
           </div>
         ) : null}
         <section aria-labelledby="mission-objectives-heading">
-          <h3 id="mission-objectives-heading" style={{ marginBottom: 8 }}>
+          <h3 id="mission-objectives-heading" className="section-title">
             Objectives
           </h3>
           <ul className="checklist">
@@ -157,7 +157,7 @@ export function MissionBrief({
         {ticketDetails?.length ? (
           <details open={openDetails}>
             <summary>Ticket details</summary>
-            <ul className="checklist" style={{ marginTop: 8 }}>
+            <ul className="checklist details-body">
               {ticketDetails.map((detail, index) => (
                 <li key={`${index}-${detail}`}>{detail}</li>
               ))}
@@ -166,7 +166,7 @@ export function MissionBrief({
         ) : null}
         {learning?.deviceUnlocks?.length ? (
           <section aria-labelledby="new-equipment-heading">
-            <h3 id="new-equipment-heading" style={{ marginBottom: 8 }}>
+            <h3 id="new-equipment-heading" className="section-title">
               New equipment
             </h3>
             <ul className="checklist">
@@ -180,7 +180,7 @@ export function MissionBrief({
         mission.learning.mode === 'boss' ? (
           <details open={easy}>
             <summary>Make a prediction before you start</summary>
-            <p style={{ marginTop: 8 }}>{mission.learning.debrief.question}</p>
+            <p className="details-body">{mission.learning.debrief.question}</p>
           </details>
         ) : null}
         <div className="actions">

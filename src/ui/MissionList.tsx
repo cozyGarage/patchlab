@@ -319,12 +319,21 @@ export function MissionList({
                             `Complete the previous ${ch ? `Arc ${ch.index}` : 'campaign'} mission to unlock`}
                       </p>
                     </div>
-                    <div className="stars" aria-label="stars">
+                    <div
+                      className="stars"
+                      aria-label={
+                        clearedMission
+                          ? 'Stage cleared'
+                          : missionUnlocked
+                            ? 'Ready to play'
+                            : 'Locked'
+                      }
+                    >
                       {clearedMission
                         ? starGlyph(progress.stars[mission.id])
                         : missionUnlocked
-                          ? '▶'
-                          : '🔒'}
+                          ? 'Go'
+                          : 'Locked'}
                     </div>
                   </button>
                 );

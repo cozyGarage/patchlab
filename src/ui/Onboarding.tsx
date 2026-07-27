@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 interface OnboardingProps {
   open: boolean;
   step: number;
@@ -28,14 +30,45 @@ export function Onboarding({
   onSkip,
   onChoosePace,
 }: OnboardingProps) {
+  const primaryRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    primaryRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onSkip();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, step, onSkip]);
+
   if (!open) return null;
   const current = STEPS[Math.min(step, STEPS.length - 1)]!;
   const last = step >= STEPS.length - 1;
   return (
-    <div className="coach-backdrop" role="dialog" aria-label="Getting started">
+    <div
+      className="coach-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Getting started"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onSkip();
+      }}
+    >
       <div className="coach-card panel">
         <div className="coach-kicker">
           Getting started · {step + 1}/{STEPS.length}
+        </div>
+        <div className="onboard-dots" aria-hidden="true">
+          {STEPS.map((_, i) => (
+            <span
+              key={i}
+              className={`onboard-dot${i === Math.min(step, STEPS.length - 1) ? ' active' : ''}`}
+            />
+          ))}
         </div>
         <h2>{current.title}</h2>
         <p>{current.body}</p>
@@ -43,6 +76,7 @@ export function Onboarding({
           {last && onChoosePace ? (
             <>
               <button
+                ref={primaryRef}
                 type="button"
                 className="btn btn-primary"
                 onClick={() => onChoosePace('easy')}
@@ -58,7 +92,12 @@ export function Onboarding({
               </button>
             </>
           ) : (
-            <button type="button" className="btn btn-primary" onClick={onNext}>
+            <button
+              ref={primaryRef}
+              type="button"
+              className="btn btn-primary"
+              onClick={onNext}
+            >
               {last ? 'Start campaign' : 'Next'}
             </button>
           )}

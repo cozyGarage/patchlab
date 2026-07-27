@@ -435,10 +435,6 @@ p {
   font-size: 0.92rem;
 }
 
-.mission-card.needs-stars {
-  border-color: rgba(251, 191, 36, 0.35);
-}
-
 .chapter-chip-num {
   width: 1.25rem;
   height: 1.25rem;
@@ -508,6 +504,50 @@ p {
   font-size: 0.82rem;
   font-weight: 600;
   width: fit-content;
+}
+
+.mode-badge {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+}
+
+.section-title {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.details-body {
+  margin-top: 8px;
+}
+
+details summary {
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+details summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.onboard-dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.onboard-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.onboard-dot.active {
+  background: var(--cyan);
+  box-shadow: 0 0 0 4px var(--cyan-dim);
 }
 
 .mission-list {
@@ -584,7 +624,9 @@ p {
   color: var(--amber);
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
+  font-size: 0.82rem;
+  text-transform: uppercase;
 }
 
 .screen-brief,
@@ -862,6 +904,7 @@ p {
 
 .rack-stats {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   color: var(--ink-muted);
   font-size: 0.88rem;
@@ -1239,12 +1282,15 @@ p {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .tip-msg {
   font-size: 0.95rem;
   color: var(--ink);
+  flex: 1 1 220px;
+  min-width: 0;
 }
 
 .tip-bar.info {
@@ -1270,6 +1316,8 @@ p {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  max-height: 4.8rem;
+  overflow: auto;
 }
 
 .goal-pill {
@@ -1303,7 +1351,7 @@ p {
 
 .debrief-stars {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 

@@ -37,33 +37,46 @@ export function TipBar({
   armedLabel,
 }: TipBarProps) {
   const level = tip?.level ?? 'info';
+  const defaultMsg = armedLabel
+    ? `Tap/drag a free port · U unplug · fling away to yank`
+    : 'Tap-tap or drag to patch · drag a plugged end to move · fling away / U to unplug';
   return (
     <div className={`tip-bar ${level}${armedLabel ? ' armed' : ''}`}>
       <div className="row">
         <div className="tip-msg" role="status" aria-live="polite">
-          {tip?.message ??
-            (armedLabel
-              ? `Armed: ${armedLabel} — tap/drag a free port · U unplug · fling away to yank`
-              : 'Tap-tap or drag to patch · drag a plugged end to move · fling away / U to unplug')}
-          {armedLabel && tip?.message ? (
-            <span className="armed-chip"> Armed: {armedLabel}</span>
+          {tip?.message ?? defaultMsg}
+          {armedLabel ? (
+            <span className="armed-chip">Armed: {armedLabel}</span>
           ) : null}
         </div>
-        <div className="rack-stats">
-          <span>Cu {inventory.copper_cat6}</span>
-          <span>Fib {inventory.fiber_om4}</span>
-          <span>Pwr {inventory.power_c13}</span>
-          <span>Con {inventory.console_rj45}</span>
+        <div className="rack-stats" aria-label="Spare patch cords">
+          <span title="Cat6 remaining" aria-label={`Cat6 remaining: ${inventory.copper_cat6}`}>
+            Cu {inventory.copper_cat6}
+          </span>
+          <span title="OM4 fiber remaining" aria-label={`Fiber remaining: ${inventory.fiber_om4}`}>
+            Fib {inventory.fiber_om4}
+          </span>
+          <span title="Power cords remaining" aria-label={`Power remaining: ${inventory.power_c13}`}>
+            Pwr {inventory.power_c13}
+          </span>
+          <span
+            title="Console cords remaining"
+            aria-label={`Console remaining: ${inventory.console_rj45}`}
+          >
+            Con {inventory.console_rj45}
+          </span>
         </div>
       </div>
       {goalLabels.length > 0 ? (
-        <div className="goal-pills">
+        <div className="goal-pills" role="list" aria-label="Stage objectives">
           {goalLabels.map((label, i) => (
             <span
               key={`${label}-${i}`}
+              role="listitem"
               className={`goal-pill ${goalsMet[i] ? 'met' : ''}`}
+              aria-label={`Objective ${i + 1}: ${label}${goalsMet[i] ? ' — complete' : ' — incomplete'}`}
             >
-              {goalsMet[i] ? '✓ ' : ''}
+              <span aria-hidden="true">{goalsMet[i] ? '✓ ' : ''}</span>
               {label}
             </span>
           ))}

@@ -675,7 +675,6 @@ export default function App() {
         <Debrief
           mission={mission}
           score={score}
-          progress={progress}
           tipHistory={tipHistory}
           hintLevel={engine?.hintLevel ?? 0}
           campaignPace={normalizePace(settings.campaignPace)}
