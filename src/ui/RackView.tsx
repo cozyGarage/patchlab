@@ -630,15 +630,25 @@ export function RackView({
             >
               <defs>
                 <linearGradient id="chassis" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3a4554" />
-                  <stop offset="45%" stopColor="#252d38" />
-                  <stop offset="100%" stopColor="#1a212b" />
+                  <stop offset="0%" stopColor="#465264" />
+                  <stop offset="18%" stopColor="#323c4a" />
+                  <stop offset="55%" stopColor="#222a35" />
+                  <stop offset="100%" stopColor="#161c24" />
+                </linearGradient>
+                <linearGradient id="chassisShine" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+                  <stop offset="35%" stopColor="rgba(255,255,255,0.06)" />
+                  <stop offset="70%" stopColor="rgba(255,255,255,0)" />
                 </linearGradient>
                 <linearGradient id="rail" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#6b7280" />
-                  <stop offset="50%" stopColor="#9ca3af" />
-                  <stop offset="100%" stopColor="#6b7280" />
+                  <stop offset="0%" stopColor="#5b6470" />
+                  <stop offset="50%" stopColor="#a3acb8" />
+                  <stop offset="100%" stopColor="#5b6470" />
                 </linearGradient>
+                <pattern id="vent" width="6" height="6" patternUnits="userSpaceOnUse">
+                  <rect width="6" height="6" fill="transparent" />
+                  <rect x="1" y="2" width="4" height="1.5" rx="0.5" fill="rgba(0,0,0,0.35)" />
+                </pattern>
                 <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur stdDeviation="2.6" result="b" />
                   <feMerge>
@@ -658,6 +668,16 @@ export function RackView({
                 fill="url(#rail)"
                 rx="2"
               />
+              {/* Mounting holes on rails */}
+              {Array.from({ length: Math.floor((height - 32) / 18) }, (_, i) => {
+                const hy = 20 + i * 18;
+                return (
+                  <g key={`hole-${i}`}>
+                    <circle cx={15} cy={hy} r={2.2} fill="#0b0f14" />
+                    <circle cx={width - 15} cy={hy} r={2.2} fill="#0b0f14" />
+                  </g>
+                );
+              })}
 
               {ordered.map((device, row) => {
                 const y = 22 + row * ROW_H;
@@ -676,7 +696,7 @@ export function RackView({
                 return (
                   <g
                     key={device.id}
-                    className="device-chassis"
+                    className={`device-chassis${focused ? ' focused' : ''}`}
                     role="button"
                     tabIndex={0}
                     aria-label={`Configure ${device.name}, ${powered ? 'powered' : 'not powered'}`}
@@ -691,27 +711,43 @@ export function RackView({
                     style={{ cursor: 'pointer' }}
                   >
                     <rect
+                      className="device-face"
                       x={28}
                       y={y}
                       width={width - 56}
                       height={78}
                       rx={8}
                       fill="url(#chassis)"
-                      stroke={focused ? accent : 'rgba(232,238,244,0.14)'}
-                      strokeWidth={focused ? 2.2 : 1}
+                      stroke={focused ? accent : 'rgba(232,238,244,0.16)'}
+                      strokeWidth={focused ? 2.4 : 1}
                     />
                     <rect
-                      x={36}
-                      y={y + 8}
-                      width={6}
-                      height={10}
-                      rx={1}
-                      fill={powered ? '#3ddcb5' : '#6b7280'}
+                      x={32}
+                      y={y + 2}
+                      width={width - 64}
+                      height={18}
+                      rx={4}
+                      fill="url(#chassisShine)"
+                      pointerEvents="none"
                     />
-                    <text className="device-label" x={50} y={y + 18}>
+                    {/* Faceplate screws */}
+                    <circle cx={36} cy={y + 8} r={2} fill="#0f141a" stroke="rgba(232,238,244,0.2)" strokeWidth={0.8} />
+                    <circle cx={width - 36} cy={y + 8} r={2} fill="#0f141a" stroke="rgba(232,238,244,0.2)" strokeWidth={0.8} />
+                    <circle cx={36} cy={y + 70} r={2} fill="#0f141a" stroke="rgba(232,238,244,0.2)" strokeWidth={0.8} />
+                    <circle cx={width - 36} cy={y + 70} r={2} fill="#0f141a" stroke="rgba(232,238,244,0.2)" strokeWidth={0.8} />
+                    <rect
+                      x={42}
+                      y={y + 10}
+                      width={7}
+                      height={11}
+                      rx={1.5}
+                      fill={powered ? '#3ddcb5' : '#4b5563'}
+                      filter={powered ? 'url(#glow)' : undefined}
+                    />
+                    <text className="device-label" x={56} y={y + 20}>
                       {device.name}
                     </text>
-                    <text className="device-sub" x={50} y={y + 34}>
+                    <text className="device-sub" x={56} y={y + 36}>
                       {device.model ?? device.role} · U{device.rackUnitStart}
                       {powered ? ' · PWR' : ' · OFF'}
                     </text>
@@ -724,20 +760,36 @@ export function RackView({
                           width={150}
                           height={22}
                           rx={3}
-                          fill="#0b1220"
-                          stroke="rgba(61,220,181,0.25)"
+                          fill="#070d16"
+                          stroke={
+                            powered
+                              ? 'rgba(61,220,181,0.35)'
+                              : 'rgba(148,163,184,0.2)'
+                          }
                         />
                         <text
                           x={width - 200}
                           y={y + 25}
-                          fill="#3ddcb5"
+                          fill={powered ? '#3ddcb5' : '#64748b'}
                           fontSize={10}
                           fontFamily="IBM Plex Sans, monospace"
                         >
-                          {device.role === 'firewall'
-                            ? `ACL ${(device.firewallRules ?? []).length}`
-                            : 'PORTS OK'}
+                          {powered
+                            ? device.role === 'firewall'
+                              ? `ACL ${(device.firewallRules ?? []).length}`
+                              : 'PORTS OK'
+                            : 'NO PWR'}
                         </text>
+                        <rect
+                          x={width - 210}
+                          y={y + 36}
+                          width={150}
+                          height={8}
+                          rx={1}
+                          fill="url(#vent)"
+                          opacity={0.7}
+                          pointerEvents="none"
+                        />
                       </g>
                     )}
                   </g>

@@ -24,6 +24,50 @@ test.beforeAll(() => {
   fs.mkdirSync(shotDir, { recursive: true });
 });
 
+test.describe('visual & interaction polish', () => {
+  test('home brand hierarchy and rack arm feedback', async ({ page }) => {
+    await clearApp(page);
+    await shot(page, 'polish-01-home');
+
+    const brand = page.locator('.brand-mark').first();
+    await expect(brand).toContainText('PatchLab');
+    const brandSize = await brand.evaluate((el) =>
+      parseFloat(getComputedStyle(el).fontSize),
+    );
+    const headlineSize = await page
+      .locator('.hero h1')
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(brandSize).toBeGreaterThanOrEqual(headlineSize);
+
+    await startMission(page, /First Lights On/i);
+    await expect(page.locator('svg.rack-svg')).toBeVisible();
+    await expect(page.locator('.device-chassis.focused')).toHaveCount(1);
+    await shot(page, 'polish-02-rack');
+
+    await tapPort(page, /Panel-A A-01/);
+    await expect(page.locator('.tip-bar.armed')).toBeVisible();
+    await expect(page.locator('.armed-chip')).toContainText(/Armed:/i);
+    await expect(page.locator('.port-shell.selected')).toHaveCount(1);
+    await expect(page.locator('.port-shell.valid-target').first()).toBeVisible();
+    await shot(page, 'polish-03-armed');
+
+    await tapPort(page, /ToR-SW-A Gi1\/0\/1 VLAN 10/);
+    await expect(page.locator('.tip-bar.armed')).toHaveCount(0);
+    await expect(page.locator('.cable-path').first()).toBeVisible();
+    await shot(page, 'polish-04-patched');
+  });
+
+  test('mobile home and brief remain usable', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await clearApp(page);
+    await shot(page, 'polish-05-mobile-home');
+    await expect(page.locator('.brand-mark')).toBeVisible();
+    await page.getByRole('button', { name: /First Lights On/i }).click();
+    await expect(page.getByRole('heading', { name: /First Lights On/i })).toBeVisible();
+    await shot(page, 'polish-06-mobile-brief');
+  });
+});
+
 test.describe('home & shell', () => {
   test('home, glossary, and sound toggle', async ({ page }) => {
     await clearApp(page);
