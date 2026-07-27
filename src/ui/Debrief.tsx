@@ -1,4 +1,4 @@
-import type { Mission, ProgressSave, Score } from '../types/schema';
+import type { Mission, Score } from '../types/schema';
 import { chapterForMission, starTotal } from '../lib/chapters';
 import {
   shouldRevealDebriefAnswer,
@@ -9,7 +9,6 @@ import { missions } from '../missions';
 interface DebriefProps {
   mission: Mission;
   score: Score;
-  progress: ProgressSave;
   tipHistory: string[];
   onNext?: () => void;
   onRetry: () => void;
@@ -72,14 +71,14 @@ export function Debrief({
 
         {debrief ? (
           <section aria-labelledby="debrief-explanation-heading">
-            <h3 id="debrief-explanation-heading" style={{ marginBottom: 8 }}>
+            <h3 id="debrief-explanation-heading" className="section-title">
               Why it worked
             </h3>
             <p>{debrief.explanation}</p>
           </section>
         ) : mission.lesson ? (
           <section aria-labelledby="debrief-explanation-heading">
-            <h3 id="debrief-explanation-heading" style={{ marginBottom: 8 }}>
+            <h3 id="debrief-explanation-heading" className="section-title">
               Why it worked
             </h3>
             <p>{mission.lesson}</p>
@@ -88,20 +87,20 @@ export function Debrief({
 
         {debrief ? (
           <section aria-labelledby="reflection-question-heading">
-            <h3 id="reflection-question-heading" style={{ marginBottom: 8 }}>
+            <h3 id="reflection-question-heading" className="section-title">
               Check your understanding
             </h3>
             <p>{debrief.question}</p>
             <details open={shouldRevealDebriefAnswer(campaignPace)}>
               <summary>Reveal answer</summary>
-              <p style={{ marginTop: 8 }}>{debrief.answer}</p>
+              <p className="details-body">{debrief.answer}</p>
             </details>
           </section>
         ) : null}
 
         {mission.learning.deviceUnlocks?.length ? (
           <section aria-labelledby="equipment-unlocked-heading">
-            <h3 id="equipment-unlocked-heading" style={{ marginBottom: 8 }}>
+            <h3 id="equipment-unlocked-heading" className="section-title">
               Equipment unlocked
             </h3>
             <ul className="checklist">
@@ -114,7 +113,7 @@ export function Debrief({
 
         {conceptsPracticed.length ? (
           <section aria-labelledby="concepts-practiced-heading">
-            <h3 id="concepts-practiced-heading" style={{ marginBottom: 8 }}>
+            <h3 id="concepts-practiced-heading" className="section-title">
               Concepts practiced
             </h3>
             <ul className="checklist">
@@ -126,7 +125,7 @@ export function Debrief({
         ) : null}
 
         <section aria-labelledby="optional-achievements-heading">
-          <h3 id="optional-achievements-heading" style={{ marginBottom: 8 }}>
+          <h3 id="optional-achievements-heading" className="section-title">
             Optional achievements · {earned}/9 stars
           </h3>
           <p>
@@ -163,10 +162,10 @@ export function Debrief({
 
         {tipHistory.length > 0 ? (
           <div>
-            <h3 style={{ marginBottom: 8 }}>Moments from this run</h3>
+            <h3 className="section-title">Moments from this run</h3>
             <ul className="checklist">
-              {tipHistory.slice(-3).map((t) => (
-                <li key={t}>{t}</li>
+              {tipHistory.slice(-3).map((t, i) => (
+                <li key={`${i}-${t}`}>{t}</li>
               ))}
             </ul>
           </div>
