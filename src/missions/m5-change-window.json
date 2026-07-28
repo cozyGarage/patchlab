@@ -3,11 +3,10 @@
   "title": "Change Window",
   "order": 5,
   "track": "copper",
-  "brief": "Migrate the documented panel cross-connect from A-01/Gi1/0/1 to A-08/Gi1/0/8. Keep SERVER-01 online on Gi1/0/5. Finish clean: old ports empty, new path lit.",
+  "brief": "Change window: migrate the panel cross-connect to the newly assigned circuit. Keep SERVER-01 online and leave no abandoned copper on the old path.",
   "constraints": [
-    "Final panel port: A-08",
-    "Final switch cross-connect: Gi1/0/8",
-    "Do not strand SERVER-01"
+    "Keep SERVER-01 attached through the move",
+    "Finish with the retired cross-connect endpoints empty"
   ],
   "parTimeSec": 150,
   "hintAfterWrongAttempts": 3,

@@ -4,10 +4,10 @@
   "order": 30,
   "track": "routing",
   "lesson": "Floating statics share a prefix but differ by administrative distance. The lower-AD route is preferred while its tracked next hop is healthy; when tracking withdraws it, the higher-AD backup is installed.",
-  "brief": "The configured AD1 route to BRANCH has been withdrawn by failed reachability tracking. Add a floating backup via 203.0.113.2 with AD 10, keep the LAN→BRANCH permit, then verify SERVER-01 → BRANCH-01.",
+  "brief": "The preferred BRANCH route has been withdrawn by failed reachability tracking. Install a floating backup so SERVER-01 can reach BRANCH-01 again while leaving the tracked primary configured.",
   "constraints": [
-    "Keep the tracked-down AD1 primary configured",
-    "Backup next hop must be ISP-PEER (203.0.113.2) with AD 10",
+    "Keep the tracked-down primary route configured",
+    "Backup must be a higher administrative distance static",
     "ACL is already permitted"
   ],
   "parTimeSec": 150,
@@ -48,10 +48,59 @@
           }
         ],
         "ports": [
-          { "id": "fw-lan", "deviceId": "fw-1", "index": 1, "label": "LAN0", "media": "copper_cat6", "connector": "rj45", "kind": "lan", "admin": "up", "role": "lan", "vlanId": 10, "ip": { "address": "10.10.10.1", "prefix": 24 } },
-          { "id": "fw-wan", "deviceId": "fw-1", "index": 2, "label": "WAN0", "media": "copper_cat6", "connector": "rj45", "kind": "wan", "admin": "up", "role": "wan", "ip": { "address": "203.0.113.1", "prefix": 30 } },
-          { "id": "fw-con", "deviceId": "fw-1", "index": 3, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
-          { "id": "fw-psu", "deviceId": "fw-1", "index": 4, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+          {
+            "id": "fw-lan",
+            "deviceId": "fw-1",
+            "index": 1,
+            "label": "LAN0",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "lan",
+            "admin": "up",
+            "role": "lan",
+            "vlanId": 10,
+            "ip": {
+              "address": "10.10.10.1",
+              "prefix": 24
+            }
+          },
+          {
+            "id": "fw-wan",
+            "deviceId": "fw-1",
+            "index": 2,
+            "label": "WAN0",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "wan",
+            "admin": "up",
+            "role": "wan",
+            "ip": {
+              "address": "203.0.113.1",
+              "prefix": 30
+            }
+          },
+          {
+            "id": "fw-con",
+            "deviceId": "fw-1",
+            "index": 3,
+            "label": "CON",
+            "media": "console_rj45",
+            "connector": "console",
+            "kind": "console",
+            "admin": "up",
+            "role": "console"
+          },
+          {
+            "id": "fw-psu",
+            "deviceId": "fw-1",
+            "index": 4,
+            "label": "PSU",
+            "media": "power_c13",
+            "connector": "c13",
+            "kind": "power",
+            "admin": "up",
+            "role": "power"
+          }
         ]
       },
       {
@@ -62,9 +111,45 @@
         "rackUnitStart": 20,
         "heightU": 1,
         "ports": [
-          { "id": "nic-1", "deviceId": "server-01", "index": 1, "label": "eth0", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "nic", "accessVlan": 10, "ip": { "address": "10.10.10.10", "prefix": 24, "gateway": "10.10.10.1" } },
-          { "id": "srv1-con", "deviceId": "server-01", "index": 2, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
-          { "id": "srv1-psu", "deviceId": "server-01", "index": 3, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+          {
+            "id": "nic-1",
+            "deviceId": "server-01",
+            "index": 1,
+            "label": "eth0",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "data",
+            "admin": "up",
+            "role": "nic",
+            "accessVlan": 10,
+            "ip": {
+              "address": "10.10.10.10",
+              "prefix": 24,
+              "gateway": "10.10.10.1"
+            }
+          },
+          {
+            "id": "srv1-con",
+            "deviceId": "server-01",
+            "index": 2,
+            "label": "CON",
+            "media": "console_rj45",
+            "connector": "console",
+            "kind": "console",
+            "admin": "up",
+            "role": "console"
+          },
+          {
+            "id": "srv1-psu",
+            "deviceId": "server-01",
+            "index": 3,
+            "label": "PSU",
+            "media": "power_c13",
+            "connector": "c13",
+            "kind": "power",
+            "admin": "up",
+            "role": "power"
+          }
         ]
       }
     ],
@@ -75,8 +160,14 @@
         "color": "yellow",
         "lengthM": 1,
         "ends": [
-          { "deviceId": "fw-1", "portId": "fw-lan" },
-          { "deviceId": "tor-1", "portId": "sw-2" }
+          {
+            "deviceId": "fw-1",
+            "portId": "fw-lan"
+          },
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-2"
+          }
         ]
       },
       {
@@ -85,8 +176,14 @@
         "color": "blue",
         "lengthM": 2,
         "ends": [
-          { "deviceId": "tor-1", "portId": "sw-5" },
-          { "deviceId": "server-01", "portId": "nic-1" }
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-5"
+          },
+          {
+            "deviceId": "server-01",
+            "portId": "nic-1"
+          }
         ]
       }
     ]

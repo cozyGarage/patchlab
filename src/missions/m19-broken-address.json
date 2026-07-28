@@ -3,11 +3,11 @@
   "title": "Broken Address",
   "order": 19,
   "track": "routing",
-  "lesson": "Same-subnet reachability starts with a correct host IP. A perfect cable still fails when the address is on the wrong network — fix the IP, then prove it with ping. Better than a bare puzzle: the rack is already live, so the tip tells you exactly what broke.",
-  "brief": "SERVER-01 is patched and powered, but someone typed 10.10.99.10/24. Put eth0 on 10.10.10.10/24 (gateway 10.10.10.1) and ping FW-EDGE.",
+  "lesson": "Same-subnet reachability starts with a correct host IP. A perfect cable still fails when the address is on the wrong network \u2014 fix the IP, then prove it with ping. Better than a bare puzzle: the rack is already live, so the tip tells you exactly what broke.",
+  "brief": "SERVER-01 has healthy copper and power, but cannot reach FW-EDGE. Someone mis-addressed the host \u2014 restore LAN reachability and prove it with a ping.",
   "constraints": [
     "Do not unpatch working copper",
-    "Target address: 10.10.10.10/24"
+    "Repair host addressing only"
   ],
   "parTimeSec": 90,
   "hintAfterWrongAttempts": 2,
@@ -27,9 +27,45 @@
         "rackUnitStart": 20,
         "heightU": 1,
         "ports": [
-          { "id": "nic-1", "deviceId": "server-01", "index": 1, "label": "eth0", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "nic", "accessVlan": 10, "ip": { "address": "10.10.99.10", "prefix": 24, "gateway": "10.10.10.1" } },
-          { "id": "srv1-con", "deviceId": "server-01", "index": 2, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
-          { "id": "srv1-psu", "deviceId": "server-01", "index": 3, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+          {
+            "id": "nic-1",
+            "deviceId": "server-01",
+            "index": 1,
+            "label": "eth0",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "data",
+            "admin": "up",
+            "role": "nic",
+            "accessVlan": 10,
+            "ip": {
+              "address": "10.10.99.10",
+              "prefix": 24,
+              "gateway": "10.10.10.1"
+            }
+          },
+          {
+            "id": "srv1-con",
+            "deviceId": "server-01",
+            "index": 2,
+            "label": "CON",
+            "media": "console_rj45",
+            "connector": "console",
+            "kind": "console",
+            "admin": "up",
+            "role": "console"
+          },
+          {
+            "id": "srv1-psu",
+            "deviceId": "server-01",
+            "index": 3,
+            "label": "PSU",
+            "media": "power_c13",
+            "connector": "c13",
+            "kind": "power",
+            "admin": "up",
+            "role": "power"
+          }
         ]
       }
     ],
@@ -40,8 +76,14 @@
         "color": "yellow",
         "lengthM": 1,
         "ends": [
-          { "deviceId": "fw-1", "portId": "fw-lan" },
-          { "deviceId": "tor-1", "portId": "sw-2" }
+          {
+            "deviceId": "fw-1",
+            "portId": "fw-lan"
+          },
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-2"
+          }
         ]
       },
       {
@@ -50,8 +92,14 @@
         "color": "blue",
         "lengthM": 2,
         "ends": [
-          { "deviceId": "tor-1", "portId": "sw-5" },
-          { "deviceId": "server-01", "portId": "nic-1" }
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-5"
+          },
+          {
+            "deviceId": "server-01",
+            "portId": "nic-1"
+          }
         ]
       }
     ]
@@ -59,7 +107,10 @@
   "goals": [
     {
       "type": "iface_ip",
-      "port": { "deviceId": "server-01", "portId": "nic-1" },
+      "port": {
+        "deviceId": "server-01",
+        "portId": "nic-1"
+      },
       "address": "10.10.10.10",
       "prefix": 24
     },

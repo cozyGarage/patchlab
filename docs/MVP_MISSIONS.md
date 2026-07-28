@@ -1,8 +1,11 @@
 # PatchLab — Mission Catalog (historical MVP notes)
 
-> **Current product:** 32 stages across 15 chapters (`src/missions/`, `src/lib/chapters.ts`),
-> plus sandbox free-play unlocked after Stage 5. This document retains early M1–M5 design
-> notes for context; authoritative mission JSON lives under `src/missions/`.
+> **Current product:** 32 stages across 10 operational arcs
+> (`src/missions/learningDesign.ts` campaign order + `src/lib/chapters.ts` chapter titles),
+> plus sandbox free-play unlocked after the first boss and optional transfer variants
+> (`src/lib/transferVariants.ts`). This document retains early M1–M5 design notes for
+> context; authoritative mission JSON lives under `src/missions/`. For authoring rules
+> (symptom briefs, mode voice), see [MISSION_AUTHORING.md](./MISSION_AUTHORING.md).
 
 ---
 

@@ -1113,28 +1113,21 @@ describe('NetPractice-inspired routing lessons', () => {
     expect(state.snapshot.complete).toBe(true);
   });
 
-  it('M32: traceroute succeeds after route + permit', () => {
+  it('M32: traceroute succeeds after route when ACL is already open', () => {
     const mission = getMission('m32-traceroute')!;
     let state = createEngineState(mission, baseRack);
+    expect(mission.brief).toMatch(/traceroute/i);
+    expect(mission.brief).not.toMatch(/198\.51\.100\.0\/24/);
+    expect(mission.brief).not.toMatch(/203\.0\.113\.2/);
     expect(
       evaluateTraceroute(state.snapshot.rack, 'server-01', 'branch-01').ok,
     ).toBe(false);
+    // ACL toward BRANCH is pre-seeded; only the route is missing.
     state = reduce(state, {
       type: 'SET_ROUTE',
       deviceId: 'fw-1',
       destCidr: '198.51.100.0/24',
       nextHop: '203.0.113.2',
-    });
-    state = reduce(state, {
-      type: 'UPSERT_FIREWALL_RULE',
-      deviceId: 'fw-1',
-      rule: {
-        id: 'permit-branch',
-        action: 'permit',
-        srcCidr: '10.10.10.0/24',
-        dstCidr: '198.51.100.0/24',
-        enabled: true,
-      },
     });
     expect(state.snapshot.complete).toBe(false);
     state = reduce(state, {
