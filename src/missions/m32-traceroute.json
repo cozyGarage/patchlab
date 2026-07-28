@@ -3,12 +3,12 @@
   "title": "Traceroute Path",
   "order": 32,
   "track": "routing",
-  "lesson": "Traceroute shows the hop path: host → gateway → next hop → destination. Fix the route and ACL, then prove the path with Traceroute — not just a silent ping.",
-  "brief": "BRANCH is dark. Add route 198.51.100.0/24 via 203.0.113.2, permit LAN→BRANCH, then run Traceroute from SERVER-01 to BRANCH-01 until the path completes.",
+  "lesson": "Traceroute shows the hop path: host → gateway → next hop → destination. When policy is already open, a missing route still stops the path — prove the repair with traceroute, not just a silent ping.",
+  "brief": "BRANCH is dark from SERVER-01. Ping alone is not enough for this incident — restore the path and prove the hop chain with traceroute until BRANCH answers.",
   "constraints": [
-    "Next hop ISP-PEER 203.0.113.2",
-    "Use Traceroute (not only Ping) to finish",
-    "BRANCH-01 is a cloud host"
+    "Use traceroute evidence to finish the ticket",
+    "BRANCH-01 is a cloud host beyond the WAN edge",
+    "Firewall policy toward BRANCH is already open — focus on forwarding"
   ],
   "parTimeSec": 150,
   "hintAfterWrongAttempts": 2,
@@ -29,10 +29,11 @@
         "heightU": 1,
         "firewallRules": [
           {
-            "id": "deny-branch",
-            "action": "deny",
+            "id": "permit-branch",
+            "action": "permit",
             "srcCidr": "10.10.10.0/24",
             "dstCidr": "198.51.100.0/24",
+            "note": "Already open for this incident",
             "enabled": true
           }
         ],
@@ -87,12 +88,6 @@
       "deviceId": "fw-1",
       "destCidr": "198.51.100.0/24",
       "nextHop": "203.0.113.2"
-    },
-    {
-      "type": "firewall_rule",
-      "action": "permit",
-      "srcCidr": "10.10.10.0/24",
-      "dstCidr": "198.51.100.0/24"
     },
     {
       "type": "traceroute_ok",

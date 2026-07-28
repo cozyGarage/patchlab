@@ -3,10 +3,10 @@
   "title": "VLAN Trap",
   "order": 3,
   "track": "copper",
-  "brief": "SERVER-07 belongs on VLAN 20. It is patched to Gi1/0/2 (VLAN 10) \u2014 the cable looks fine, but the link will not pass. Move the server cable to Gi1/0/7 (VLAN 20).",
+  "brief": "SERVER-07 is online in the rack but cannot join its assigned tenant segment. The copper patch looks seated, yet traffic never arrives. Restore the server onto the correct VLAN path and leave the wrong switch port clear.",
   "constraints": [
-    "SERVER-07 access VLAN is 20",
-    "Clear the wrong switch port when finished"
+    "Match the server to its documented VLAN segment",
+    "Leave no abandoned cross-connect on the wrong switch port"
   ],
   "parTimeSec": 120,
   "hintAfterWrongAttempts": 2,

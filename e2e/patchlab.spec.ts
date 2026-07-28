@@ -650,11 +650,17 @@ test.describe('logic / security missions', () => {
 
   test('Mission 32 traceroute path', async ({ page }) => {
     await clearApp(page);
+    await page.getByRole('button', { name: /Pace: Easy/i }).click();
     await unlockThrough(page, 32);
     await startMission(page, /Traceroute Path/i);
+    const symptom = page.locator('.incident-report').getByText(/Symptom:/i);
+    await expect(symptom).toContainText(/BRANCH is dark/i);
+    await expect(symptom).not.toContainText(/198\.51\.100\.0\/24/);
+    await expect(
+      page.locator('details').filter({ hasText: /Ticket details/i }),
+    ).not.toHaveAttribute('open', '');
     await focusDevice(page, 'FW-EDGE');
     await page.getByRole('button', { name: 'Apply route' }).click();
-    await insertCustomAcl(page, 'permit', '10.10.10.0/24', '198.51.100.0/24');
     await focusDevice(page, 'SERVER-01');
     const diagnostics = page.locator('.config-block', {
       has: page.getByRole('heading', { name: /Traceroute/ }),

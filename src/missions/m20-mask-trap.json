@@ -3,11 +3,11 @@
   "title": "Mask Trap",
   "order": 20,
   "track": "routing",
-  "lesson": "Address and mask are a pair. 10.10.10.10/16 is not the same network as the gateway 10.10.10.1/24 — prefixes must match for same-subnet logic. PatchLab refuses the lazy 'it looks close enough' answer.",
-  "brief": "SERVER-01 shows 10.10.10.10 with a /16 mask. Correct it to /24 (keep gateway 10.10.10.1) and ping FW-EDGE.",
+  "lesson": "Address and mask are a pair. 10.10.10.10/16 is not the same network as the gateway 10.10.10.1/24 \u2014 prefixes must match for same-subnet logic. PatchLab refuses the lazy 'it looks close enough' answer.",
+  "brief": "SERVER-01 has link and an address that looks familiar, but it cannot reach FW-EDGE on the LAN. Something in the host addressing is wrong \u2014 find it, fix it, and prove reachability with a ping.",
   "constraints": [
-    "Keep address 10.10.10.10",
-    "Prefix must be 24"
+    "Do not change the host's IPv4 address itself",
+    "Restore same-subnet reachability to the firewall"
   ],
   "parTimeSec": 75,
   "hintAfterWrongAttempts": 2,
@@ -27,9 +27,45 @@
         "rackUnitStart": 20,
         "heightU": 1,
         "ports": [
-          { "id": "nic-1", "deviceId": "server-01", "index": 1, "label": "eth0", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "nic", "accessVlan": 10, "ip": { "address": "10.10.10.10", "prefix": 16, "gateway": "10.10.10.1" } },
-          { "id": "srv1-con", "deviceId": "server-01", "index": 2, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
-          { "id": "srv1-psu", "deviceId": "server-01", "index": 3, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+          {
+            "id": "nic-1",
+            "deviceId": "server-01",
+            "index": 1,
+            "label": "eth0",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "data",
+            "admin": "up",
+            "role": "nic",
+            "accessVlan": 10,
+            "ip": {
+              "address": "10.10.10.10",
+              "prefix": 16,
+              "gateway": "10.10.10.1"
+            }
+          },
+          {
+            "id": "srv1-con",
+            "deviceId": "server-01",
+            "index": 2,
+            "label": "CON",
+            "media": "console_rj45",
+            "connector": "console",
+            "kind": "console",
+            "admin": "up",
+            "role": "console"
+          },
+          {
+            "id": "srv1-psu",
+            "deviceId": "server-01",
+            "index": 3,
+            "label": "PSU",
+            "media": "power_c13",
+            "connector": "c13",
+            "kind": "power",
+            "admin": "up",
+            "role": "power"
+          }
         ]
       }
     ],
@@ -40,8 +76,14 @@
         "color": "yellow",
         "lengthM": 1,
         "ends": [
-          { "deviceId": "fw-1", "portId": "fw-lan" },
-          { "deviceId": "tor-1", "portId": "sw-2" }
+          {
+            "deviceId": "fw-1",
+            "portId": "fw-lan"
+          },
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-2"
+          }
         ]
       },
       {
@@ -50,8 +92,14 @@
         "color": "blue",
         "lengthM": 2,
         "ends": [
-          { "deviceId": "tor-1", "portId": "sw-5" },
-          { "deviceId": "server-01", "portId": "nic-1" }
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-5"
+          },
+          {
+            "deviceId": "server-01",
+            "portId": "nic-1"
+          }
         ]
       }
     ]
@@ -59,7 +107,10 @@
   "goals": [
     {
       "type": "iface_ip",
-      "port": { "deviceId": "server-01", "portId": "nic-1" },
+      "port": {
+        "deviceId": "server-01",
+        "portId": "nic-1"
+      },
       "address": "10.10.10.10",
       "prefix": 24
     },

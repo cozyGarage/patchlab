@@ -45,7 +45,8 @@ See [docs/ci/README.md](docs/ci/README.md). Manual fallback: `npm run deploy:pag
 |---|---|
 | [docs/PRODUCT_BRIEF.md](docs/PRODUCT_BRIEF.md) | Vision / MVP roots |
 | [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) | Game loop, learning progression, campaign arcs, and implementation plan |
+| [docs/MISSION_AUTHORING.md](docs/MISSION_AUTHORING.md) | Mode voice, anti-spoiler checklist, and mission authoring rules |
 | [docs/SCREEN_MAP.md](docs/SCREEN_MAP.md) | Screens & flows |
 | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Ports, cables, intents |
-| [docs/MVP_MISSIONS.md](docs/MVP_MISSIONS.md) | Mission catalog |
+| [docs/MVP_MISSIONS.md](docs/MVP_MISSIONS.md) | Historical MVP mission notes (see learningDesign for current catalog) |
 | [docs/TECH_STACK.md](docs/TECH_STACK.md) | Stack & phases |

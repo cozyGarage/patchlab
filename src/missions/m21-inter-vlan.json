@@ -3,12 +3,12 @@
   "title": "Inter-VLAN Router",
   "order": 21,
   "track": "routing",
-  "lesson": "Hosts in different VLANs need a router (or L3 firewall) with an interface in each network. This improves on flat IP puzzles: you feel the VLAN boundary, then bridge it with a second LAN IP — classic router-on-a-stick thinking without the CLI pain.",
-  "brief": "Bring SERVER-01 (VLAN 10 → 10.10.10.10/24 gw .1) and SERVER-07 (VLAN 20 → 10.10.20.10/24 gw .1) online. Patch both FW LAN interfaces (LAN0 + LAN20), then ping SERVER-01 → SERVER-07.",
+  "lesson": "Hosts in different VLANs need a router (or L3 firewall) with an interface in each network. This improves on flat IP puzzles: you feel the VLAN boundary, then bridge it with a second LAN IP \u2014 classic router-on-a-stick thinking without the CLI pain.",
+  "brief": "Two tenant servers sit on separate VLANs and cannot reach each other. Complete the Layer-3 path through FW-EDGE and prove SERVER-01 can reach SERVER-07.",
   "constraints": [
-    "FW LAN0 = 10.10.10.1/24, LAN20 = 10.10.20.1/24 (pre-set)",
-    "Use Gi1/0/5 for SERVER-01 and Gi1/0/7 for SERVER-07",
-    "Gateways must match each VLAN"
+    "Each tenant needs a firewall interface on its own LAN",
+    "Hosts must use the gateway on their local VLAN",
+    "Do not rely on trunking alone to route"
   ],
   "parTimeSec": 180,
   "hintAfterWrongAttempts": 2,
@@ -28,16 +28,124 @@
         "rackUnitStart": 40,
         "heightU": 1,
         "ports": [
-          { "id": "sw-1", "deviceId": "tor-1", "index": 1, "label": "Gi1/0/1", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "network", "vlanId": 10 },
-          { "id": "sw-2", "deviceId": "tor-1", "index": 2, "label": "Gi1/0/2", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "network", "vlanId": 10 },
-          { "id": "sw-3", "deviceId": "tor-1", "index": 3, "label": "Gi1/0/3", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "network", "vlanId": 10 },
-          { "id": "sw-4", "deviceId": "tor-1", "index": 4, "label": "Gi1/0/4", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "down", "role": "network", "vlanId": 10 },
-          { "id": "sw-5", "deviceId": "tor-1", "index": 5, "label": "Gi1/0/5", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "network", "vlanId": 10 },
-          { "id": "sw-6", "deviceId": "tor-1", "index": 6, "label": "Gi1/0/6", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "network", "vlanId": 10 },
-          { "id": "sw-7", "deviceId": "tor-1", "index": 7, "label": "Gi1/0/7", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "network", "vlanId": 20 },
-          { "id": "sw-8", "deviceId": "tor-1", "index": 8, "label": "Gi1/0/8", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "network", "vlanId": 20 },
-          { "id": "sw-con", "deviceId": "tor-1", "index": 9, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
-          { "id": "sw-psu", "deviceId": "tor-1", "index": 10, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+          {
+            "id": "sw-1",
+            "deviceId": "tor-1",
+            "index": 1,
+            "label": "Gi1/0/1",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "data",
+            "admin": "up",
+            "role": "network",
+            "vlanId": 10
+          },
+          {
+            "id": "sw-2",
+            "deviceId": "tor-1",
+            "index": 2,
+            "label": "Gi1/0/2",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "data",
+            "admin": "up",
+            "role": "network",
+            "vlanId": 10
+          },
+          {
+            "id": "sw-3",
+            "deviceId": "tor-1",
+            "index": 3,
+            "label": "Gi1/0/3",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "data",
+            "admin": "up",
+            "role": "network",
+            "vlanId": 10
+          },
+          {
+            "id": "sw-4",
+            "deviceId": "tor-1",
+            "index": 4,
+            "label": "Gi1/0/4",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "data",
+            "admin": "down",
+            "role": "network",
+            "vlanId": 10
+          },
+          {
+            "id": "sw-5",
+            "deviceId": "tor-1",
+            "index": 5,
+            "label": "Gi1/0/5",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "data",
+            "admin": "up",
+            "role": "network",
+            "vlanId": 10
+          },
+          {
+            "id": "sw-6",
+            "deviceId": "tor-1",
+            "index": 6,
+            "label": "Gi1/0/6",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "data",
+            "admin": "up",
+            "role": "network",
+            "vlanId": 10
+          },
+          {
+            "id": "sw-7",
+            "deviceId": "tor-1",
+            "index": 7,
+            "label": "Gi1/0/7",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "data",
+            "admin": "up",
+            "role": "network",
+            "vlanId": 20
+          },
+          {
+            "id": "sw-8",
+            "deviceId": "tor-1",
+            "index": 8,
+            "label": "Gi1/0/8",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "data",
+            "admin": "up",
+            "role": "network",
+            "vlanId": 20
+          },
+          {
+            "id": "sw-con",
+            "deviceId": "tor-1",
+            "index": 9,
+            "label": "CON",
+            "media": "console_rj45",
+            "connector": "console",
+            "kind": "console",
+            "admin": "up",
+            "role": "console"
+          },
+          {
+            "id": "sw-psu",
+            "deviceId": "tor-1",
+            "index": 10,
+            "label": "PSU",
+            "media": "power_c13",
+            "connector": "c13",
+            "kind": "power",
+            "admin": "up",
+            "role": "power"
+          }
         ]
       },
       {
@@ -49,11 +157,75 @@
         "heightU": 1,
         "firewallRules": [],
         "ports": [
-          { "id": "fw-lan", "deviceId": "fw-1", "index": 1, "label": "LAN0", "media": "copper_cat6", "connector": "rj45", "kind": "lan", "admin": "up", "role": "lan", "vlanId": 10, "ip": { "address": "10.10.10.1", "prefix": 24 } },
-          { "id": "fw-lan20", "deviceId": "fw-1", "index": 2, "label": "LAN20", "media": "copper_cat6", "connector": "rj45", "kind": "lan", "admin": "up", "role": "lan", "vlanId": 20, "ip": { "address": "10.10.20.1", "prefix": 24 } },
-          { "id": "fw-wan", "deviceId": "fw-1", "index": 3, "label": "WAN0", "media": "copper_cat6", "connector": "rj45", "kind": "wan", "admin": "up", "role": "wan", "ip": { "address": "203.0.113.1", "prefix": 30 } },
-          { "id": "fw-con", "deviceId": "fw-1", "index": 4, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
-          { "id": "fw-psu", "deviceId": "fw-1", "index": 5, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+          {
+            "id": "fw-lan",
+            "deviceId": "fw-1",
+            "index": 1,
+            "label": "LAN0",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "lan",
+            "admin": "up",
+            "role": "lan",
+            "vlanId": 10,
+            "ip": {
+              "address": "10.10.10.1",
+              "prefix": 24
+            }
+          },
+          {
+            "id": "fw-lan20",
+            "deviceId": "fw-1",
+            "index": 2,
+            "label": "LAN20",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "lan",
+            "admin": "up",
+            "role": "lan",
+            "vlanId": 20,
+            "ip": {
+              "address": "10.10.20.1",
+              "prefix": 24
+            }
+          },
+          {
+            "id": "fw-wan",
+            "deviceId": "fw-1",
+            "index": 3,
+            "label": "WAN0",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "wan",
+            "admin": "up",
+            "role": "wan",
+            "ip": {
+              "address": "203.0.113.1",
+              "prefix": 30
+            }
+          },
+          {
+            "id": "fw-con",
+            "deviceId": "fw-1",
+            "index": 4,
+            "label": "CON",
+            "media": "console_rj45",
+            "connector": "console",
+            "kind": "console",
+            "admin": "up",
+            "role": "console"
+          },
+          {
+            "id": "fw-psu",
+            "deviceId": "fw-1",
+            "index": 5,
+            "label": "PSU",
+            "media": "power_c13",
+            "connector": "c13",
+            "kind": "power",
+            "admin": "up",
+            "role": "power"
+          }
         ]
       }
     ],
@@ -62,33 +234,63 @@
   "goals": [
     {
       "type": "link_up",
-      "a": { "deviceId": "tor-1", "portId": "sw-5" },
-      "b": { "deviceId": "server-01", "portId": "nic-1" }
+      "a": {
+        "deviceId": "tor-1",
+        "portId": "sw-5"
+      },
+      "b": {
+        "deviceId": "server-01",
+        "portId": "nic-1"
+      }
     },
     {
       "type": "link_up",
-      "a": { "deviceId": "tor-1", "portId": "sw-7" },
-      "b": { "deviceId": "server-07", "portId": "nic-1" }
+      "a": {
+        "deviceId": "tor-1",
+        "portId": "sw-7"
+      },
+      "b": {
+        "deviceId": "server-07",
+        "portId": "nic-1"
+      }
     },
     {
       "type": "link_up",
-      "a": { "deviceId": "fw-1", "portId": "fw-lan" },
-      "b": { "deviceId": "tor-1", "portId": "sw-2" }
+      "a": {
+        "deviceId": "fw-1",
+        "portId": "fw-lan"
+      },
+      "b": {
+        "deviceId": "tor-1",
+        "portId": "sw-2"
+      }
     },
     {
       "type": "link_up",
-      "a": { "deviceId": "fw-1", "portId": "fw-lan20" },
-      "b": { "deviceId": "tor-1", "portId": "sw-8" }
+      "a": {
+        "deviceId": "fw-1",
+        "portId": "fw-lan20"
+      },
+      "b": {
+        "deviceId": "tor-1",
+        "portId": "sw-8"
+      }
     },
     {
       "type": "iface_ip",
-      "port": { "deviceId": "server-01", "portId": "nic-1" },
+      "port": {
+        "deviceId": "server-01",
+        "portId": "nic-1"
+      },
       "address": "10.10.10.10",
       "prefix": 24
     },
     {
       "type": "iface_ip",
-      "port": { "deviceId": "server-07", "portId": "nic-1" },
+      "port": {
+        "deviceId": "server-07",
+        "portId": "nic-1"
+      },
       "address": "10.10.20.10",
       "prefix": 24
     },

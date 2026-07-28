@@ -195,7 +195,7 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsPracticed: ['Administrative-down link symptoms', 'Physical endpoints and link-state evidence'],
     enabledTools: ['switchport'],
     visibleObjectives: ['Restore the documented cross-connect without repatching it.', 'Keep the existing server-facing connection online.'],
-    ticketDetails: ['The A-04 to Gi1/0/4 cable is correct.', 'The switchport is administratively disabled.'],
+    ticketDetails: ['The A-04 to Gi1/0/4 cable is already correct.', 'Enable Gi1/0/4; leave the server-facing link on Gi1/0/5 unchanged.'],
     debrief: {
       outcome: 'The documented Gi1/0/4 circuit is restored in place.',
       explanation: 'Re-enabling the intended interface fixes the root cause and avoids an undocumented spare-port workaround.',
@@ -204,8 +204,8 @@ export const LEARNING_DESIGN_BY_ID = {
     },
     hints: {
       prompt: 'Decide whether the physical path or the interface state conflicts with the ticket.',
-      evidence: 'The cable already lands on the required endpoints, but Gi1/0/4 reports admin down.',
-      action: 'Use the switchport control to enable the existing interface.',
+      evidence: 'The cable already lands on A-04 and Gi1/0/4, but Gi1/0/4 reports admin down.',
+      action: 'Use the switchport control to enable Gi1/0/4.',
       solution: 'Select Gi1/0/4 and toggle its administrative state to up; do not move either cable.',
     },
   },
@@ -275,13 +275,16 @@ export const LEARNING_DESIGN_BY_ID = {
     },
   },
   'm19-broken-address': {
-    mode: 'practice',
+    mode: 'challenge',
     difficulty: 2,
     conceptsIntroduced: [],
     conceptsPracticed: ['Same-subnet IPv4 reachability', 'IPv4 interface addressing', 'Ping-based fault isolation'],
     enabledTools: ['ip', 'ping'],
     visibleObjectives: ['Diagnose why a healthy local link cannot reach the firewall.', 'Repair only the server addressing fault and verify service.'],
-    ticketDetails: ['The physical path is already working.', 'Compare SERVER-01 eth0 with the firewall LAN subnet.'],
+    ticketDetails: [
+      'The physical path is already working; only host addressing is wrong.',
+      'Set SERVER-01 eth0 to 10.10.10.10/24 with gateway 10.10.10.1.',
+    ],
     debrief: {
       outcome: 'Correct server addressing restores local reachability without disturbing cabling.',
       explanation: 'The original 10.10.99.10/24 address placed the server outside the firewall LAN network despite a healthy physical link.',
@@ -291,7 +294,7 @@ export const LEARNING_DESIGN_BY_ID = {
     hints: {
       prompt: 'Compare network portions rather than changing the known-good cable.',
       evidence: 'SERVER-01 is in 10.10.99.0/24 while FW-EDGE LAN is in 10.10.10.0/24.',
-      action: 'Correct the server address to the firewall LAN and retest.',
+      action: 'Correct the server address to 10.10.10.10/24 on the firewall LAN and retest.',
       solution: 'Set eth0 to 10.10.10.10/24 with gateway 10.10.10.1, then ping FW-EDGE.',
     },
   },
@@ -302,6 +305,10 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsPracticed: ['Same-subnet IPv4 reachability', 'Ping-based fault isolation'],
     enabledTools: ['ip', 'ping'],
     visibleObjectives: ['Find the addressing detail that disagrees with the local network.', 'Restore and verify firewall reachability without repatching.'],
+    ticketDetails: [
+      'The host address text looks familiar, but same-subnet reachability still fails.',
+      'Keep 10.10.10.10 and set the prefix to /24 with gateway 10.10.10.1.',
+    ],
     debrief: {
       outcome: 'SERVER-01 again interprets the LAN with the correct subnet boundary and reaches the firewall.',
       explanation: 'An IP address and prefix are a pair; the prefix determines which bits identify the network and which destinations are considered local.',
@@ -310,8 +317,9 @@ export const LEARNING_DESIGN_BY_ID = {
     },
     hints: {
       prompt: 'The address looks familiar; inspect the other half of the IPv4 configuration.',
-      evidence: 'The server and firewall do not describe the LAN with the same prefix length.',
-      action: 'Align the server prefix with the documented LAN, then use ping as evidence.',
+      evidence: 'SERVER-01 is 10.10.10.10/16 while FW-EDGE LAN is 10.10.10.1/24.',
+      action: 'Change only the server prefix length to /24, then use ping as evidence.',
+      solution: 'Set eth0 to 10.10.10.10/24 with gateway 10.10.10.1, then ping FW-EDGE.',
     },
   },
   'm29-spare-pdu': {
@@ -360,11 +368,18 @@ export const LEARNING_DESIGN_BY_ID = {
   'm18-deny-host': {
     mode: 'boss',
     difficulty: 3,
-    conceptsIntroduced: ['First-match ACL order and host-specific /32 rules'],
-    conceptsPracticed: ['ACL permit rules and implicit deny', 'Ping-based fault isolation'],
+    conceptsIntroduced: [],
+    conceptsPracticed: [
+      'ACL permit rules and implicit deny',
+      'First-match ACL order and host-specific /32 rules',
+      'Ping-based fault isolation',
+    ],
     enabledTools: ['acl', 'ping'],
     visibleObjectives: ['Block only the unauthorized server from the WAN.', 'Preserve approved WAN reachability for the other server.'],
-    ticketDetails: ['SERVER-07 is 10.10.10.20.', 'A broad permit currently allows both servers.'],
+    ticketDetails: [
+      'One LAN host must lose WAN access while the approved server keeps it.',
+      'Deny 10.10.10.20/32 to 203.0.113.0/30 above the broad permit.',
+    ],
     debrief: {
       outcome: 'SERVER-07 is blocked while SERVER-01 retains WAN access.',
       explanation: 'A /32 identifies one host, and placing its deny before the broad permit makes first-match processing selective.',
@@ -373,8 +388,8 @@ export const LEARNING_DESIGN_BY_ID = {
     },
     hints: {
       prompt: 'Design a rule that distinguishes one source without changing the permitted destination service.',
-      evidence: 'The existing any-source permit matches both hosts before a later rule could act.',
-      action: 'Place a host-specific deny ahead of the broad permit and test both outcomes.',
+      evidence: 'The existing any-source permit matches 10.10.10.20 before a later deny could act.',
+      action: 'Place a deny for 10.10.10.20/32 to 203.0.113.0/30 ahead of the broad permit and test both outcomes.',
       solution: 'Deny 10.10.10.20/32 to 203.0.113.0/30 before the permit; verify SERVER-07 fails and SERVER-01 succeeds.',
     },
   },
@@ -407,7 +422,10 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsPracticed: ['Access-port VLAN assignment', 'VLAN mismatch diagnosis', 'Cable removal and clean final state'],
     enabledTools: ['patch'],
     visibleObjectives: ['Move SERVER-07 onto a port in its assigned tenant.', 'Clear the incorrect access port when service returns.'],
-    ticketDetails: ['SERVER-07 belongs to VLAN 20.', 'Inspect the VLAN assignments of the current and candidate ports.'],
+    ticketDetails: [
+      'SERVER-07 belongs to VLAN 20; the currently attached access port does not.',
+      'Use Gi1/0/7 for SERVER-07 eth0 and leave Gi1/0/2 empty.',
+    ],
     debrief: {
       outcome: 'SERVER-07 uses the VLAN 20 access path and the incorrect VLAN 10 port is clear.',
       explanation: 'A healthy copper cable does not fix a VLAN mismatch; endpoint and access-port segmentation must agree.',
@@ -417,7 +435,7 @@ export const LEARNING_DESIGN_BY_ID = {
     hints: {
       prompt: 'Look beyond cable condition and compare logical port assignments.',
       evidence: 'Gi1/0/2 is VLAN 10, while SERVER-07 requires VLAN 20 and Gi1/0/7 provides it.',
-      action: 'Move the server cable to the matching access port and clear the old one.',
+      action: 'Move the server cable to Gi1/0/7 and clear Gi1/0/2.',
       solution: 'Connect SERVER-07 eth0 to Gi1/0/7 and leave Gi1/0/2 empty.',
     },
   },
@@ -427,7 +445,11 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsIntroduced: ['VLANs as Layer-2 isolation boundaries'],
     conceptsPracticed: ['Access-port VLAN assignment', 'Same-subnet IPv4 reachability', 'Negative probe evidence'],
     enabledTools: ['patch', 'ip', 'ping'],
-    visibleObjectives: ['Bring both tenant servers online in their assigned VLANs.', 'Demonstrate that the tenant boundary prevents direct communication.'],
+    visibleObjectives: ['Bring both tenant servers online in their assigned segments.', 'Prove that the tenant boundary blocks direct communication.'],
+    ticketDetails: [
+      'Both servers must stay linked while cross-tenant ping fails.',
+      'SERVER-01: 10.10.10.10/24 on VLAN 10 (Gi1/0/5); SERVER-07: 10.10.10.20/24 on VLAN 20 (Gi1/0/7).',
+    ],
     debrief: {
       outcome: 'Both server links are healthy while the cross-tenant probe remains blocked.',
       explanation: 'Separate access VLANs create distinct Layer-2 broadcast domains, so a switch does not bridge traffic directly between them.',
@@ -436,8 +458,9 @@ export const LEARNING_DESIGN_BY_ID = {
     },
     hints: {
       prompt: 'Judge physical health and policy isolation as separate outcomes.',
-      evidence: 'Each server has a valid link in a different access VLAN; direct switching should not cross that boundary.',
-      action: 'Complete both tenant links and addresses, then verify the expected negative probe.',
+      evidence: 'Gi1/0/5 is VLAN 10 and Gi1/0/7 is VLAN 20; direct switching should not cross that boundary.',
+      action: 'Patch SERVER-01 to Gi1/0/5 and SERVER-07 to Gi1/0/7, set 10.10.10.10/24 and 10.10.10.20/24, then confirm the negative probe.',
+      solution: 'Link SERVER-01 on Gi1/0/5 at 10.10.10.10/24 and SERVER-07 on Gi1/0/7 at 10.10.10.20/24; ping between them must fail.',
     },
   },
   'm8-dual-servers': {
@@ -483,13 +506,21 @@ export const LEARNING_DESIGN_BY_ID = {
     },
   },
   'm24-wrong-gateway': {
-    mode: 'practice',
+    mode: 'challenge',
     difficulty: 2,
     conceptsIntroduced: [],
-    conceptsPracticed: ['Default gateway for off-subnet forwarding', 'IPv4 interface addressing', 'Ping-based fault isolation'],
+    conceptsPracticed: [
+      'Default gateway for off-subnet forwarding',
+      'IPv4 interface addressing',
+      'Ping-based fault isolation',
+      'Prefix length determines network membership',
+    ],
     enabledTools: ['ip', 'ping'],
     visibleObjectives: ['Diagnose why local configuration cannot reach the WAN.', 'Repair only the incorrect forwarding setting and verify service.'],
-    ticketDetails: ['The address, prefix, links, and firewall policy are already valid.', 'Compare the configured gateway with FW-EDGE LAN.'],
+    ticketDetails: [
+      'Address, prefix, links, and firewall policy are already valid; only off-subnet forwarding fails.',
+      'Keep 10.10.10.10/24 and set the default gateway to 10.10.10.1.',
+    ],
     debrief: {
       outcome: 'Correcting the gateway restores WAN reachability without changing healthy components.',
       explanation: 'A host can communicate locally with a wrong gateway, but off-subnet packets must be sent to a router address on its own LAN.',
@@ -498,8 +529,8 @@ export const LEARNING_DESIGN_BY_ID = {
     },
     hints: {
       prompt: 'Focus on the setting used only for off-subnet destinations.',
-      evidence: 'SERVER-01 is in 10.10.10.0/24, but its gateway points into VLAN 20.',
-      action: 'Set the gateway to the firewall address on the server’s own LAN and retest.',
+      evidence: 'SERVER-01 is in 10.10.10.0/24, but its gateway is 10.10.20.1 instead of FW-EDGE LAN.',
+      action: 'Set the gateway to 10.10.10.1 and retest WAN reachability.',
       solution: 'Keep 10.10.10.10/24, change the gateway to 10.10.10.1, and ping ISP-PEER.',
     },
   },
@@ -529,10 +560,20 @@ export const LEARNING_DESIGN_BY_ID = {
     mode: 'boss',
     difficulty: 4,
     conceptsIntroduced: ['Layer-3 routing between VLANs'],
-    conceptsPracticed: ['Access-port VLAN assignment', 'Default gateway for off-subnet forwarding', 'Same-subnet IPv4 reachability'],
+    conceptsPracticed: [
+      'Access-port VLAN assignment',
+      'VLANs as Layer-2 isolation boundaries',
+      'Default gateway for off-subnet forwarding',
+      'Same-subnet IPv4 reachability',
+      '802.1Q trunk uplinks',
+    ],
     enabledTools: ['patch', 'ip', 'ping'],
     visibleObjectives: ['Bring both tenant networks to their firewall interfaces.', 'Configure each server for its local gateway and prove routed service.'],
-    ticketDetails: ['VLAN 10 uses 10.10.10.1/24; VLAN 20 uses 10.10.20.1/24.', 'Each firewall LAN interface has a separate switch connection.'],
+    ticketDetails: [
+      'Each tenant needs a firewall interface on its own LAN; trunks alone do not route.',
+      'SERVER-01: 10.10.10.10/24 gw 10.10.10.1 on VLAN 10; SERVER-07: 10.10.20.10/24 gw 10.10.20.1 on VLAN 20.',
+      'Patch VLAN 10 through LAN0/Gi1/0/2 and VLAN 20 through LAN20/Gi1/0/8.',
+    ],
     debrief: {
       outcome: 'SERVER-01 and SERVER-07 communicate through the firewall across their VLAN boundary.',
       explanation: 'Each server forwards off-subnet traffic to a firewall interface in its own VLAN; the Layer-3 device routes between the two connected networks.',
@@ -541,8 +582,8 @@ export const LEARNING_DESIGN_BY_ID = {
     },
     hints: {
       prompt: 'Trace each server to a gateway in its own VLAN before considering the end-to-end probe.',
-      evidence: 'The firewall provides separate LAN0 and LAN20 interfaces, one for each subnet.',
-      action: 'Complete both server and firewall links, configure each host in its subnet, then test across VLANs.',
+      evidence: 'The firewall provides separate LAN0 and LAN20 interfaces for 10.10.10.0/24 and 10.10.20.0/24.',
+      action: 'Complete both server and firewall links, set each host gateway to its VLAN .1 address, then test across VLANs.',
       solution: 'Patch VLAN 10 through LAN0/Gi1/0/2 and VLAN 20 through LAN20/Gi1/0/8; address both servers with their .1 gateways.',
     },
   },
@@ -572,10 +613,18 @@ export const LEARNING_DESIGN_BY_ID = {
     mode: 'boss',
     difficulty: 4,
     conceptsIntroduced: ['Many-to-one PAT overload'],
-    conceptsPracticed: ['Default gateway for off-subnet forwarding', 'ACL permit rules and implicit deny', 'Address translation'],
+    conceptsPracticed: [
+      'One-to-one static NAT publication',
+      'Default gateway for off-subnet forwarding',
+      'ACL permit rules and implicit deny',
+      'Address translation',
+    ],
     enabledTools: ['pat', 'ping'],
     visibleObjectives: ['Restore outbound translation for the private LAN.', 'Verify that a LAN host can use the shared WAN address.'],
-    ticketDetails: ['The inside pool is 10.10.10.0/24.', 'Use the FW-EDGE WAN address for overload.'],
+    ticketDetails: [
+      'Private LAN hosts need shared egress through the firewall outside address.',
+      'Overload 10.10.10.0/24 to FW-EDGE WAN 203.0.113.1.',
+    ],
     debrief: {
       outcome: 'Private LAN traffic reaches the ISP through the firewall’s shared outside address.',
       explanation: 'PAT translates many inside sessions to one outside IP by distinguishing flows, allowing RFC1918 hosts to share WAN egress.',
@@ -584,8 +633,8 @@ export const LEARNING_DESIGN_BY_ID = {
     },
     hints: {
       prompt: 'The route and policy work; inspect what the WAN requires from private source addresses.',
-      evidence: 'FW-EDGE requires outbound translation, but no overload rule covers 10.10.10.0/24.',
-      action: 'Apply PAT from the inside subnet to the firewall WAN address, then test egress.',
+      evidence: 'FW-EDGE requires outbound translation, but no overload rule covers 10.10.10.0/24 to 203.0.113.1.',
+      action: 'Apply PAT from 10.10.10.0/24 to 203.0.113.1, then test egress.',
       solution: 'Configure PAT 10.10.10.0/24 to 203.0.113.1 and ping ISP-PEER from SERVER-01.',
     },
   },
@@ -593,7 +642,12 @@ export const LEARNING_DESIGN_BY_ID = {
     mode: 'guided',
     difficulty: 3,
     conceptsIntroduced: ['Static routes to remote prefixes'],
-    conceptsPracticed: ['Default gateway for off-subnet forwarding', 'ACL permit rules and implicit deny', 'Ping-based verification'],
+    conceptsPracticed: [
+      'Default gateway for off-subnet forwarding',
+      'ACL permit rules and implicit deny',
+      'Ping-based verification',
+      'Layer-3 routing between VLANs',
+    ],
     deviceUnlocks: ['Route table editor', 'Branch site'],
     enabledTools: ['route', 'acl', 'ping'],
     visibleObjectives: ['Teach FW-EDGE how to reach the branch network.', 'Authorize and verify the LAN-to-branch service path.'],
@@ -612,13 +666,16 @@ export const LEARNING_DESIGN_BY_ID = {
     },
   },
   'm25-host-route': {
-    mode: 'practice',
+    mode: 'challenge',
     difficulty: 4,
     conceptsIntroduced: ['Longest-prefix route selection'],
     conceptsPracticed: ['Static routes to remote prefixes', 'Ping-based fault isolation'],
     enabledTools: ['route', 'ping'],
     visibleObjectives: ['Identify why one branch host ignores the working summary path.', 'Restore that destination without changing the WAN or ACL.'],
-    ticketDetails: ['A /24 branch route exists.', 'Inspect the more-specific route for BRANCH-01.'],
+    ticketDetails: [
+      'A working /24 branch summary exists, but one host still black-holes.',
+      'Set 198.51.100.10/32 next hop to 203.0.113.2 (ISP-PEER).',
+    ],
     debrief: {
       outcome: 'BRANCH-01 follows the corrected host route through ISP-PEER.',
       explanation: 'Routers prefer the longest matching prefix, so a /32 route controls this host even when a valid /24 route also matches.',
@@ -627,8 +684,8 @@ export const LEARNING_DESIGN_BY_ID = {
     },
     hints: {
       prompt: 'Compare every matching route by prefix specificity, not only by whether a summary exists.',
-      evidence: 'The 198.51.100.10/32 entry is more specific and points to a LAN host instead of ISP-PEER.',
-      action: 'Correct the host route next hop and retest that destination.',
+      evidence: 'The 198.51.100.10/32 entry is more specific and points to 10.10.10.10 instead of ISP-PEER.',
+      action: 'Change the 198.51.100.10/32 next hop to 203.0.113.2 and retest.',
       solution: 'Set 198.51.100.10/32 to next hop 203.0.113.2 and ping BRANCH-01.',
     },
   },
@@ -636,10 +693,17 @@ export const LEARNING_DESIGN_BY_ID = {
     mode: 'boss',
     difficulty: 5,
     conceptsIntroduced: ['Administrative distance and floating backup routes'],
-    conceptsPracticed: ['Static routes to remote prefixes', 'Longest-prefix route selection', 'Ping-based fault isolation'],
+    conceptsPracticed: [
+      'Static routes to remote prefixes',
+      'Longest-prefix route selection',
+      'Ping-based fault isolation',
+    ],
     enabledTools: ['route', 'ping'],
     visibleObjectives: ['Preserve the configured primary route while adding branch resilience.', 'Recover branch service through the valid backup path.'],
-    ticketDetails: ['The configured AD1 primary is currently withdrawn by failed reachability tracking.', 'The backup must use ISP-PEER with administrative distance 10.'],
+    ticketDetails: [
+      'The preferred primary is withdrawn by failed reachability tracking; branch service needs a backup path.',
+      'Keep 198.51.100.0/24 via 10.10.10.10 at AD1; add 198.51.100.0/24 via 203.0.113.2 at AD10.',
+    ],
     debrief: {
       outcome: 'The branch prefix has a retained primary route and a usable higher-distance backup.',
       explanation: 'For equal prefixes, lower administrative distance is preferred while tracked healthy; when tracking withdraws the primary, the floating static becomes eligible through its alternate next hop.',
@@ -648,8 +712,8 @@ export const LEARNING_DESIGN_BY_ID = {
     },
     hints: {
       prompt: 'Keep prefix specificity constant and compare route preference and next-hop viability.',
-      evidence: 'The tracked-down AD1 route remains configured, while ISP-PEER is the valid alternate next hop.',
-      action: 'Add an equal-prefix route through ISP-PEER with a higher administrative distance.',
+      evidence: 'The tracked-down AD1 route to 198.51.100.0/24 via 10.10.10.10 remains configured; ISP-PEER 203.0.113.2 is the valid alternate.',
+      action: 'Add 198.51.100.0/24 via 203.0.113.2 with administrative distance 10.',
       solution: 'Keep the AD1 route and add 198.51.100.0/24 via 203.0.113.2 at AD10, then ping BRANCH-01.',
     },
   },
@@ -660,7 +724,10 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsPracticed: ['First-match ACL order and host-specific /32 rules', 'Static routes to remote prefixes', 'Negative probe evidence'],
     enabledTools: ['acl', 'ping'],
     visibleObjectives: ['Block one unauthorized branch client.', 'Keep branch access working for the approved server.'],
-    ticketDetails: ['SERVER-07 is 10.10.10.20.', 'The branch destination is 198.51.100.0/24 and a broad permit exists.'],
+    ticketDetails: [
+      'One LAN host must lose branch access while the approved server keeps it.',
+      'Deny 10.10.10.20/32 to 198.51.100.0/24 above the existing LAN-to-branch permit.',
+    ],
     debrief: {
       outcome: 'SERVER-07 is denied to the routed branch while SERVER-01 remains authorized.',
       explanation: 'The earlier host-specific first-match policy pattern applies equally to a remote routed destination prefix.',
@@ -669,8 +736,8 @@ export const LEARNING_DESIGN_BY_ID = {
     },
     hints: {
       prompt: 'Reuse the selective-deny pattern without changing the known-good route.',
-      evidence: 'A broad LAN-to-branch permit currently matches SERVER-07 as well as SERVER-01.',
-      action: 'Insert a source-host deny before the broad branch permit and test both hosts.',
+      evidence: 'A broad permit for 10.10.10.0/24 to 198.51.100.0/24 currently matches SERVER-07 as well as SERVER-01.',
+      action: 'Insert deny 10.10.10.20/32 to 198.51.100.0/24 before the broad branch permit and test both hosts.',
       solution: 'Deny 10.10.10.20/32 to 198.51.100.0/24 first; verify SERVER-07 fails and SERVER-01 succeeds.',
     },
   },
@@ -681,6 +748,10 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsPracticed: ['First-match ACL order and host-specific /32 rules', 'Out-of-band console access and management addressing', 'Negative probe evidence'],
     enabledTools: ['console', 'acl', 'ping'],
     visibleObjectives: ['Use the recovery path to make a least-privilege policy change.', 'Restore one approved branch flow without opening access for other hosts.'],
+    ticketDetails: [
+      'BRANCH is locked for the LAN; only one approved host-to-host flow may return.',
+      'Console in, then permit 10.10.10.10/32 to 198.51.100.10/32 above the broad deny.',
+    ],
     debrief: {
       outcome: 'Only SERVER-01 can reach BRANCH-01, and the broader branch denial remains effective.',
       explanation: 'A narrowly scoped host-to-host permit placed before a broad deny creates the required exception without weakening policy for the rest of the LAN.',
@@ -689,27 +760,49 @@ export const LEARNING_DESIGN_BY_ID = {
     },
     hints: {
       prompt: 'Find the smallest rule that can precede the broad deny and satisfy the approved flow.',
-      evidence: 'The recovery console is available, and only one source-to-destination pair should pass.',
-      action: 'Connect out of band, add a more-specific permit before the deny, and test both allowed and blocked cases.',
+      evidence: 'TTY recovery console can reach the firewall; only 10.10.10.10 to 198.51.100.10 should pass.',
+      action: 'Connect out of band, add permit 10.10.10.10/32 to 198.51.100.10/32 before the deny, and test both cases.',
+      solution: 'Console TTY2 to FW CON; permit 10.10.10.10/32 to 198.51.100.10/32 above the deny; SERVER-01 succeeds and SERVER-07 fails.',
     },
   },
   'm32-traceroute': {
     mode: 'boss',
     difficulty: 5,
-    conceptsIntroduced: ['Hop-by-hop traceroute fault isolation'],
-    conceptsPracticed: ['Static routes to remote prefixes', 'ACL permit rules and implicit deny', 'Default gateway for off-subnet forwarding'],
-    enabledTools: ['route', 'acl', 'traceroute'],
-    visibleObjectives: ['Use hop evidence to determine where the branch path stops.', 'Restore the layered service and prove the complete route with traceroute.'],
+    conceptsIntroduced: ['Traceroute as path evidence'],
+    conceptsPracticed: [
+      'Static routes to remote prefixes',
+      'ACL permit rules and implicit deny',
+      'Narrow ACL exceptions above broad denies',
+      'Administrative distance and floating backup routes',
+      'Many-to-one PAT overload',
+    ],
+    enabledTools: ['route', 'traceroute', 'ping'],
+    visibleObjectives: [
+      'Restore BRANCH path.',
+      'Prove the hop path with traceroute.',
+    ],
+    ticketDetails: [
+      'Firewall policy toward BRANCH is already open — focus on forwarding.',
+      'Add route 198.51.100.0/24 via 203.0.113.2, then traceroute SERVER-01 → BRANCH-01.',
+    ],
     debrief: {
       outcome: 'The end-to-end branch path completes and traceroute records each routed hop.',
-      explanation: 'A complete path requires both forwarding knowledge and policy permission; traceroute localizes progress through the host, gateway, next hop, and destination.',
-      question: 'How does traceroute narrow a layered fault more effectively than a final ping result?',
-      answer: 'It shows the last responding hop, revealing how far forwarding succeeds before routing or policy stops the path.',
+      explanation:
+        'With policy already open, missing forwarding still stops the path; traceroute shows how far packets travel before the break.',
+      question:
+        'How does traceroute narrow a layered fault more effectively than a final ping result?',
+      answer:
+        'It shows the last responding hop, revealing how far forwarding succeeds before the path stops.',
     },
     hints: {
-      prompt: 'Run the diagnostic and classify the stopping point as local, gateway, next-hop, route, or policy evidence.',
-      evidence: 'The LAN and WAN adjacency are present, but the branch path needs both forwarding knowledge and authorization.',
-      action: 'Repair the missing route or policy layer indicated by the hop evidence, then rerun traceroute.',
+      prompt:
+        'Run traceroute and note the last hop that answers before BRANCH stays dark.',
+      evidence:
+        'LAN and WAN adjacency respond; there is no installed route for the BRANCH prefix yet.',
+      action:
+        'Install the BRANCH static via ISP-PEER, then rerun traceroute until the path completes.',
+      solution:
+        'Route 198.51.100.0/24 via 203.0.113.2, then traceroute SERVER-01 to BRANCH-01.',
     },
   },
 } satisfies Record<CampaignMissionId, LearningDesign>;
