@@ -652,13 +652,16 @@ test.describe('logic / security missions', () => {
     await clearApp(page);
     await page.getByRole('button', { name: /Pace: Easy/i }).click();
     await unlockThrough(page, 32);
-    await startMission(page, /Traceroute Path/i);
-    const symptom = page.locator('.incident-report').getByText(/Symptom:/i);
-    await expect(symptom).toContainText(/BRANCH is dark/i);
-    await expect(symptom).not.toContainText(/198\.51\.100\.0\/24/);
+    await page.getByRole('button', { name: /Traceroute Path/i }).click();
+    await expect(page.getByRole('button', { name: /Start stage/i })).toBeVisible();
+    const incident = page.locator('.incident-report');
+    await expect(incident).toContainText(/BRANCH is dark/i);
+    await expect(incident).not.toContainText(/198\.51\.100\.0\/24/);
     await expect(
       page.locator('details').filter({ hasText: /Ticket details/i }),
     ).not.toHaveAttribute('open', '');
+    await page.getByRole('button', { name: /Start stage/i }).click();
+    await expect(page.locator('svg.rack-svg')).toBeVisible();
     await focusDevice(page, 'FW-EDGE');
     await page.getByRole('button', { name: 'Apply route' }).click();
     await focusDevice(page, 'SERVER-01');
