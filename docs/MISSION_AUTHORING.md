@@ -4,25 +4,26 @@ Short checklist for writing or revising campaign stages. Authoritative campaign 
 
 ## Mode voice
 
-| Mode | Player-facing brief | Ticket details | Visible objectives |
-|---|---|---|---|
-| Guided | Exact values and steps | Optional; may repeat the recipe | Exact checklist |
-| Practice | Outcome + limited ticket facts | Exact values OK | Broad objectives |
-| Challenge | Symptoms + service impact only | Exact values (Easy opens these) | Outcome only |
-| Boss | Incident story + service targets | Exact repair values only here / hints | Service outcomes |
+| Mode | Player-facing brief | Impact line | Ticket details | Visible objectives |
+|---|---|---|---|---|
+| Guided | Exact values and steps | n/a | Optional; may repeat the recipe | Exact checklist |
+| Practice | Outcome + limited ticket facts | n/a | Exact values OK | Broad objectives |
+| Challenge | Symptoms only | Service impact (`learning.impact`) | Exact values (Easy opens these) | Outcome only |
+| Boss | Incident story | Service impact (`learning.impact`) | Exact repair values only here / hints | Service outcomes |
 
-**Campaign pace:** Easy may open ticket details and soften challenge/boss support. Standard must feel like real diagnosis — briefs stay symptom-first.
+**Campaign pace:** Easy may open ticket details and show coach tips. Standard must feel like real diagnosis — briefs, Impact, and objectives stay symptom/outcome-first. Never reuse `ticketDetails[0]` as the Impact line.
 
 ## Anti-spoiler checklist
 
 For **practice / challenge / boss** (especially challenge and boss):
 
-1. Brief and constraints describe **symptoms and impact**, not the fix.
-2. Do **not** put goal port IDs, CIDRs, ACL actions (`permit` / `deny`), next hops, or target host IPs in the brief/constraints when those values appear in `goals`.
+1. Brief, constraints, and `learning.impact` describe **symptoms and service impact**, not the fix.
+2. Do **not** put goal port IDs, human port labels (`Gi1/0/1`, `A-01`, `OUT5`), CIDRs, ACL actions (`permit` / `deny`), next hops, or target host IPs in brief/constraints/impact/visible objectives when those values appear in `goals`.
 3. Put exact repair values in `learning.ticketDetails` and the hint ladder (`prompt` → `evidence` → `action` → `solution`).
 4. Visible objectives name outcomes (“restore WAN reachability”), not recipes (“set gateway 10.10.10.1”).
+5. Challenge/boss stages must set a spoiler-free `learning.impact`.
 
-Automated coverage: `src/missions/learningDesign.test.ts` fails if a challenge/boss brief/constraints surface contains goal literals.
+Automated coverage: `src/missions/learningDesign.test.ts` fails if a challenge/boss player-facing surface contains goal literals or human recipe labels.
 
 ## Cadence (teach → practice → challenge → boss)
 

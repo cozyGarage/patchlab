@@ -3,12 +3,12 @@
   "title": "Fiber No-Shut",
   "order": 28,
   "track": "fiber",
-  "lesson": "Fiber admin-down looks exactly like a dark strand. Docs already land on Te1/0/3 — enable the SFP instead of jumping to a spare tray port.",
-  "brief": "F-03 is already patched to Te1/0/3, but the cage is admin down. Select Te1/0/3 and Toggle admin (no shutdown). Do not move the circuit to F-04 / Te1/0/4.",
+  "lesson": "Fiber admin-down looks exactly like a dark strand. Docs already land on Te1/0/3 \u2014 enable the SFP instead of jumping to a spare tray port.",
+  "brief": "The documented fiber circuit is already patched, but the path stays dark. Recover the intended strand in place \u2014 do not jump to a spare tray or SFP.",
   "constraints": [
-    "Keep F-03 ↔ Te1/0/3",
-    "Do not leave cables on F-04 or Te1/0/4",
-    "Use Toggle admin on the SFP"
+    "Keep the existing documented fiber patch",
+    "Leave unauthorized spare fiber endpoints unused",
+    "Treat admin state as a possible cause of a dark optical path"
   ],
   "parTimeSec": 75,
   "hintAfterWrongAttempts": 1,
@@ -27,8 +27,14 @@
         "color": "aqua",
         "lengthM": 2,
         "ends": [
-          { "deviceId": "fiber-tray", "portId": "f-3" },
-          { "deviceId": "tor-sfp", "portId": "sfp-3" }
+          {
+            "deviceId": "fiber-tray",
+            "portId": "f-3"
+          },
+          {
+            "deviceId": "tor-sfp",
+            "portId": "sfp-3"
+          }
         ]
       }
     ]
@@ -36,14 +42,26 @@
   "goals": [
     {
       "type": "link_up",
-      "a": { "deviceId": "fiber-tray", "portId": "f-3" },
-      "b": { "deviceId": "tor-sfp", "portId": "sfp-3" }
+      "a": {
+        "deviceId": "fiber-tray",
+        "portId": "f-3"
+      },
+      "b": {
+        "deviceId": "tor-sfp",
+        "portId": "sfp-3"
+      }
     },
     {
       "type": "no_cables_on",
       "ports": [
-        { "deviceId": "fiber-tray", "portId": "f-4" },
-        { "deviceId": "tor-sfp", "portId": "sfp-4" }
+        {
+          "deviceId": "fiber-tray",
+          "portId": "f-4"
+        },
+        {
+          "deviceId": "tor-sfp",
+          "portId": "sfp-4"
+        }
       ]
     }
   ]

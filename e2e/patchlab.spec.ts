@@ -656,7 +656,9 @@ test.describe('logic / security missions', () => {
     await expect(page.getByRole('button', { name: /Start stage/i })).toBeVisible();
     const incident = page.locator('.incident-report');
     await expect(incident).toContainText(/BRANCH is dark/i);
+    await expect(incident).toContainText(/Impact:/i);
     await expect(incident).not.toContainText(/198\.51\.100\.0\/24/);
+    await expect(incident).not.toContainText(/203\.0\.113\.2/);
     await expect(
       page.locator('details').filter({ hasText: /Ticket details/i }),
     ).not.toHaveAttribute('open', '');

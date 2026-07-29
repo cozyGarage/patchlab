@@ -126,8 +126,8 @@ export function MissionBrief({
           <div className="incident-report">
             <div className="incident-kicker">Incident report</div>
             <p><strong>Symptom:</strong> {mission.brief}</p>
-            {ticketDetails?.[0] ? (
-              <p><strong>Impact:</strong> {ticketDetails[0]}</p>
+            {learning?.impact ? (
+              <p><strong>Impact:</strong> {learning.impact}</p>
             ) : null}
           </div>
         ) : (

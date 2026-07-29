@@ -8,7 +8,7 @@ import {
 } from './learningDesign';
 import { missions } from './index';
 
-/** Goal literals that must not appear in challenge/boss briefs or constraints. */
+/** Goal literals that must not appear in challenge/boss player-facing surfaces. */
 function goalSpoilers(goals: Goal[]): string[] {
   const spoilers = new Set<string>();
   for (const goal of goals) {
@@ -61,6 +61,25 @@ function goalSpoilers(goals: Goal[]): string[] {
     }
   }
   return [...spoilers].filter((value) => value.length > 0);
+}
+
+/** Human-facing port / address recipes that must not leak into Standard-visible copy. */
+const HUMAN_RECIPE_PATTERNS: RegExp[] = [
+  /\b(?:Gi|Te)\d\/\d\/\d+\b/i,
+  /\bA-\d{2}\b/,
+  /\bF-\d{2}\b/,
+  /\bOUT\d+\b/i,
+  /\b\d{1,3}(?:\.\d{1,3}){3}(?:\/\d{1,2})?\b/,
+];
+
+function playerFacingSurface(mission: (typeof missions)[number]): string {
+  const design = mission.learning;
+  return [
+    mission.brief,
+    ...(mission.constraints ?? []),
+    design.impact ?? '',
+    ...design.visibleObjectives,
+  ].join('\n');
 }
 
 describe('learningDesign', () => {
@@ -138,7 +157,7 @@ describe('learningDesign', () => {
     }
   });
 
-  it('keeps challenge/boss briefs free of goal literals', () => {
+  it('requires spoiler-free impact copy on challenge/boss stages', () => {
     for (const mission of missions) {
       if (
         mission.learning.mode !== 'challenge' &&
@@ -146,11 +165,32 @@ describe('learningDesign', () => {
       ) {
         continue;
       }
-      const surface = [mission.brief, ...(mission.constraints ?? [])].join('\n');
+      expect(
+        mission.learning.impact?.trim().length,
+        `${mission.id} missing learning.impact`,
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps challenge/boss player surfaces free of goal literals and human recipes', () => {
+    for (const mission of missions) {
+      if (
+        mission.learning.mode !== 'challenge' &&
+        mission.learning.mode !== 'boss'
+      ) {
+        continue;
+      }
+      const surface = playerFacingSurface(mission);
       for (const literal of goalSpoilers(mission.goals)) {
         expect(
           surface.includes(literal),
-          `${mission.id} ${mission.learning.mode} surface spoils goal literal "${literal}"`,
+          `${mission.id} surface spoils goal literal "${literal}"`,
+        ).toBe(false);
+      }
+      for (const pattern of HUMAN_RECIPE_PATTERNS) {
+        expect(
+          pattern.test(surface),
+          `${mission.id} surface matches human recipe ${pattern}`,
         ).toBe(false);
       }
     }
