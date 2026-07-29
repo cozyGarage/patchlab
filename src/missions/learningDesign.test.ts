@@ -195,4 +195,59 @@ describe('learningDesign', () => {
       }
     }
   });
+
+  it('ensures challenge/boss practiced concepts were introduced earlier when catalogued', () => {
+    const introducedAt = new Map<string, number>();
+    for (const [index, id] of CAMPAIGN_MISSION_IDS.entries()) {
+      for (const concept of LEARNING_DESIGN_BY_ID[id].conceptsIntroduced) {
+        if (!introducedAt.has(concept)) introducedAt.set(concept, index);
+      }
+    }
+
+    for (const [index, id] of CAMPAIGN_MISSION_IDS.entries()) {
+      const design = LEARNING_DESIGN_BY_ID[id];
+      if (design.mode !== 'challenge' && design.mode !== 'boss') continue;
+      for (const concept of design.conceptsPracticed) {
+        const introIndex = introducedAt.get(concept);
+        if (introIndex == null) continue; // flavor strings without an intro entry
+        expect(
+          introIndex < index,
+          `${id} practices "${concept}" before/without a prior introduction`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('requires every boss to practice at least two previously introduced concepts', () => {
+    const introducedAt = new Map<string, number>();
+    for (const [index, id] of CAMPAIGN_MISSION_IDS.entries()) {
+      for (const concept of LEARNING_DESIGN_BY_ID[id].conceptsIntroduced) {
+        if (!introducedAt.has(concept)) introducedAt.set(concept, index);
+      }
+    }
+
+    for (const [index, id] of CAMPAIGN_MISSION_IDS.entries()) {
+      const design = LEARNING_DESIGN_BY_ID[id];
+      if (design.mode !== 'boss') continue;
+      const prior = design.conceptsPracticed.filter((concept) => {
+        const introIndex = introducedAt.get(concept);
+        return introIndex != null && introIndex < index;
+      });
+      expect(
+        prior.length,
+        `${id} boss practices only ${prior.length} previously introduced concept(s)`,
+      ).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('limits adjacent difficulty swings to two points', () => {
+    for (let i = 1; i < CAMPAIGN_MISSION_IDS.length; i++) {
+      const prev = LEARNING_DESIGN_BY_ID[CAMPAIGN_MISSION_IDS[i - 1]!];
+      const curr = LEARNING_DESIGN_BY_ID[CAMPAIGN_MISSION_IDS[i]!];
+      expect(
+        Math.abs(curr.difficulty - prev.difficulty),
+        `${CAMPAIGN_MISSION_IDS[i]} difficulty jumps more than 2 from prior stage`,
+      ).toBeLessThanOrEqual(2);
+    }
+  });
 });

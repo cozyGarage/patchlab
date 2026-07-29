@@ -63,8 +63,8 @@ export const LEARNING_DESIGN_BY_ID = {
   'm2-wrong-port': {
     mode: 'practice',
     difficulty: 1,
-    conceptsIntroduced: [],
-    conceptsPracticed: ['Physical endpoints and link-state evidence', 'Cable removal and clean final state'],
+    conceptsIntroduced: ['Cable removal and clean final state'],
+    conceptsPracticed: ['Physical endpoints and link-state evidence'],
     enabledTools: ['patch'],
     visibleObjectives: ['Correct the mislabeled cross-connect.', 'Leave the retired panel port clear while preserving server service.'],
     ticketDetails: ['The ticket calls for panel A-01; A-03 is currently occupied.'],
@@ -374,10 +374,10 @@ export const LEARNING_DESIGN_BY_ID = {
   'm18-deny-host': {
     mode: 'boss',
     difficulty: 3,
-    conceptsIntroduced: [],
+    conceptsIntroduced: ['First-match ACL order and host-specific /32 rules'],
     conceptsPracticed: [
       'ACL permit rules and implicit deny',
-      'First-match ACL order and host-specific /32 rules',
+      'Same-subnet IPv4 reachability',
       'Ping-based fault isolation',
     ],
     enabledTools: ['acl', 'ping'],
