@@ -171,7 +171,7 @@ Replace 15 microchapters with 10 operational arcs. Each arc ends with a capstone
 |---:|---|---|---|---|
 | 10 | M10 Console & Mgmt IP | Introduce | Out-of-band access and management IP | Attach the exact TTY and address the switch |
 | 11 | M11 Subnet Ping | Introduce | Same-subnet reachability | Address and verify a server |
-| 12 | M19 Broken Address | Practice | Diagnose an address on the wrong network | Repair reachability from symptoms |
+| 12 | M19 Broken Address | Challenge | Diagnose an address on the wrong network | Repair reachability from symptoms |
 | 13 | M20 Mask Trap | Challenge | Prefix length changes network membership | Find the mask fault without a disclosed answer |
 | 14 | M29 Spare PDU | Boss | Combine power recovery and ping evidence | Restore two devices and prove service |
 
@@ -210,7 +210,7 @@ Replace 15 microchapters with 10 operational arcs. Each arc ends with a capstone
 | Slot | Existing mission | Mode | New lesson | Player outcome |
 |---:|---|---|---|---|
 | 21 | M15 Default Gateway | Introduce | Off-subnet forwarding | Reach the ISP peer through the gateway |
-| 22 | M24 Wrong Gateway | Practice | Diagnose gateway failure | Repair only the incorrect gateway |
+| 22 | M24 Wrong Gateway | Challenge | Diagnose gateway failure | Repair only the incorrect gateway |
 | 23 | M16 Trunk Uplink | Introduce | Trunk mode | Carry multiple VLANs over an uplink |
 | 24 | M21 Inter-VLAN | Boss | Routed communication between VLANs | Build and verify bidirectional routed service |
 
@@ -238,7 +238,7 @@ Replace 15 microchapters with 10 operational arcs. Each arc ends with a capstone
 | Slot | Existing mission | Mode | New lesson | Player outcome |
 |---:|---|---|---|---|
 | 27 | M22 Static Route | Introduce | Route to a remote prefix | Reach BRANCH through a next hop |
-| 28 | M25 Host Route | Practice | Longest-prefix match | Override one destination with `/32` |
+| 28 | M25 Host Route | Challenge | Longest-prefix match | Override one destination with `/32` |
 | 29 | M30 Floating Static | Boss | Backup path selection | Recover after the preferred route becomes unavailable |
 
 **Content correction:** failover must make the preferred next hop/interface unresolved or model tracking. End-to-end failure alone should not cause a real floating static to replace an installed route.
@@ -431,30 +431,9 @@ This is more educationally meaningful than a single total-star number.
 
 ## 10. Implementation roadmap
 
-### Phase 1 — Make the existing campaign learnable
+Phases 1–2 from the original redesign are largely shipped (campaign arcs, learning metadata, mastery, transfers, anti-spoiler briefs).
 
-1. Reorder missions into the ten arcs above while preserving mission IDs.
-2. Replace hard star gates with completion gates.
-3. Add `learning` metadata to the mission schema and all mission files.
-4. Render mission-specific visible objectives and debrief content.
-5. Show only tools relevant to the current mission; Sandbox keeps all tools.
-6. Make hints voluntary and non-blocking.
-7. Keep exact engine goals hidden in practice/challenge modes.
-
-### Phase 2 — Improve validity and mastery
-
-1. Implement VLAN-aware L2 forwarding and bidirectional routed reachability.
-2. Correct M14, M16, M21, M30, and static NAT behavior.
-3. Add concept mastery data and progress migration.
-4. Add prediction/reflection prompts.
-5. Add one changed-value transfer variant per arc.
-
-### Phase 3 — Increase replay value
-
-1. Parameterize ports, VLAN IDs, subnets, ACL hosts, and route prefixes.
-2. Generate daily/weekly incident tickets from validated templates.
-3. Add adaptive review based on concept history and support level.
-4. Add instructor-facing summaries without treating speed as mastery.
+**Current roadmap:** [ROADMAP.md](./ROADMAP.md) — R0 docs → R1 cadence → R2 diagnosis depth → R3 replay → R4 classroom.
 
 ---
 

@@ -424,6 +424,173 @@ export const TRANSFER_DEFS: TransferVariantDef[] = [
       },
     }),
   },
+  {
+    id: 'm6-fiber-first-t1',
+    parentId: 'm6-fiber-first',
+    titleSuffix: 'Transfer',
+    brief:
+      'A reassigned fiber circuit needs first light. Bring up the OM4 path on the new tray and SFP labels without using a disabled cage.',
+    apply: (mission) => ({
+      ...mission,
+      id: 'm6-fiber-first-t1',
+      title: `${mission.title} · Transfer`,
+      brief:
+        'A reassigned fiber circuit needs first light. Bring up the OM4 path on the new tray and SFP labels without using a disabled cage.',
+      goals: [
+        {
+          type: 'cable_media_between',
+          a: { deviceId: 'fiber-tray', portId: 'f-2' },
+          b: { deviceId: 'tor-sfp', portId: 'sfp-2' },
+          media: 'fiber_om4',
+        },
+        {
+          type: 'link_up',
+          a: { deviceId: 'fiber-tray', portId: 'f-2' },
+          b: { deviceId: 'tor-sfp', portId: 'sfp-2' },
+        },
+        {
+          type: 'no_cables_on',
+          ports: [{ deviceId: 'tor-sfp', portId: 'sfp-3' }],
+        },
+      ],
+      learning: {
+        ...mission.learning,
+        mode: 'challenge',
+        visibleObjectives: [
+          'Build the reassigned fiber tray uplink.',
+          'Confirm the optical path lights without using a disabled cage.',
+        ],
+        ticketDetails: [
+          'Patch F-02 to Te1/0/2 with OM4 fiber.',
+          'Te1/0/3 remains administratively down — leave it clear.',
+        ],
+      },
+    }),
+  },
+  {
+    id: 'm4-admin-down-t1',
+    parentId: 'm4-admin-down',
+    titleSuffix: 'Transfer',
+    brief:
+      'The documented copper path still looks correct, but the access port stays dark. Recover service on an approved spare without leaving the dead port patched.',
+    apply: (mission) => ({
+      ...mission,
+      id: 'm4-admin-down-t1',
+      title: `${mission.title} · Transfer`,
+      brief:
+        'The documented copper path still looks correct, but the access port stays dark. Recover service on an approved spare without leaving the dead port patched.',
+      goals: [
+        {
+          type: 'link_up',
+          a: { deviceId: 'panel-a', portId: 'panel-4' },
+          b: { deviceId: 'tor-1', portId: 'sw-8' },
+        },
+        {
+          type: 'link_up',
+          a: { deviceId: 'tor-1', portId: 'sw-5' },
+          b: { deviceId: 'server-01', portId: 'nic-1' },
+        },
+        {
+          type: 'no_cables_on',
+          ports: [{ deviceId: 'tor-1', portId: 'sw-4' }],
+        },
+      ],
+      learning: {
+        ...mission.learning,
+        mode: 'challenge',
+        visibleObjectives: [
+          'Move the panel cross-connect onto an approved live spare.',
+          'Keep SERVER-01 online and clear the admin-down port.',
+        ],
+        ticketDetails: [
+          'Gi1/0/4 is administratively down.',
+          'Use Gi1/0/8 as the approved spare for this transfer.',
+        ],
+      },
+    }),
+  },
+  {
+    id: 'm16-trunk-uplink-t1',
+    parentId: 'm16-trunk-uplink',
+    titleSuffix: 'Transfer',
+    brief:
+      'Operations reassigned the firewall uplink. Prepare the new switchport as a multi-VLAN handoff and prove the link.',
+    apply: (mission) => ({
+      ...mission,
+      id: 'm16-trunk-uplink-t1',
+      title: `${mission.title} · Transfer`,
+      brief:
+        'Operations reassigned the firewall uplink. Prepare the new switchport as a multi-VLAN handoff and prove the link.',
+      goals: [
+        {
+          type: 'port_mode',
+          port: { deviceId: 'tor-1', portId: 'sw-6' },
+          mode: 'trunk',
+        },
+        {
+          type: 'trunk_vlans',
+          port: { deviceId: 'tor-1', portId: 'sw-6' },
+          vlanIds: [10, 20],
+        },
+        {
+          type: 'link_up',
+          a: { deviceId: 'tor-1', portId: 'sw-6' },
+          b: { deviceId: 'fw-1', portId: 'fw-lan' },
+        },
+      ],
+      learning: {
+        ...mission.learning,
+        mode: 'challenge',
+        visibleObjectives: [
+          'Prepare the reassigned uplink to carry multiple VLANs.',
+          'Connect and verify the firewall handoff.',
+        ],
+        ticketDetails: [
+          'Gi1/0/6 is the assigned trunk for this transfer.',
+          'Patch Gi1/0/6 to FW-EDGE LAN0 and allow VLANs 10 and 20.',
+        ],
+      },
+    }),
+  },
+  {
+    id: 'm17-static-nat-t1',
+    parentId: 'm17-static-nat',
+    titleSuffix: 'Transfer',
+    brief:
+      'A different public address was issued for SERVER-01. Publish the host, authorize inbound traffic, and prove the external path.',
+    apply: (mission) => ({
+      ...mission,
+      id: 'm17-static-nat-t1',
+      title: `${mission.title} · Transfer`,
+      brief:
+        'A different public address was issued for SERVER-01. Publish the host, authorize inbound traffic, and prove the external path.',
+      goals: mission.goals.map((goal) => {
+        if (goal.type === 'nat_static') {
+          return {
+            ...goal,
+            insideIp: '10.10.10.10',
+            outsideIp: '203.0.113.11',
+          };
+        }
+        if (goal.type === 'ping_public') {
+          return { ...goal, publicIp: '203.0.113.11' };
+        }
+        return goal;
+      }),
+      learning: {
+        ...mission.learning,
+        mode: 'challenge',
+        visibleObjectives: [
+          'Publish the internal server at the reissued public address.',
+          'Authorize inbound traffic and verify the external service path.',
+        ],
+        ticketDetails: [
+          'Map inside 10.10.10.10 to outside 203.0.113.11.',
+          'Permit 203.0.113.0/30 → 10.10.10.0/24, then probe the public mapping.',
+        ],
+      },
+    }),
+  },
 ];
 
 export function buildTransferMission(
