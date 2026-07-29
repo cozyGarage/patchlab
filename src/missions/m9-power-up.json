@@ -5,10 +5,11 @@
   "track": "power",
   "useBaseCables": false,
   "lesson": "Active gear is dark until PSU cords land on a PDU. Keep power and data on opposite mental paths \u2014 same habit as real racks (TIA-942 / BICSI).",
-  "brief": "Facility power was pulled. Power ToR-SW-A and SERVER-01 from PDU-A, then bring the data path back: A-01\u2194Gi1/0/1 and Gi1/0/5\u2194eth0.",
+  "brief": "Facility power was pulled. ToR-SW-A and SERVER-01 are dark, and the copper data path is down with them. Restore power first, then bring the documented data path back online.",
   "constraints": [
-    "Use C13 power cords into PDU outlets",
-    "Data links stay down until devices are powered"
+    "Power and data are separate paths \u2014 restore both",
+    "Use the PDU outlets and C13 cords already staged for this rack",
+    "Do not leave the service on an undocumented copper path"
   ],
   "parTimeSec": 150,
   "hintAfterWrongAttempts": 2,

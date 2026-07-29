@@ -88,6 +88,7 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsPracticed: ['Physical endpoints and link-state evidence', 'Cable removal and clean final state'],
     enabledTools: ['patch'],
     visibleObjectives: ['Migrate the documented panel circuit to its assigned path.', 'Keep SERVER-01 attached and finish with no abandoned cross-connects.'],
+    impact: "The panel circuit must move without dropping SERVER-01 or leaving abandoned copper.",
     ticketDetails: ['The destination circuit is A-08 through Gi1/0/8.', 'The old A-01 and Gi1/0/1 endpoints must be empty after the change.'],
     debrief: {
       outcome: 'The service has moved to the new documented cross-connect with the old path fully retired.',
@@ -153,6 +154,7 @@ export const LEARNING_DESIGN_BY_ID = {
     deviceUnlocks: ['PDU', 'C13 power cord'],
     enabledTools: ['power', 'patch'],
     visibleObjectives: ['Restore power to the switch and server.', 'Rebuild and verify the documented data path.'],
+    impact: "Active gear stays dark until power returns, so the data path cannot light.",
     ticketDetails: ['Power ToR-SW-A and SERVER-01 from PDU-A.', 'The data circuit uses A-01, Gi1/0/1, Gi1/0/5, and eth0.'],
     debrief: {
       outcome: 'The active devices are powered and SERVER-01 has a working data path.',
@@ -216,6 +218,7 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsPracticed: ['Administrative-down link symptoms', 'Administrative interface recovery', 'OM4 fiber media and LC endpoints'],
     enabledTools: ['switchport'],
     visibleObjectives: ['Recover the documented fiber circuit in place.', 'Leave the unauthorized spare fiber endpoints unused.'],
+    impact: "The documented optical path stays dark despite a correct-looking patch.",
     ticketDetails: ['F-03 is correctly patched to Te1/0/3.', 'The Te1/0/3 SFP cage is administratively down.'],
     debrief: {
       outcome: 'The intended F-03 fiber path is lit without an undocumented repatch.',
@@ -281,6 +284,7 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsPracticed: ['Same-subnet IPv4 reachability', 'IPv4 interface addressing', 'Ping-based fault isolation'],
     enabledTools: ['ip', 'ping'],
     visibleObjectives: ['Diagnose why a healthy local link cannot reach the firewall.', 'Repair only the server addressing fault and verify service.'],
+    impact: "Local ping to the firewall fails even though copper and power look healthy.",
     ticketDetails: [
       'The physical path is already working; only host addressing is wrong.',
       'Set SERVER-01 eth0 to 10.10.10.10/24 with gateway 10.10.10.1.',
@@ -305,6 +309,7 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsPracticed: ['Same-subnet IPv4 reachability', 'Ping-based fault isolation'],
     enabledTools: ['ip', 'ping'],
     visibleObjectives: ['Find the addressing detail that disagrees with the local network.', 'Restore and verify firewall reachability without repatching.'],
+    impact: "Familiar-looking addressing still cannot reach the firewall on the LAN.",
     ticketDetails: [
       'The host address text looks familiar, but same-subnet reachability still fails.',
       'Keep 10.10.10.10 and set the prefix to /24 with gateway 10.10.10.1.',
@@ -329,6 +334,7 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsPracticed: ['Power as a prerequisite for data links', 'Same-subnet IPv4 reachability', 'Ping-based fault isolation'],
     enabledTools: ['power', 'ping'],
     visibleObjectives: ['Restore firewall and SERVER-07 power on the reserved outlets.', 'Prove the staged LAN service works after power recovery.'],
+    impact: "Firewall and SERVER-07 stay dark after outlet reassignment until spare power is restored.",
     ticketDetails: ['OUT5 is reserved for FW-EDGE and OUT6 for SERVER-07.', 'OUT1 through OUT4 support other staged equipment.'],
     debrief: {
       outcome: 'The firewall and SERVER-07 are powered from the spare outlets and local service is verified.',
@@ -376,6 +382,7 @@ export const LEARNING_DESIGN_BY_ID = {
     ],
     enabledTools: ['acl', 'ping'],
     visibleObjectives: ['Block only the unauthorized server from the WAN.', 'Preserve approved WAN reachability for the other server.'],
+    impact: "One unauthorized host must lose WAN access while approved service continues.",
     ticketDetails: [
       'One LAN host must lose WAN access while the approved server keeps it.',
       'Deny 10.10.10.20/32 to 203.0.113.0/30 above the broad permit.',
@@ -446,6 +453,7 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsPracticed: ['Access-port VLAN assignment', 'Same-subnet IPv4 reachability', 'Negative probe evidence'],
     enabledTools: ['patch', 'ip', 'ping'],
     visibleObjectives: ['Bring both tenant servers online in their assigned segments.', 'Prove that the tenant boundary blocks direct communication.'],
+    impact: "Both tenants must stay linked while cross-tenant traffic remains blocked.",
     ticketDetails: [
       'Both servers must stay linked while cross-tenant ping fails.',
       'SERVER-01: 10.10.10.10/24 on VLAN 10 (Gi1/0/5); SERVER-07: 10.10.10.20/24 on VLAN 20 (Gi1/0/7).',
@@ -470,6 +478,7 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsPracticed: ['Access-port VLAN assignment', 'VLANs as Layer-2 isolation boundaries', 'Physical endpoints and link-state evidence', 'Clean rack documentation'],
     enabledTools: ['patch'],
     visibleObjectives: ['Bring both tenant servers online simultaneously.', 'Use the documented panel circuits and matching VLAN access paths.'],
+    impact: "Both tenant servers must come online cleanly without crossing documented paths.",
     ticketDetails: ['A-01 documents SERVER-01 in VLAN 10.', 'A-02 documents SERVER-07 in VLAN 20.'],
     debrief: {
       outcome: 'Both tenant servers have clean, simultaneous access links on their assigned VLAN paths.',
@@ -517,6 +526,7 @@ export const LEARNING_DESIGN_BY_ID = {
     ],
     enabledTools: ['ip', 'ping'],
     visibleObjectives: ['Diagnose why local configuration cannot reach the WAN.', 'Repair only the incorrect forwarding setting and verify service.'],
+    impact: "LAN fabric works, but every off-subnet attempt toward the WAN fails.",
     ticketDetails: [
       'Address, prefix, links, and firewall policy are already valid; only off-subnet forwarding fails.',
       'Keep 10.10.10.10/24 and set the default gateway to 10.10.10.1.',
@@ -569,6 +579,7 @@ export const LEARNING_DESIGN_BY_ID = {
     ],
     enabledTools: ['patch', 'ip', 'ping'],
     visibleObjectives: ['Bring both tenant networks to their firewall interfaces.', 'Configure each server for its local gateway and prove routed service.'],
+    impact: "Separate tenant VLANs cannot reach each other until a Layer-3 path exists.",
     ticketDetails: [
       'Each tenant needs a firewall interface on its own LAN; trunks alone do not route.',
       'SERVER-01: 10.10.10.10/24 gw 10.10.10.1 on VLAN 10; SERVER-07: 10.10.20.10/24 gw 10.10.20.1 on VLAN 20.',
@@ -621,6 +632,7 @@ export const LEARNING_DESIGN_BY_ID = {
     ],
     enabledTools: ['pat', 'ping'],
     visibleObjectives: ['Restore outbound translation for the private LAN.', 'Verify that a LAN host can use the shared WAN address.'],
+    impact: "Private LAN hosts still cannot leave for the WAN despite healthy route and ACL.",
     ticketDetails: [
       'Private LAN hosts need shared egress through the firewall outside address.',
       'Overload 10.10.10.0/24 to FW-EDGE WAN 203.0.113.1.',
@@ -672,6 +684,7 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsPracticed: ['Static routes to remote prefixes', 'Ping-based fault isolation'],
     enabledTools: ['route', 'ping'],
     visibleObjectives: ['Identify why one branch host ignores the working summary path.', 'Restore that destination without changing the WAN or ACL.'],
+    impact: "BRANCH is unreachable for one destination while broader routing looks intact.",
     ticketDetails: [
       'A working /24 branch summary exists, but one host still black-holes.',
       'Set 198.51.100.10/32 next hop to 203.0.113.2 (ISP-PEER).',
@@ -700,6 +713,7 @@ export const LEARNING_DESIGN_BY_ID = {
     ],
     enabledTools: ['route', 'ping'],
     visibleObjectives: ['Preserve the configured primary route while adding branch resilience.', 'Recover branch service through the valid backup path.'],
+    impact: "Preferred BRANCH forwarding is withdrawn; service needs a backup path.",
     ticketDetails: [
       'The preferred primary is withdrawn by failed reachability tracking; branch service needs a backup path.',
       'Keep 198.51.100.0/24 via 10.10.10.10 at AD1; add 198.51.100.0/24 via 203.0.113.2 at AD10.',
@@ -748,6 +762,7 @@ export const LEARNING_DESIGN_BY_ID = {
     conceptsPracticed: ['First-match ACL order and host-specific /32 rules', 'Out-of-band console access and management addressing', 'Negative probe evidence'],
     enabledTools: ['console', 'acl', 'ping'],
     visibleObjectives: ['Use the recovery path to make a least-privilege policy change.', 'Restore one approved branch flow without opening access for other hosts.'],
+    impact: "BRANCH is locked down for the LAN; one approved host needs a narrow exception.",
     ticketDetails: [
       'BRANCH is locked for the LAN; only one approved host-to-host flow may return.',
       'Console in, then permit 10.10.10.10/32 to 198.51.100.10/32 above the broad deny.',
@@ -781,6 +796,7 @@ export const LEARNING_DESIGN_BY_ID = {
       'Restore BRANCH path.',
       'Prove the hop path with traceroute.',
     ],
+    impact: "BRANCH stays dark from SERVER-01 until hop evidence proves the repaired path.",
     ticketDetails: [
       'Firewall policy toward BRANCH is already open — focus on forwarding.',
       'Add route 198.51.100.0/24 via 203.0.113.2, then traceroute SERVER-01 → BRANCH-01.',

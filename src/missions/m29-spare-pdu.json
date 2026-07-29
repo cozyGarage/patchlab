@@ -4,12 +4,12 @@
   "order": 29,
   "track": "power",
   "useBaseCables": false,
-  "lesson": "Maintenance often relocates PSUs to spare PDU outlets. Power path and data path are independent — bring the gear up on OUT5/OUT6, then the LAN ping returns.",
-  "brief": "Facility moved FW-EDGE and SERVER-07 off the primary outlets. Power FW to PDU OUT5 and SERVER-07 to OUT6, then ping SERVER-07 → FW-EDGE. WAN and ToR/SERVER-01 power are already staged.",
+  "lesson": "Maintenance often relocates PSUs to spare PDU outlets. Power path and data path are independent \u2014 bring the gear up on OUT5/OUT6, then the LAN ping returns.",
+  "brief": "Facility moved FW-EDGE and SERVER-07 off their primary outlets. Both devices are dark while other staged gear still has power. Restore the reserved spare outlets, then prove LAN service returns.",
   "constraints": [
-    "FW PSU → PDU OUT5",
-    "SERVER-07 PSU → PDU OUT6",
-    "Do not steal OUT1–OUT4 from staged gear"
+    "Use only the reserved spare outlets for the two dark devices",
+    "Do not steal power from already-staged gear",
+    "Verify with a LAN ping after power returns"
   ],
   "parTimeSec": 120,
   "hintAfterWrongAttempts": 2,
@@ -30,10 +30,59 @@
         "heightU": 1,
         "firewallRules": [],
         "ports": [
-          { "id": "fw-lan", "deviceId": "fw-1", "index": 1, "label": "LAN0", "media": "copper_cat6", "connector": "rj45", "kind": "lan", "admin": "up", "role": "lan", "vlanId": 10, "ip": { "address": "10.10.10.1", "prefix": 24 } },
-          { "id": "fw-wan", "deviceId": "fw-1", "index": 2, "label": "WAN0", "media": "copper_cat6", "connector": "rj45", "kind": "wan", "admin": "up", "role": "wan", "ip": { "address": "203.0.113.1", "prefix": 30 } },
-          { "id": "fw-con", "deviceId": "fw-1", "index": 3, "label": "CON", "media": "console_rj45", "connector": "console", "kind": "console", "admin": "up", "role": "console" },
-          { "id": "fw-psu", "deviceId": "fw-1", "index": 4, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+          {
+            "id": "fw-lan",
+            "deviceId": "fw-1",
+            "index": 1,
+            "label": "LAN0",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "lan",
+            "admin": "up",
+            "role": "lan",
+            "vlanId": 10,
+            "ip": {
+              "address": "10.10.10.1",
+              "prefix": 24
+            }
+          },
+          {
+            "id": "fw-wan",
+            "deviceId": "fw-1",
+            "index": 2,
+            "label": "WAN0",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "wan",
+            "admin": "up",
+            "role": "wan",
+            "ip": {
+              "address": "203.0.113.1",
+              "prefix": 30
+            }
+          },
+          {
+            "id": "fw-con",
+            "deviceId": "fw-1",
+            "index": 3,
+            "label": "CON",
+            "media": "console_rj45",
+            "connector": "console",
+            "kind": "console",
+            "admin": "up",
+            "role": "console"
+          },
+          {
+            "id": "fw-psu",
+            "deviceId": "fw-1",
+            "index": 4,
+            "label": "PSU",
+            "media": "power_c13",
+            "connector": "c13",
+            "kind": "power",
+            "admin": "up",
+            "role": "power"
+          }
         ]
       },
       {
@@ -44,8 +93,34 @@
         "rackUnitStart": 14,
         "heightU": 1,
         "ports": [
-          { "id": "nic-1", "deviceId": "server-07", "index": 1, "label": "eth0", "media": "copper_cat6", "connector": "rj45", "kind": "data", "admin": "up", "role": "nic", "accessVlan": 10, "ip": { "address": "10.10.10.20", "prefix": 24, "gateway": "10.10.10.1" } },
-          { "id": "srv7-psu", "deviceId": "server-07", "index": 2, "label": "PSU", "media": "power_c13", "connector": "c13", "kind": "power", "admin": "up", "role": "power" }
+          {
+            "id": "nic-1",
+            "deviceId": "server-07",
+            "index": 1,
+            "label": "eth0",
+            "media": "copper_cat6",
+            "connector": "rj45",
+            "kind": "data",
+            "admin": "up",
+            "role": "nic",
+            "accessVlan": 10,
+            "ip": {
+              "address": "10.10.10.20",
+              "prefix": 24,
+              "gateway": "10.10.10.1"
+            }
+          },
+          {
+            "id": "srv7-psu",
+            "deviceId": "server-07",
+            "index": 2,
+            "label": "PSU",
+            "media": "power_c13",
+            "connector": "c13",
+            "kind": "power",
+            "admin": "up",
+            "role": "power"
+          }
         ]
       }
     ],
@@ -56,8 +131,14 @@
         "color": "orange",
         "lengthM": 1,
         "ends": [
-          { "deviceId": "fw-1", "portId": "fw-wan" },
-          { "deviceId": "wan-peer", "portId": "peer-eth" }
+          {
+            "deviceId": "fw-1",
+            "portId": "fw-wan"
+          },
+          {
+            "deviceId": "wan-peer",
+            "portId": "peer-eth"
+          }
         ]
       },
       {
@@ -66,8 +147,14 @@
         "color": "black",
         "lengthM": 1.5,
         "ends": [
-          { "deviceId": "tor-1", "portId": "sw-psu" },
-          { "deviceId": "pdu-a", "portId": "out-1" }
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-psu"
+          },
+          {
+            "deviceId": "pdu-a",
+            "portId": "out-1"
+          }
         ]
       },
       {
@@ -76,8 +163,14 @@
         "color": "black",
         "lengthM": 1.5,
         "ends": [
-          { "deviceId": "server-01", "portId": "srv1-psu" },
-          { "deviceId": "pdu-a", "portId": "out-2" }
+          {
+            "deviceId": "server-01",
+            "portId": "srv1-psu"
+          },
+          {
+            "deviceId": "pdu-a",
+            "portId": "out-2"
+          }
         ]
       },
       {
@@ -86,8 +179,14 @@
         "color": "yellow",
         "lengthM": 1,
         "ends": [
-          { "deviceId": "fw-1", "portId": "fw-lan" },
-          { "deviceId": "tor-1", "portId": "sw-2" }
+          {
+            "deviceId": "fw-1",
+            "portId": "fw-lan"
+          },
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-2"
+          }
         ]
       },
       {
@@ -96,8 +195,14 @@
         "color": "blue",
         "lengthM": 2,
         "ends": [
-          { "deviceId": "tor-1", "portId": "sw-5" },
-          { "deviceId": "server-07", "portId": "nic-1" }
+          {
+            "deviceId": "tor-1",
+            "portId": "sw-5"
+          },
+          {
+            "deviceId": "server-07",
+            "portId": "nic-1"
+          }
         ]
       }
     ]
@@ -105,16 +210,34 @@
   "goals": [
     {
       "type": "link_up",
-      "a": { "deviceId": "fw-1", "portId": "fw-psu" },
-      "b": { "deviceId": "pdu-a", "portId": "out-5" }
+      "a": {
+        "deviceId": "fw-1",
+        "portId": "fw-psu"
+      },
+      "b": {
+        "deviceId": "pdu-a",
+        "portId": "out-5"
+      }
     },
     {
       "type": "link_up",
-      "a": { "deviceId": "server-07", "portId": "srv7-psu" },
-      "b": { "deviceId": "pdu-a", "portId": "out-6" }
+      "a": {
+        "deviceId": "server-07",
+        "portId": "srv7-psu"
+      },
+      "b": {
+        "deviceId": "pdu-a",
+        "portId": "out-6"
+      }
     },
-    { "type": "device_powered", "deviceId": "fw-1" },
-    { "type": "device_powered", "deviceId": "server-07" },
+    {
+      "type": "device_powered",
+      "deviceId": "fw-1"
+    },
+    {
+      "type": "device_powered",
+      "deviceId": "server-07"
+    },
     {
       "type": "ping",
       "fromDeviceId": "server-07",

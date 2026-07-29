@@ -340,7 +340,7 @@ Catalog validation should enforce:
 - every introduced concept is revisited later,
 - difficulty changes by no more than two points between adjacent stages.
 
-Authoring voice, anti-spoiler rules, and transfer guidance: [MISSION_AUTHORING.md](./MISSION_AUTHORING.md). Automated checks live in `src/missions/learningDesign.test.ts`.
+Authoring voice, anti-spoiler rules, and transfer guidance: [MISSION_AUTHORING.md](./MISSION_AUTHORING.md). Automated checks live in `src/missions/learningDesign.test.ts`. Challenge/boss Impact copy uses `learning.impact` (not `ticketDetails[0]`), so Standard pace does not leak Easy ticket recipes.
 
 ---
 

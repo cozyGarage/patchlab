@@ -258,6 +258,11 @@ export interface LearningDesign {
   deviceUnlocks?: string[];
   enabledTools: ToolId[];
   visibleObjectives: string[];
+  /**
+   * Challenge/boss service-impact line shown beside the symptom.
+   * Must stay spoiler-free; exact repair values belong in ticketDetails/hints only.
+   */
+  impact?: string;
   ticketDetails?: string[];
   debrief: {
     outcome: string;

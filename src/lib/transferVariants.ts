@@ -153,13 +153,13 @@ export const TRANSFER_DEFS: TransferVariantDef[] = [
     parentId: 'm18-deny-host',
     titleSuffix: 'Transfer',
     brief:
-      'Policy review: one approved host must keep WAN access while the other is cut off. Apply a selective deny without breaking the remaining service.',
+      'Policy review: one approved host must keep WAN access while the other is cut off. Apply a selective host block without breaking the remaining service.',
     apply: (mission) => ({
       ...mission,
       id: 'm18-deny-host-t1',
       title: `${mission.title} · Transfer`,
       brief:
-        'Policy review: one approved host must keep WAN access while the other is cut off. Apply a selective deny without breaking the remaining service.',
+        'Policy review: one approved host must keep WAN access while the other is cut off. Apply a selective host block without breaking the remaining service.',
       goals: [
         {
           type: 'firewall_rule',
